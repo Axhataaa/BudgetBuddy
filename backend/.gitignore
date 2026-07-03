@@ -20,3 +20,9 @@ db.sqlite3
 # OS
 .DS_Store
 Thumbs.db
+
+# Media
+media/
+
+# Logs
+*.log

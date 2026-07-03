@@ -1,4 +1,4 @@
-# Setup Guide
+# ⚙️ Installation Guide
 
 ## Clone Repository
 
@@ -88,3 +88,7 @@ Admin
 ```
 http://127.0.0.1:8000/admin/
 ```
+
+## Environment Variables
+
+Create a `.env` file in the backend directory using the provided `.env.example` as a reference.

@@ -1,4 +1,4 @@
-# 💰 BudgetBuddy
+# 💰 BudgetBuddy – Personal Budget Planning & Expense Management System
 
 BudgetBuddy is a full-stack personal finance management application developed as part of the Infosys Springboard 7.0 Internship Program. The application helps users organize their finances by tracking income, expenses, budgets, and savings goals through a secure web-based platform built with Django REST Framework and React.
 
@@ -17,7 +17,7 @@ The application follows a **REST API architecture**, where the backend is built 
 
 # ✨ Features
 
-## ✅ Currently Implemented (Milestone 1)
+## ✅ Currently Implemented
 
 - Django Backend Setup
 - Django REST Framework Configuration
@@ -33,7 +33,7 @@ The application follows a **REST API architecture**, where the backend is built 
 
 ---
 
-## 🚧 Upcoming Features
+## 🚧 Planned Features
 
 - Income Management
 - Expense Management
@@ -73,32 +73,32 @@ The application follows a **REST API architecture**, where the backend is built 
 
 # 📂 Project Structure
 
-```
-BudgetBuddy
+```text
+BudgetBuddy/
 │
-├── backend
-│   ├── budgets
-│   ├── config
-│   ├── expenses
-│   ├── reports
-│   ├── users
-│   ├── manage.py
-│   ├── requirements.txt
-│   └── db.sqlite3
+├── backend/
+│   ├── budgets/                 # Budget and savings goal management
+│   ├── config/                  # Django project configuration
+│   ├── expenses/                # Income and expense management
+│   ├── reports/                 # Reports and notifications
+│   ├── users/                   # User authentication and profiles
+│   ├── manage.py                # Django management script
+│   └── requirements.txt         # Backend dependencies
 │
-├── frontend
-│   ├── public
-│   ├── src
-│   ├── package.json
-│   ├── vite.config.js
-│   └── index.html
+├── frontend/
+│   ├── public/                  # Static assets
+│   ├── src/                     # React application source code
+│   ├── package.json             # Frontend dependencies and scripts
+│   ├── vite.config.js           # Vite configuration
+│   └── index.html               # Application entry point
 │
-├── Screenshots
+├── Screenshots/                 # Project setup and development screenshots
 │
-├── README.md
-├── PROJECT_SCOPE.md
-├── SETUP.md
-└── MILESTONE_1_COMPLETION.md
+├── README.md                    # Main project documentation
+├── PROJECT_OVERVIEW.md          # Project overview, objectives, and architecture
+├── INSTALLATION.md              # Installation and setup instructions
+├── DEVELOPMENT_LOG.md           # Development progress and updates
+└── .env.example                 # Sample environment variables
 ```
 
 ---
@@ -289,7 +289,7 @@ The Screenshots directory contains the setup and development progress captured d
 
 ---
 
-# 🎯 Next Milestone
+# 🎯 Next Development Phase
 
 The following modules will be implemented in the next development phase.
 
@@ -333,4 +333,4 @@ This project is developed for educational and internship purposes.
 
 ---
 
-## ⭐ Milestone 1 Successfully Completed
+🚀 This project is actively being developed as part of the Infosys Springboard 7.0 Internship Program.
