@@ -42,6 +42,7 @@ INSTALLED_APPS = [
 
     # Third-Party Apps
     "rest_framework",
+    "corsheaders",
 
     # Local Apps
     "users",
@@ -52,6 +53,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+
+    "corsheaders.middleware.CorsMiddleware",
+
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -152,5 +156,10 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": False,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+# CORS Configuration
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

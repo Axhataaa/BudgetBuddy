@@ -1,73 +1,96 @@
 # 💰 BudgetBuddy – Personal Budget Planning & Expense Management System
 
-BudgetBuddy is a full-stack personal finance management application developed as part of the Infosys Springboard 7.0 Internship Program. The application helps users organize their finances by tracking income, expenses, budgets, and savings goals through a secure web-based platform built with Django REST Framework and React.
+BudgetBuddy is a full-stack personal finance management application developed as part of the **Infosys Springboard 7.0 Internship Program**.
 
-**Current Development Phase:**
-Milestone 1 – Backend Foundation ✅
+The application enables users to efficiently manage their personal finances by tracking income, expenses, budgets, and savings goals through a secure web-based platform built using **Django REST Framework**, **React**, and **PostgreSQL**.
+
+> 🚀 **Project Status:** Currently under active development.
 
 ---
 
 # 📖 Project Overview
 
-BudgetBuddy is designed to simplify personal finance management by providing users with a centralized platform for monitoring their financial activities.
+BudgetBuddy is designed to simplify personal finance management by providing users with a centralized platform to organize and monitor their financial activities.
 
-The application follows a **REST API architecture**, where the backend is built using **Django REST Framework** and the frontend is developed using **React + Vite**.
+The project follows a **RESTful API architecture**, where:
+
+- **Backend:** Django + Django REST Framework
+- **Frontend:** React + Vite
+- **Database:** PostgreSQL
+- **Authentication:** JWT (JSON Web Tokens)
 
 ---
 
-# ✨ Features
+# ✨ Current Features
 
-## ✅ Currently Implemented
+## Backend
 
-- Django Backend Setup
+- Django Project Setup
 - Django REST Framework Configuration
-- SQLite Database Configuration
-- React + Vite Frontend Setup
+- PostgreSQL Database Integration
 - JWT Authentication
 - User Registration API
 - User Login API
-- Refresh Token API
+- Token Refresh API
 - Database Models
-- Django Admin Panel
+- Django Admin Configuration
 - Initial Database Migrations
+
+## Frontend
+
+- React + Vite Setup
+- React Router Configuration
+- Axios Integration
+- User Registration Page
+- User Login Page
+- Dashboard Routing
+- JWT Token Storage
 
 ---
 
-## 🚧 Planned Features
+# 🚧 Planned Features
 
 - Income Management
 - Expense Management
-- Budget Tracking
-- Savings Goals Dashboard
+- Budget Management
+- Savings Goals
 - Reports & Analytics
 - Notification System
 - User Profile Management
+- Dashboard Visualization
 - Responsive User Interface
 
 ---
 
-# 🛠 Tech Stack
+# 🛠 Technology Stack
 
 ## Backend
 
 - Python 3.13
-- Django 6.0
+- Django 6
 - Django REST Framework
-- Simple JWT Authentication
+- Simple JWT
 - Pillow
-- SQLite
 
 ## Frontend
 
 - React 19
 - Vite
 - JavaScript
+- Axios
+- React Router DOM
+
+## Database
+
+- PostgreSQL
 
 ## Tools
 
 - Git
 - GitHub
 - VS Code
+- Postman
+- pgAdmin 4
 
 ---
 
@@ -80,107 +103,51 @@ BudgetBuddy/
 │   ├── budgets/                 # Budget and savings goal management
 │   ├── config/                  # Django project configuration
 │   ├── expenses/                # Income and expense management
-│   ├── reports/                 # Reports and notifications
-│   ├── users/                   # User authentication and profiles
+│   ├── reports/                 # Reports and notification management
+│   ├── users/                   # User authentication and profile management
 │   ├── manage.py                # Django management script
 │   └── requirements.txt         # Backend dependencies
 │
 ├── frontend/
 │   ├── public/                  # Static assets
-│   ├── src/                     # React application source code
-│   ├── package.json             # Frontend dependencies and scripts
+│   ├── src/
+│   │   ├── api/                 # Axios configuration
+│   │   ├── components/          # Reusable UI components
+│   │   ├── context/             # Authentication context
+│   │   ├── pages/               # Application pages
+│   │   ├── routes/              # Route configuration
+│   │   ├── services/            # API service functions
+│   │   ├── App.jsx              # Root React component
+│   │   ├── index.css            # Global styles
+│   │   └── main.jsx             # Application entry point
+│   ├── package.json             # Frontend dependencies
 │   ├── vite.config.js           # Vite configuration
 │   └── index.html               # Application entry point
 │
-├── Screenshots/                 # Project setup and development screenshots
+├── Screenshots/                 # Project screenshots
 │
-├── README.md                    # Main project documentation
-├── PROJECT_OVERVIEW.md          # Project overview, objectives, and architecture
-├── INSTALLATION.md              # Installation and setup instructions
-├── DEVELOPMENT_LOG.md           # Development progress and updates
-└── .env.example                 # Sample environment variables
+├── .env.example                 # Sample environment variables
+├── README.md                    # Main documentation
+├── PROJECT_OVERVIEW.md          # Project objectives and architecture
+├── INSTALLATION.md              # Installation guide
+└── DEVELOPMENT_LOG.md           # Development progress
 ```
 
 ---
 
 # 🗄 Database Design
 
-The current database contains the following models.
+The current database consists of the following models:
 
-### User Profile
+- User Profile
+- Income
+- Expense
+- Budget
+- Savings Goal
+- Report
+- Notification
 
-Stores additional information about each registered user.
-
-Key attributes:
-
-- User
-- Full Name
-- Phone Number
-- Profile Picture
-- Created At
-
----
-
-### Income
-
-Stores user income records.
-
-Fields include:
-
-- User
-- Source
-- Amount
-- Date
-
----
-
-### Expense
-
-Stores expense details.
-
-Fields include:
-
-- User
-- Category
-- Amount
-- Date
-
----
-
-### Budget
-
-Stores monthly budget limits.
-
-Fields include:
-
-- User
-- Category
-- Monthly Limit
-
----
-
-### Savings Goal
-
-Stores savings targets.
-
-Fields include:
-
-- User
-- Goal Name
-- Target Amount
-- Current Amount
-
----
-
-### Report
-
-Stores generated financial reports.
-
----
-
-### Notification
-
-Stores notifications for users.
+These models form the foundation of the BudgetBuddy financial management system.
 
 ---
 
@@ -188,12 +155,12 @@ Stores notifications for users.
 
 Authentication is implemented using **JSON Web Tokens (JWT)**.
 
-Available endpoints:
+### Available Endpoints
 
 | Method | Endpoint               | Description          |
 | ------ | ---------------------- | -------------------- |
 | POST   | `/api/users/register/` | Register User        |
-| POST   | `/api/users/login/`    | Login                |
+| POST   | `/api/users/login/`    | User Login           |
 | POST   | `/api/users/refresh/`  | Refresh Access Token |
 
 ---
@@ -216,7 +183,7 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Backend URL
+Backend
 
 ```
 http://127.0.0.1:8000/
@@ -234,7 +201,7 @@ npm install
 npm run dev
 ```
 
-Frontend URL
+Frontend
 
 ```
 http://localhost:5173/
@@ -242,15 +209,15 @@ http://localhost:5173/
 
 ---
 
-# 👨‍💻 Django Admin
+# 👨‍💻 Django Administration
 
-Create an administrator account.
+Create a superuser:
 
 ```bash
 python manage.py createsuperuser
 ```
 
-Open
+Open:
 
 ```
 http://127.0.0.1:8000/admin/
@@ -260,58 +227,58 @@ http://127.0.0.1:8000/admin/
 
 # 📷 Project Screenshots
 
-The Screenshots directory contains the setup and development progress captured during Milestone 1, including:
+The **Screenshots** directory contains important development milestones, including:
 
 - Project Structure
-- requirements.txt
-- React + Vite Setup
+- Requirements File
 - Django Welcome Page
 - Django Admin Login
 - Django Admin Dashboard
+- Registered Users
 - Database Migrations
-- JWT Registration
-- JWT Login
-- JWT Token Refresh
+- React + Vite Setup
 
 ---
 
-# 📊 Milestone 1 Status
+# 📊 Current Development Progress
 
-| Task                | Status |
-| ------------------- | ------ |
-| Backend Setup       | ✅     |
-| React Setup         | ✅     |
-| Database Design     | ✅     |
-| JWT Authentication  | ✅     |
-| Admin Configuration | ✅     |
-| Initial APIs        | ✅     |
-| Database Migration  | ✅     |
+## Completed
+
+- Backend Project Setup
+- React Frontend Setup
+- PostgreSQL Configuration
+- Database Design
+- JWT Authentication
+- User Registration
+- User Login
+- Django Admin Configuration
+- Initial Database Migrations
+- React–Django Integration
 
 ---
 
-# 🎯 Next Development Phase
+## Upcoming Development
 
-The following modules will be implemented in the next development phase.
-
-- Income CRUD APIs
-- Expense CRUD APIs
-- Budget CRUD APIs
-- Savings Goal CRUD APIs
-- Reports Module
-- Notification Module
+- Protected Routes
+- Logout Functionality
+- Income Module
+- Expense Module
+- Budget Module
+- Savings Goals
+- Reports
+- Notifications
 - Dashboard UI
 - Charts & Analytics
-- User Profile Management
 
 ---
 
 # 📚 Documentation
 
-Additional project documentation is available in:
+Additional documentation is available in:
 
-- PROJECT_SCOPE.md
-- SETUP.md
-- MILESTONE_1_COMPLETION.md
+- PROJECT_OVERVIEW.md
+- INSTALLATION.md
+- DEVELOPMENT_LOG.md
 
 ---
 
@@ -319,11 +286,11 @@ Additional project documentation is available in:
 
 **Akshata Lokhande**
 
-B.Tech Information Technology
+B.Tech – Information Technology
 
-Madhav Institute of Technology & Science, Gwalior
+Madhav Institute of Technology & Science (MITS), Gwalior
 
-Infosys Springboard 7.0 Internship Project
+Developed as part of the **Infosys Springboard 7.0 Internship Program**
 
 ---
 
@@ -333,4 +300,4 @@ This project is developed for educational and internship purposes.
 
 ---
 
-🚀 This project is actively being developed as part of the Infosys Springboard 7.0 Internship Program.
+⭐ **BudgetBuddy is actively being developed, with additional finance management modules and dashboard features planned in upcoming milestones.**

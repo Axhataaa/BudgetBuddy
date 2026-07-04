@@ -65,8 +65,8 @@ The application is intended for individuals who want to manage their daily finan
 
 ### Database
 
-- SQLite (Current Development)
-- PostgreSQL (Production / Future Deployment)
+- PostgreSQL
+- SQLite (for local fallback/testing, if required)
 
 ---
 
