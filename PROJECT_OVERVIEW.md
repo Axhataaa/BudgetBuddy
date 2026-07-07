@@ -66,7 +66,6 @@ The application is intended for individuals who want to manage their daily finan
 ### Database
 
 - PostgreSQL
-- SQLite (for local fallback/testing, if required)
 
 ---
 

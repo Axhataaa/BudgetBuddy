@@ -31,19 +31,29 @@ The project follows a **RESTful API architecture**, where:
 - JWT Authentication
 - User Registration API
 - User Login API
-- Token Refresh API
+- User Logout API
+- Refresh Token API
+- Protected API Endpoint
 - Database Models
 - Django Admin Configuration
 - Initial Database Migrations
+- Postman API Testing
 
 ## Frontend
 
 - React + Vite Setup
 - React Router Configuration
 - Axios Integration
-- User Registration Page
-- User Login Page
-- Dashboard Routing
+- Authentication Pages
+- Dashboard Page
+- Home Page
+- Income Page
+- Expenses Page
+- Budgets Page
+- Reports Page
+- Savings Page
+- Profile Page
+- Settings Page
 - JWT Token Storage
 
 ---
@@ -112,14 +122,20 @@ BudgetBuddy/
 │   ├── public/                  # Static assets
 │   ├── src/
 │   │   ├── api/                 # Axios configuration
+│   │   ├── assets/              # Images, icons, and static resources
 │   │   ├── components/          # Reusable UI components
-│   │   ├── context/             # Authentication context
+│   │   ├── context/             # Authentication and global context
+│   │   ├── hooks/               # Custom React hooks
+│   │   ├── layouts/             # Shared application layouts
 │   │   ├── pages/               # Application pages
 │   │   ├── routes/              # Route configuration
 │   │   ├── services/            # API service functions
+│   │   ├── styles/              # Global and custom styles
+│   │   ├── utils/               # Utility/helper functions
 │   │   ├── App.jsx              # Root React component
+│   │   ├── App.css              # App-specific styles
 │   │   ├── index.css            # Global styles
-│   │   └── main.jsx             # Application entry point
+│   │   └── main.jsx             # React entry point
 │   ├── package.json             # Frontend dependencies
 │   ├── vite.config.js           # Vite configuration
 │   └── index.html               # Application entry point
@@ -162,6 +178,7 @@ Authentication is implemented using **JSON Web Tokens (JWT)**.
 | POST   | `/api/users/register/` | Register User        |
 | POST   | `/api/users/login/`    | User Login           |
 | POST   | `/api/users/refresh/`  | Refresh Access Token |
+| POST   | `/api/users/logout/`   | User Logout          |
 
 ---
 
@@ -237,6 +254,7 @@ The **Screenshots** directory contains important development milestones, includi
 - Registered Users
 - Database Migrations
 - React + Vite Setup
+- Postman API Testing
 
 ---
 
@@ -251,6 +269,9 @@ The **Screenshots** directory contains important development milestones, includi
 - JWT Authentication
 - User Registration
 - User Login
+- User Logout
+- Protected API Endpoint
+- Postman API Testing
 - Django Admin Configuration
 - Initial Database Migrations
 - React–Django Integration
@@ -259,16 +280,15 @@ The **Screenshots** directory contains important development milestones, includi
 
 ## Upcoming Development
 
-- Protected Routes
-- Logout Functionality
-- Income Module
-- Expense Module
-- Budget Module
-- Savings Goals
-- Reports
-- Notifications
+- Income CRUD APIs
+- Expense CRUD APIs
+- Budget CRUD APIs
+- Savings Goal CRUD APIs
+- Reports Module
+- Notification Module
 - Dashboard UI
 - Charts & Analytics
+- Profile Management
 
 ---
 

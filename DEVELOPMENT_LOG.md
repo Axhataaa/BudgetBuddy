@@ -6,7 +6,7 @@
 
 - Initialized Django project
 - Configured Django REST Framework
-- Configured SQLite database
+- Configured PostgreSQL database
 - Created project applications
   - users
   - expenses
@@ -19,34 +19,64 @@
 - Created Register API
 - Created Login API
 - Created Refresh Token API
+- Created Logout API
+- Implemented Protected API Endpoint
+- Tested Register API using Postman
+- Tested Login API using Postman
+- Tested Refresh Token API using Postman
+- Tested Logout API using Postman
 
 ---
 
 ### Frontend
 
 - Initialized React project using Vite
+- Installed Axios
+- Installed React Router DOM
+- Organized frontend folder structure
+- Created Home page
+- Created Authentication pages
+- Created Dashboard page
+- Created Income page
+- Created Expenses page
+- Created Budgets page
+- Created Reports page
+- Created Savings page
+- Created Profile page
+- Created Settings page
 
 ---
 
 ### Documentation
 
 - Added project documentation
-- Added setup guide
+- Added installation guide
 - Added project overview
 - Added development log
 - Added environment template
+- Updated README with project structure and screenshots
 
 ---
 
 ### Git
 
 - Initialized local repository
-- Connected local project to remote repository
-- Created individual development branch
-- Pushed initial project structure to GitHub
+- Connected local repository to mentor repository
+- Connected personal GitHub repository
+- Created development branch
+- Maintained project documentation
+- Added project screenshots
+
+---
+
+## Milestone Status
+
+✅ Milestone 1 Completed
 
 ---
 
 ## Current Focus
 
-The project foundation has been established. Current development is focused on implementing business logic, CRUD APIs, frontend integration, and database improvements.
+The project foundation has been completed successfully.
+
+The next phase focuses on implementing CRUD operations for Income, Expenses, Budgets, Savings Goals, Reports, Notifications, and frontend integration.
