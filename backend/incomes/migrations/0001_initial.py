@@ -15,18 +15,16 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Expense',
+            name='Income',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=100)),
+                ('source', models.CharField(choices=[('Pocket Money', 'Pocket Money'), ('Scholarship', 'Scholarship'), ('Freelance', 'Freelance'), ('Other', 'Other')], max_length=50)),
                 ('amount', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('category', models.CharField(choices=[('Food', 'Food'), ('Travel', 'Travel'), ('Shopping', 'Shopping'), ('Education', 'Education'), ('Entertainment', 'Entertainment'), ('Healthcare', 'Healthcare'), ('Miscellaneous', 'Miscellaneous')], max_length=30)),
-                ('payment_method', models.CharField(choices=[('Cash', 'Cash'), ('UPI', 'UPI'), ('Card', 'Card'), ('Bank Transfer', 'Bank Transfer')], default='UPI', max_length=20)),
                 ('date', models.DateField()),
                 ('description', models.TextField(blank=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='expenses', to=settings.AUTH_USER_MODEL)),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='incomes', to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'ordering': ['-date', '-created_at'],

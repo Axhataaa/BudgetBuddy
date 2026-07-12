@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django_budgetbuddy_project_secret_2026"
+SECRET_KEY = config("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", cast=bool)
@@ -44,10 +44,12 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
+    "django_filters",
 
     # Local Apps
     "users",
     "expenses",
+    "incomes",
     "budgets",
     "reports",
 ]
@@ -136,6 +138,10 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+# Media files (user uploads, e.g. Profile.profile_picture)
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 
 # Django REST Framework Configuration
 REST_FRAMEWORK = {
@@ -146,6 +152,23 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
+
+    # Backend API Design Document §12 - every list endpoint is paginated
+    # the same way, no module opts out.
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
+
+    # §13/§14/§15 - filtering, search, and ordering available by default;
+    # individual ViewSets declare which fields are actually filterable.
+    "DEFAULT_FILTER_BACKENDS": (
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ),
+
+    # §6/§7/§24 - every error response, in every module, goes through
+    # this one handler so the shape never drifts between apps.
+    "EXCEPTION_HANDLER": "config.exceptions.custom_exception_handler",
 }
 
 from datetime import timedelta
@@ -153,8 +176,8 @@ from datetime import timedelta
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "ROTATE_REFRESH_TOKENS": False,
-    "BLACKLIST_AFTER_ROTATION": False,
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
