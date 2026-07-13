@@ -1,65 +1,68 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { loginUser } from "../../services/authService";
+import { useNavigate, Link } from "react-router-dom";
+import { LuWallet } from "react-icons/lu";
+import Input from "../../components/ui/Input";
+import Button from "../../components/ui/Button";
+import { useAuth } from "../../hooks/useAuth";
+import { useToast } from "../../components/ui/Toast";
 
 function Login() {
-
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const { showToast } = useToast();
 
-  const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ username: "", password: "" });
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setSubmitting(true);
     try {
-      const data = await loginUser(formData);
-
-      localStorage.setItem("access", data.access);
-      localStorage.setItem("refresh", data.refresh);
-
-      alert("Login Successful!");
-
+      // Routes through AuthContext (not authService directly) so
+      // isAuthenticated updates and ProtectedRoute lets us into
+      // /expenses immediately - this was the gap flagged in the
+      // architecture review: Login previously wrote tokens straight to
+      // localStorage with no shared state, so the rest of the app had
+      // no way to know a user had logged in.
+      await login(formData);
       navigate("/dashboard");
-
-    } catch (error) {
-      console.log(error.response?.data);
-      alert("Invalid Username or Password");
+    } catch {
+      showToast("Invalid username or password.", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div>
-      <h2>Login</h2>
+    <div className="d-flex align-items-center justify-content-center" style={{ minHeight: "100vh" }}>
+      <div className="bg-surface rounded shadow-token-md p-4" style={{ width: 380 }}>
+        <div className="d-flex align-items-center gap-2 justify-content-center mb-4">
+          <LuWallet size={24} className="text-primary" />
+          <span className="font-display fs-4 fw-semibold">BudgetBuddy</span>
+        </div>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          name="username"
-          placeholder="Username"
-          onChange={handleChange}
-        />
+        <form onSubmit={handleSubmit}>
+          <Input label="Username" name="username" value={formData.username} onChange={handleChange} />
+          <Input
+            label="Password"
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+          />
+          <Button type="submit" className="w-100 justify-content-center mt-2" loading={submitting}>
+            Log in
+          </Button>
+        </form>
 
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          onChange={handleChange}
-        />
-
-        <button type="submit">
-          Login
-        </button>
-      </form>
+        <p className="text-center small text-muted-ink mt-3 mb-0">
+          Don't have an account? <Link to="/register" className="text-primary">Register</Link>
+        </p>
+      </div>
     </div>
   );
 }

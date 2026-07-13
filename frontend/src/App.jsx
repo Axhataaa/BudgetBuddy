@@ -3,6 +3,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Authentication/Login";
 import Register from "./pages/Authentication/Register";
 import Dashboard from "./pages/Dashboard/Dashboard";
+import Expenses from "./pages/Expenses/Expenses";
+import Income from "./pages/Income/Income";
+import Budgets from "./pages/Budgets/Budgets";
+import AppShell from "./app/AppShell";
+import ProtectedRoute from "./app/ProtectedRoute";
 
 function App() {
   return (
@@ -10,7 +15,19 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+
+        <Route
+          element={
+            <ProtectedRoute>
+              <AppShell />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/expenses" element={<Expenses />} />
+          <Route path="/income" element={<Income />} />
+          <Route path="/budgets" element={<Budgets />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
