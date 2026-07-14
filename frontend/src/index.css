@@ -24,7 +24,6 @@
 
   --font-display: "Space Grotesk", sans-serif;
   --font-sans: "Inter", sans-serif;
-  --font-mono: "IBM Plex Mono", monospace;
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -73,8 +72,9 @@ a {
    uses this class so amounts always align on tabular figures, per the
    Frontend Design System's Design Philosophy section. */
 .font-currency {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 .text-income {

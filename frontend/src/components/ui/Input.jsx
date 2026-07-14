@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { LuEye, LuEyeOff } from "react-icons/lu";
+
 export default function Input({
   label,
   error,
@@ -5,11 +8,17 @@ export default function Input({
   as = "input",
   options,
   className = "",
+  showPasswordToggle = false,
   ...props
 }) {
+  const [visible, setVisible] = useState(false);
+
   const fieldClasses = `form-control ${type === "number" ? "font-currency text-end" : ""} ${
     error ? "is-invalid" : ""
   }`;
+
+  const isToggleablePassword = showPasswordToggle && type === "password";
+  const resolvedType = isToggleablePassword ? (visible ? "text" : "password") : type;
 
   return (
     <div className={`mb-3 ${className}`}>
@@ -25,6 +34,19 @@ export default function Input({
         </select>
       ) : as === "textarea" ? (
         <textarea className={`form-control ${error ? "is-invalid" : ""}`} rows={3} {...props} />
+      ) : isToggleablePassword ? (
+        <div className="position-relative">
+          <input type={resolvedType} className={fieldClasses} {...props} />
+          <button
+            type="button"
+            onClick={() => setVisible((v) => !v)}
+            className="btn btn-sm btn-link text-muted-ink position-absolute top-50 end-0 translate-middle-y me-1 p-1"
+            aria-label={visible ? "Hide password" : "Show password"}
+            tabIndex={-1}
+          >
+            {visible ? <LuEyeOff size={16} /> : <LuEye size={16} />}
+          </button>
+        </div>
       ) : (
         <input type={type} className={fieldClasses} {...props} />
       )}

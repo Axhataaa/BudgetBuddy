@@ -9,6 +9,7 @@ import Pagination from "../../components/ui/Pagination";
 import { useToast } from "../../components/ui/Toast";
 import IncomeForm from "./IncomeForm";
 import { INCOME_SOURCES } from "./incomeConstants";
+import { formatCurrency } from "../../utils/formatCurrency";
 import {
   listIncomes,
   createIncome,
@@ -177,7 +178,7 @@ export default function Income() {
                   </td>
                   <td className="text-muted-ink">{income.date}</td>
                   <td className="text-end font-currency text-income fw-medium">
-                    +₹{Number(income.amount).toFixed(2)}
+                    +{formatCurrency(income.amount)}
                   </td>
                   <td className="text-end">
                     <button

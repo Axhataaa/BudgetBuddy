@@ -10,10 +10,15 @@ def create_user_profile(sender, instance, created, **kwargs):
     """
     Ensure every User has exactly one Profile.
 
-    Runs for all user-creation paths (RegisterView, createsuperuser,
-    Django admin, shell), not just the registration API - so role and
-    profile data can never silently be missing.
+    The registration serializer immediately updates the role chosen by
+    the user after the profile is created. Until then, every newly
+    created profile starts as Student.
     """
     if created:
         full_name = f"{instance.first_name} {instance.last_name}".strip()
-        Profile.objects.create(user=instance, full_name=full_name)
+
+        Profile.objects.create(
+            user=instance,
+            full_name=full_name,
+            role=Profile.Role.STUDENT,
+        )

@@ -10,6 +10,7 @@ class Expense(models.Model):
         ('Education', 'Education'),
         ('Entertainment', 'Entertainment'),
         ('Healthcare', 'Healthcare'),
+        ('Bills', 'Bills'),
         ('Miscellaneous', 'Miscellaneous'),
     ]
 

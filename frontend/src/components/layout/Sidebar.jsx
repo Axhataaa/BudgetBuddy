@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LuLayoutDashboard, LuWallet, LuPiggyBank, LuTarget, LuLogOut } from "react-icons/lu";
+import { LuLayoutDashboard, LuWallet, LuPiggyBank, LuTarget, LuCircleUserRound, LuLogOut } from "react-icons/lu";
 import { useAuth } from "../../hooks/useAuth";
 
 export default function Sidebar() {
@@ -60,18 +60,37 @@ export default function Sidebar() {
           <LuTarget size={18} />
           Budgets
         </NavLink>
-        {/* Savings Goals, Reports, Notifications, Profile, Settings are
-            added here as each module ships - no placeholder links for
-            pages that don't exist yet. */}
+        {/* Savings Goals, Reports, Notifications, Settings are added
+            here as each module ships - no placeholder links for pages
+            that don't exist yet. */}
       </nav>
 
-      <button
-        onClick={logout}
-        className="btn btn-link text-muted-ink text-decoration-none d-flex align-items-center gap-2 px-2"
-      >
-        <LuLogOut size={18} />
-        Log out
-      </button>
+      {/* My Profile sits in its own bottom section, immediately above
+          Logout - not inside the finance-modules nav above, which has
+          flex-grow-1 and would leave a visual gap between it and
+          Logout. */}
+      <div>
+        <hr className="my-2" />
+        <NavLink
+          to="/profile"
+          className={({ isActive }) =>
+            `d-flex align-items-center gap-2 px-3 py-2 rounded text-decoration-none mb-1 ${
+              isActive ? "bg-primary text-white" : "text-muted-ink"
+            }`
+          }
+        >
+          <LuCircleUserRound size={18} />
+          My Profile
+        </NavLink>
+
+        <button
+          onClick={logout}
+          className="btn btn-link text-muted-ink text-decoration-none d-flex align-items-center gap-2 px-2"
+        >
+          <LuLogOut size={18} />
+          Log out
+        </button>
+      </div>
     </aside>
   );
 }

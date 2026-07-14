@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { LuPlus, LuPencil, LuTrash2, LuTarget } from "react-icons/lu";
 import Button from "../../components/ui/Button";
-import Input from "../../components/ui/Input";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import EmptyState from "../../components/ui/EmptyState";
+import PeriodSelector, { MONTH_NAMES } from "../../components/ui/PeriodSelector";
 import { useToast } from "../../components/ui/Toast";
 import BudgetForm from "./BudgetForm";
+import { formatCurrency } from "../../utils/formatCurrency";
 import { listBudgets, createBudget, updateBudget, deleteBudget } from "../../services/budgetService";
 // Reusing the already-tested Dashboard aggregation instead of
 // re-implementing "spend per category" here - the summary endpoint's
@@ -15,12 +16,25 @@ import { listBudgets, createBudget, updateBudget, deleteBudget } from "../../ser
 // duplicating the Expense-aggregation logic that lives in analytics/.
 import { getDashboardSummary } from "../../services/dashboardService";
 
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
 const today = new Date();
+
+function BudgetCardSkeleton() {
+  return (
+    <div className="col-md-4">
+      <div className="bg-surface rounded shadow-token-sm p-3">
+        <span className="placeholder-glow d-block mb-2">
+          <span className="placeholder col-4" />
+        </span>
+        <span className="placeholder-glow d-block mb-2">
+          <span className="placeholder col-7" />
+        </span>
+        <span className="placeholder-glow d-block">
+          <span className="placeholder col-12" style={{ height: 6 }} />
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function BudgetCard({ budget, onEdit, onDelete }) {
   const percent = budget.percent_used ?? 0;
@@ -43,8 +57,8 @@ function BudgetCard({ budget, onEdit, onDelete }) {
         </div>
 
         <div className="font-currency small mb-1">
-          <span className="text-expense">₹{Number(budget.spent ?? 0).toFixed(2)}</span>
-          <span className="text-muted-ink"> of ₹{Number(budget.monthly_limit).toFixed(2)}</span>
+          <span className="text-expense">{formatCurrency(budget.spent ?? 0)}</span>
+          <span className="text-muted-ink"> of {formatCurrency(budget.monthly_limit)}</span>
         </div>
 
         <div className="progress" style={{ height: 6 }}>
@@ -164,22 +178,16 @@ export default function Budgets() {
         </Button>
       </div>
 
-      <div className="row g-2 mb-3">
-        <div className="col-md-3">
-          <Input
-            as="select"
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-            options={MONTH_NAMES.map((name, i) => ({ value: i + 1, label: name }))}
-          />
-        </div>
-        <div className="col-md-2">
-          <Input type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} />
-        </div>
+      <div className="mb-3">
+        <PeriodSelector month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y); }} />
       </div>
 
       {loading ? (
-        <div className="text-muted-ink small">Loading...</div>
+        <div className="row g-3">
+          <BudgetCardSkeleton />
+          <BudgetCardSkeleton />
+          <BudgetCardSkeleton />
+        </div>
       ) : budgets.length === 0 ? (
         <EmptyState
           icon={LuTarget}

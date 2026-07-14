@@ -8,6 +8,7 @@ export const EXPENSE_CATEGORIES = [
   "Education",
   "Entertainment",
   "Healthcare",
+  "Bills",
   "Miscellaneous",
 ];
 

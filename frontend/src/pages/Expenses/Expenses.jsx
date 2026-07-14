@@ -8,6 +8,8 @@ import SkeletonRows from "../../components/ui/SkeletonRows";
 import Pagination from "../../components/ui/Pagination";
 import { useToast } from "../../components/ui/Toast";
 import ExpenseForm from "./ExpenseForm";
+import { formatCurrency } from "../../utils/formatCurrency";
+import { TIME_PERIOD_OPTIONS, getDateRangeForPeriod } from "../../utils/dateRanges";
 import { EXPENSE_CATEGORIES, PAYMENT_METHODS } from "./expenseConstants";
 import {
   listExpenses,
@@ -17,6 +19,16 @@ import {
 } from "../../services/expenseService";
 
 const PAGE_SIZE = 20;
+
+// Maps a human-readable sort label to the `ordering` param the backend
+// already supports (ExpenseViewSet.ordering_fields, §15 of the API
+// Design Doc) - no backend change needed, just exposing what's there.
+const SORT_OPTIONS = [
+  { value: "-date", label: "Latest First" },
+  { value: "date", label: "Oldest First" },
+  { value: "-amount", label: "Highest Amount" },
+  { value: "amount", label: "Lowest Amount" },
+];
 
 export default function Expenses() {
   const { showToast } = useToast();
@@ -29,6 +41,10 @@ export default function Expenses() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [timePeriod, setTimePeriod] = useState("");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [ordering, setOrdering] = useState("-date");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
@@ -40,10 +56,24 @@ export default function Expenses() {
   const fetchExpenses = async () => {
     setLoading(true);
     try {
-      const params = { page, page_size: PAGE_SIZE };
+      const params = { page, page_size: PAGE_SIZE, ordering };
       if (search) params.search = search;
       if (category) params.category = category;
       if (paymentMethod) params.payment_method = paymentMethod;
+
+      // "custom" uses the two explicit date inputs; every other preset
+      // is computed from getDateRangeForPeriod - either way, both flow
+      // into the same existing date_from/date_to backend params.
+      if (timePeriod === "custom") {
+        if (customFrom) params.date_from = customFrom;
+        if (customTo) params.date_to = customTo;
+      } else if (timePeriod) {
+        const range = getDateRangeForPeriod(timePeriod);
+        if (range) {
+          params.date_from = range.date_from;
+          params.date_to = range.date_to;
+        }
+      }
 
       const data = await listExpenses(params);
       setExpenses(data.results);
@@ -56,19 +86,19 @@ export default function Expenses() {
   };
 
   // Search is debounced (300ms) so we don't fire a request on every
-  // keystroke - category/payment method filters apply immediately
-  // since those are discrete choices, not free text.
+  // keystroke - every other filter applies through the same debounced
+  // effect (existing pattern, unchanged), just with more dependencies now.
   useEffect(() => {
     const timer = setTimeout(fetchExpenses, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, category, paymentMethod, page]);
+  }, [search, category, paymentMethod, timePeriod, customFrom, customTo, ordering, page]);
 
   // Any filter change resets to page 1 - staying on page 3 of a filtered
   // result set that now has 1 page would silently show nothing.
   useEffect(() => {
     setPage(1);
-  }, [search, category, paymentMethod]);
+  }, [search, category, paymentMethod, timePeriod, customFrom, customTo, ordering]);
 
   const openAddModal = () => {
     setEditingExpense(null);
@@ -118,7 +148,7 @@ export default function Expenses() {
     }
   };
 
-  const hasFilters = search || category || paymentMethod;
+  const hasFilters = search || category || paymentMethod || timePeriod;
 
   return (
     <div>
@@ -129,8 +159,8 @@ export default function Expenses() {
         </Button>
       </div>
 
-      <div className="row g-2 mb-3">
-        <div className="col-md-5">
+      <div className="row g-2 mb-2">
+        <div className="col-md-4">
           <div className="position-relative">
             <LuSearch
               size={16}
@@ -145,7 +175,7 @@ export default function Expenses() {
             />
           </div>
         </div>
-        <div className="col-md-3">
+        <div className="col-md-2">
           <select
             className="form-select"
             value={category}
@@ -159,7 +189,7 @@ export default function Expenses() {
             ))}
           </select>
         </div>
-        <div className="col-md-3">
+        <div className="col-md-2">
           <select
             className="form-select"
             value={paymentMethod}
@@ -173,9 +203,58 @@ export default function Expenses() {
             ))}
           </select>
         </div>
+        <div className="col-md-2">
+          <select
+            className="form-select"
+            value={timePeriod}
+            onChange={(e) => setTimePeriod(e.target.value)}
+          >
+            {TIME_PERIOD_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="col-md-2">
+          <select
+            className="form-select"
+            value={ordering}
+            onChange={(e) => setOrdering(e.target.value)}
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div className="bg-surface rounded shadow-token-sm">
+      {timePeriod === "custom" && (
+        <div className="row g-2 mb-3">
+          <div className="col-md-2">
+            <input
+              type="date"
+              className="form-control"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              aria-label="From date"
+            />
+          </div>
+          <div className="col-md-2">
+            <input
+              type="date"
+              className="form-control"
+              value={customTo}
+              onChange={(e) => setCustomTo(e.target.value)}
+              aria-label="To date"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className={`bg-surface rounded shadow-token-sm ${timePeriod === "custom" ? "" : "mt-1"}`}>
         <table className="table mb-0 align-middle">
           <thead>
             <tr className="text-muted-ink small text-uppercase">
@@ -205,7 +284,7 @@ export default function Expenses() {
                   <td className="text-muted-ink">{expense.payment_method}</td>
                   <td className="text-muted-ink">{expense.date}</td>
                   <td className="text-end font-currency text-expense fw-medium">
-                    -₹{Number(expense.amount).toFixed(2)}
+                    -{formatCurrency(expense.amount)}
                   </td>
                   <td className="text-end">
                     <button

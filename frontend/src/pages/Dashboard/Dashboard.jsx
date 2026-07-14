@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { LuPlus, LuTrendingUp, LuTrendingDown, LuWallet, LuLayoutDashboard } from "react-icons/lu";
 import EmptyState from "../../components/ui/EmptyState";
 import SkeletonRows from "../../components/ui/SkeletonRows";
+import PeriodSelector, { MONTH_NAMES } from "../../components/ui/PeriodSelector";
 import { useToast } from "../../components/ui/Toast";
 import { getDashboardSummary } from "../../services/dashboardService";
 // Recent transactions reuse the existing Expense/Income list endpoints
@@ -10,13 +11,12 @@ import { getDashboardSummary } from "../../services/dashboardService";
 // data is NOT duplicated inside the dashboard summary endpoint.
 import { listExpenses } from "../../services/expenseService";
 import { listIncomes } from "../../services/incomeService";
+import { formatCurrency } from "../../utils/formatCurrency";
+import { getMonthDateRange } from "../../utils/dateRanges";
 
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+const today = new Date();
 
-function StatCard({ label, amount, colorClass, icon: Icon }) {
+function StatCard({ label, amount, subtitle, colorClass, icon: Icon }) {
   return (
     <div className="col-md-4">
       <div className="bg-surface rounded shadow-token-sm p-3 h-100">
@@ -25,8 +25,24 @@ function StatCard({ label, amount, colorClass, icon: Icon }) {
           {label}
         </div>
         <div className={`font-currency fs-4 fw-medium ${colorClass}`}>
-          ₹{Number(amount).toFixed(2)}
+          {formatCurrency(amount)}
         </div>
+        {subtitle && <div className="text-muted-ink small mt-1">{subtitle}</div>}
+      </div>
+    </div>
+  );
+}
+
+function StatCardSkeleton() {
+  return (
+    <div className="col-md-4">
+      <div className="bg-surface rounded shadow-token-sm p-3">
+        <span className="placeholder-glow d-block mb-2">
+          <span className="placeholder col-6" />
+        </span>
+        <span className="placeholder-glow d-block">
+          <span className="placeholder col-8" style={{ height: 28 }} />
+        </span>
       </div>
     </div>
   );
@@ -35,20 +51,27 @@ function StatCard({ label, amount, colorClass, icon: Icon }) {
 export default function Dashboard() {
   const { showToast } = useToast();
 
+  const [month, setMonth] = useState(today.getMonth() + 1);
+  const [year, setYear] = useState(today.getFullYear());
+
   const [summary, setSummary] = useState(null);
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const today = new Date();
 
   useEffect(() => {
     const fetchDashboard = async () => {
       setLoading(true);
       try {
+        // Recent transactions are scoped to the SAME selected period as
+        // the summary cards - otherwise switching to a past month would
+        // show that month's totals next to today's most recent activity,
+        // which reads as broken rather than "viewing history."
+        const { date_from, date_to } = getMonthDateRange(month, year);
+
         const [summaryData, expensesData, incomesData] = await Promise.all([
-          getDashboardSummary(),
-          listExpenses({ page_size: 5, ordering: "-date" }),
-          listIncomes({ page_size: 5, ordering: "-date" }),
+          getDashboardSummary({ month, year }),
+          listExpenses({ page_size: 5, ordering: "-date", date_from, date_to }),
+          listIncomes({ page_size: 5, ordering: "-date", date_from, date_to }),
         ]);
 
         setSummary(summaryData);
@@ -75,8 +98,9 @@ export default function Dashboard() {
 
     fetchDashboard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [month, year]);
 
+  const periodLabel = `${MONTH_NAMES[month - 1]} ${year}`;
   const hasCategoryData = summary?.expense_by_category?.length > 0;
   const categoryMax = hasCategoryData
     ? Math.max(...summary.expense_by_category.map((c) => Number(c.total)))
@@ -86,29 +110,30 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
         <div>
           <h1 className="font-display fs-3 fw-semibold mb-0">Dashboard</h1>
-          <p className="text-muted-ink small mb-0">
-            {MONTH_NAMES[today.getMonth()]} {today.getFullYear()}
-          </p>
+          <p className="text-muted-ink small mb-0">{periodLabel}</p>
         </div>
-        <div className="d-flex gap-2">
-          <Link to="/expenses" className="btn btn-outline-primary d-inline-flex align-items-center gap-2">
-            <LuPlus size={16} />
-            Expense
-          </Link>
-          <Link to="/income" className="btn btn-primary d-inline-flex align-items-center gap-2">
-            <LuPlus size={16} />
-            Income
-          </Link>
+        <div className="d-flex align-items-center gap-3 flex-wrap">
+          <PeriodSelector month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y); }} />
+          <div className="d-flex gap-2">
+            <Link to="/expenses" className="btn btn-outline-primary d-inline-flex align-items-center gap-2">
+              <LuPlus size={16} />
+              Expense
+            </Link>
+            <Link to="/income" className="btn btn-primary d-inline-flex align-items-center gap-2">
+              <LuPlus size={16} />
+              Income
+            </Link>
+          </div>
         </div>
       </div>
 
       {isEmptyPeriod ? (
         <EmptyState
           icon={LuLayoutDashboard}
-          message="Welcome to BudgetBuddy — add your first expense or income to see your dashboard come to life."
+          message={`No activity recorded for ${periodLabel} yet — add an expense or income to see this period come to life.`}
           action={
             <div className="d-flex gap-2">
               <Link to="/expenses" className="btn btn-outline-primary">Add Expense</Link>
@@ -121,17 +146,30 @@ export default function Dashboard() {
           <div className="row g-3 mb-4">
             {loading || !summary ? (
               <>
-                <div className="col-md-4"><div className="bg-surface rounded shadow-token-sm p-3" style={{ height: 88 }} /></div>
-                <div className="col-md-4"><div className="bg-surface rounded shadow-token-sm p-3" style={{ height: 88 }} /></div>
-                <div className="col-md-4"><div className="bg-surface rounded shadow-token-sm p-3" style={{ height: 88 }} /></div>
+                <StatCardSkeleton />
+                <StatCardSkeleton />
+                <StatCardSkeleton />
               </>
             ) : (
               <>
-                <StatCard label="Total Income" amount={summary.total_income} colorClass="text-income" icon={LuTrendingUp} />
-                <StatCard label="Total Expenses" amount={summary.total_expenses} colorClass="text-expense" icon={LuTrendingDown} />
+                <StatCard
+                  label="Total Income"
+                  amount={summary.total_income}
+                  subtitle={periodLabel}
+                  colorClass="text-income"
+                  icon={LuTrendingUp}
+                />
+                <StatCard
+                  label="Total Expenses"
+                  amount={summary.total_expenses}
+                  subtitle={periodLabel}
+                  colorClass="text-expense"
+                  icon={LuTrendingDown}
+                />
                 <StatCard
                   label="Net Savings"
                   amount={summary.net_savings}
+                  subtitle={Number(summary.net_savings) >= 0 ? "You're in the green" : "Spending exceeds income"}
                   colorClass={Number(summary.net_savings) >= 0 ? "text-income" : "text-expense"}
                   icon={LuWallet}
                 />
@@ -157,7 +195,7 @@ export default function Dashboard() {
                           <div className="d-flex justify-content-between small mb-1">
                             <span>{b.category}</span>
                             <span className="font-currency text-muted-ink">
-                              ₹{Number(b.spent).toFixed(2)} / ₹{Number(b.limit).toFixed(2)}
+                              {formatCurrency(b.spent)} / {formatCurrency(b.limit)}
                             </span>
                           </div>
                           <div className="progress" style={{ height: 6 }}>
@@ -182,13 +220,13 @@ export default function Dashboard() {
                 {loading ? (
                   <div className="text-muted-ink small">Loading...</div>
                 ) : !hasCategoryData ? (
-                  <p className="text-muted-ink small mb-0">No expenses recorded this month yet.</p>
+                  <p className="text-muted-ink small mb-0">No expenses recorded for {periodLabel}.</p>
                 ) : (
                   summary.expense_by_category.map((c) => (
                     <div key={c.category} className="mb-3">
                       <div className="d-flex justify-content-between small mb-1">
                         <span>{c.category}</span>
-                        <span className="font-currency text-expense">₹{Number(c.total).toFixed(2)}</span>
+                        <span className="font-currency text-expense">{formatCurrency(c.total)}</span>
                       </div>
                       <div className="progress" style={{ height: 6 }}>
                         <div
@@ -217,7 +255,7 @@ export default function Dashboard() {
                       <SkeletonRows rows={5} columns={3} />
                     ) : recent.length === 0 ? (
                       <tr>
-                        <td className="text-muted-ink small py-3">No recent activity.</td>
+                        <td className="text-muted-ink small py-3">No activity for {periodLabel}.</td>
                       </tr>
                     ) : (
                       recent.map((item) => (
@@ -230,7 +268,7 @@ export default function Dashboard() {
                           <td>{item.label}</td>
                           <td className="text-muted-ink small">{item.date}</td>
                           <td className={`text-end font-currency ${item.type === "income" ? "text-income" : "text-expense"}`}>
-                            {item.type === "income" ? "+" : "-"}₹{Number(item.amount).toFixed(2)}
+                            {item.type === "income" ? "+" : "-"}{formatCurrency(item.amount)}
                           </td>
                         </tr>
                       ))

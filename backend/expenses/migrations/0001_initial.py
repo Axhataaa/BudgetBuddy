@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('title', models.CharField(max_length=100)),
                 ('amount', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('category', models.CharField(choices=[('Food', 'Food'), ('Travel', 'Travel'), ('Shopping', 'Shopping'), ('Education', 'Education'), ('Entertainment', 'Entertainment'), ('Healthcare', 'Healthcare'), ('Miscellaneous', 'Miscellaneous')], max_length=30)),
+                ('category', models.CharField(choices=[('Food', 'Food'), ('Travel', 'Travel'), ('Shopping', 'Shopping'), ('Education', 'Education'), ('Entertainment', 'Entertainment'), ('Healthcare', 'Healthcare'), ('Bills', 'Bills'), ('Miscellaneous', 'Miscellaneous')], max_length=30)),
                 ('payment_method', models.CharField(choices=[('Cash', 'Cash'), ('UPI', 'UPI'), ('Card', 'Card'), ('Bank Transfer', 'Bank Transfer')], default='UPI', max_length=20)),
                 ('date', models.DateField()),
                 ('description', models.TextField(blank=True)),
