@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             name='Income',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('source', models.CharField(choices=[('Pocket Money', 'Pocket Money'), ('Scholarship', 'Scholarship'), ('Freelance', 'Freelance'), ('Other', 'Other')], max_length=50)),
+                ('source', models.CharField(choices=[('Salary', 'Salary'), ('Pocket Money', 'Pocket Money'), ('Scholarship', 'Scholarship'), ('Freelance', 'Freelance'), ('Business', 'Business'), ('Other', 'Other')], max_length=50)),
                 ('amount', models.DecimalField(decimal_places=2, max_digits=10)),
                 ('date', models.DateField()),
                 ('description', models.TextField(blank=True)),

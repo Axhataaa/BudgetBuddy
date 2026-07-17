@@ -8,6 +8,7 @@ import PeriodSelector, { MONTH_NAMES } from "../../components/ui/PeriodSelector"
 import { useToast } from "../../components/ui/Toast";
 import BudgetForm from "./BudgetForm";
 import { formatCurrency } from "../../utils/formatCurrency";
+import { getBudgetStatusColor } from "../../utils/budgetStatus";
 import { listBudgets, createBudget, updateBudget, deleteBudget } from "../../services/budgetService";
 // Reusing the already-tested Dashboard aggregation instead of
 // re-implementing "spend per category" here - the summary endpoint's
@@ -20,8 +21,8 @@ const today = new Date();
 
 function BudgetCardSkeleton() {
   return (
-    <div className="col-md-4">
-      <div className="bg-surface rounded shadow-token-sm p-3">
+    <div className="col-6 col-md-4">
+      <div className="bg-surface rounded shadow-token-sm hover-card p-3">
         <span className="placeholder-glow d-block mb-2">
           <span className="placeholder col-4" />
         </span>
@@ -38,12 +39,14 @@ function BudgetCardSkeleton() {
 
 function BudgetCard({ budget, onEdit, onDelete }) {
   const percent = budget.percent_used ?? 0;
-  const barColor =
-    percent >= 100 ? "var(--color-danger)" : percent >= 70 ? "var(--color-warning)" : "var(--color-income)";
+  const spent = Number(budget.spent ?? 0);
+  const limit = Number(budget.monthly_limit);
+  const remaining = limit - spent;
+  const barColor = getBudgetStatusColor(percent);
 
   return (
-    <div className="col-md-4">
-      <div className="bg-surface rounded shadow-token-sm p-3 h-100">
+    <div className="col-6 col-md-4">
+      <div className="bg-surface rounded shadow-token-sm hover-card  p-3 h-100">
         <div className="d-flex justify-content-between align-items-start mb-2">
           <span className="badge bg-surface-sunken text-ink">{budget.category}</span>
           <div>
@@ -57,8 +60,8 @@ function BudgetCard({ budget, onEdit, onDelete }) {
         </div>
 
         <div className="font-currency small mb-1">
-          <span className="text-expense">{formatCurrency(budget.spent ?? 0)}</span>
-          <span className="text-muted-ink"> of {formatCurrency(budget.monthly_limit)}</span>
+          <span className="text-expense">{formatCurrency(spent)}</span>
+          <span className="text-muted-ink"> of {formatCurrency(limit)}</span>
         </div>
 
         <div className="progress" style={{ height: 6 }}>
@@ -67,7 +70,14 @@ function BudgetCard({ budget, onEdit, onDelete }) {
             style={{ width: `${Math.min(percent, 100)}%`, backgroundColor: barColor }}
           />
         </div>
-        <div className="small text-muted-ink mt-1">{percent.toFixed(1)}% used</div>
+
+        <div className="d-flex justify-content-between small text-muted-ink mt-1">
+          <span style={{ color: remaining < 0 ? "var(--color-danger)" : undefined }}>
+            {remaining < 0 ? "Over by " : "Remaining: "}
+            {formatCurrency(Math.abs(remaining))}
+          </span>
+          <span>{percent.toFixed(1)}% used</span>
+        </div>
       </div>
     </div>
   );

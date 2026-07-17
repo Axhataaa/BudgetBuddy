@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
-import { LuPlus, LuPencil, LuTrash2, LuSearch, LuPiggyBank } from "react-icons/lu";
+import { LuPlus, LuPencil, LuTrash2, LuSearch, LuPiggyBank, LuFilterX } from "react-icons/lu";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import EmptyState from "../../components/ui/EmptyState";
 import SkeletonRows from "../../components/ui/SkeletonRows";
 import Pagination from "../../components/ui/Pagination";
+import FilterChips from "../../components/ui/FilterChips";
 import { useToast } from "../../components/ui/Toast";
 import IncomeForm from "./IncomeForm";
 import { INCOME_SOURCES } from "./incomeConstants";
 import { formatCurrency } from "../../utils/formatCurrency";
+import { TIME_PERIOD_OPTIONS, getDateRangeForPeriod } from "../../utils/dateRanges";
+import { AMOUNT_DATE_SORT_OPTIONS } from "../../utils/sortOptions";
 import {
   listIncomes,
   createIncome,
@@ -19,6 +22,14 @@ import {
 
 const PAGE_SIZE = 20;
 
+const emptyFilters = {
+  search: "",
+  source: "",
+  timePeriod: "",
+  customFrom: "",
+  customTo: "",
+};
+
 export default function Income() {
   const { showToast } = useToast();
 
@@ -27,8 +38,9 @@ export default function Income() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  const [search, setSearch] = useState("");
-  const [source, setSource] = useState("");
+  const [filters, setFilters] = useState(emptyFilters);
+  const { search, source, timePeriod, customFrom, customTo } = filters;
+  const [ordering, setOrdering] = useState("-date");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingIncome, setEditingIncome] = useState(null);
@@ -37,12 +49,27 @@ export default function Income() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  const setFilter = (key) => (value) => setFilters((prev) => ({ ...prev, [key]: value }));
+
   const fetchIncomes = async () => {
     setLoading(true);
     try {
-      const params = { page, page_size: PAGE_SIZE };
+      const params = { page, page_size: PAGE_SIZE, ordering };
       if (search) params.search = search;
       if (source) params.source = source;
+
+      // Same Time Period preset logic as Expenses.jsx, sharing the same
+      // utils/dateRanges.js helper rather than a second implementation.
+      if (timePeriod === "custom") {
+        if (customFrom) params.date_from = customFrom;
+        if (customTo) params.date_to = customTo;
+      } else if (timePeriod) {
+        const range = getDateRangeForPeriod(timePeriod);
+        if (range) {
+          params.date_from = range.date_from;
+          params.date_to = range.date_to;
+        }
+      }
 
       const data = await listIncomes(params);
       setIncomes(data.results);
@@ -54,18 +81,16 @@ export default function Income() {
     }
   };
 
-  // Same debounce/reset pattern as Expenses.jsx - search debounced
-  // 300ms, source filter applies immediately, any filter change resets
-  // to page 1.
+  // Same debounce/reset pattern as Expenses.jsx.
   useEffect(() => {
     const timer = setTimeout(fetchIncomes, 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, source, page]);
+  }, [search, source, timePeriod, customFrom, customTo, ordering, page]);
 
   useEffect(() => {
     setPage(1);
-  }, [search, source]);
+  }, [search, source, timePeriod, customFrom, customTo, ordering]);
 
   const openAddModal = () => {
     setEditingIncome(null);
@@ -111,7 +136,27 @@ export default function Income() {
     }
   };
 
-  const hasFilters = search || source;
+  const isTimePeriodActive = timePeriod && (timePeriod !== "custom" || customFrom || customTo);
+  const hasFilters = search || source || isTimePeriodActive;
+
+  const timePeriodLabel = TIME_PERIOD_OPTIONS.find((o) => o.value === timePeriod)?.label;
+
+  const chips = [
+    search && { key: "search", label: `Search: "${search}"`, onRemove: () => setFilter("search")("") },
+    source && { key: "source", label: `Source: ${source}`, onRemove: () => setFilter("source")("") },
+    timePeriod &&
+      timePeriod !== "custom" && {
+        key: "period",
+        label: timePeriodLabel,
+        onRemove: () => setFilter("timePeriod")(""),
+      },
+    timePeriod === "custom" &&
+      (customFrom || customTo) && {
+        key: "custom",
+        label: `${customFrom || "…"} → ${customTo || "…"}`,
+        onRemove: () => setFilters((prev) => ({ ...prev, timePeriod: "", customFrom: "", customTo: "" })),
+      },
+  ].filter(Boolean);
 
   return (
     <div>
@@ -122,8 +167,8 @@ export default function Income() {
         </Button>
       </div>
 
-      <div className="row g-2 mb-3">
-        <div className="col-md-6">
+      <div className="row g-2 mb-2">
+        <div className="col-md-4">
           <div className="position-relative">
             <LuSearch
               size={16}
@@ -134,73 +179,119 @@ export default function Income() {
               className="form-control ps-5"
               placeholder="Search by description..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => setFilter("search")(e.target.value)}
             />
           </div>
         </div>
-        <div className="col-md-3">
-          <select
-            className="form-select"
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
-          >
+        <div className="col-6 col-md-3">
+          <select className="form-select" value={source} onChange={(e) => setFilter("source")(e.target.value)}>
             <option value="">All sources</option>
             {INCOME_SOURCES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <div className="col-6 col-md-2">
+          <select
+            className="form-select"
+            value={timePeriod}
+            onChange={(e) => setFilter("timePeriod")(e.target.value)}
+          >
+            {TIME_PERIOD_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="col-6 col-md-3">
+          <select className="form-select" value={ordering} onChange={(e) => setOrdering(e.target.value)}>
+            {AMOUNT_DATE_SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
         </div>
       </div>
 
-      <div className="bg-surface rounded shadow-token-sm">
-        <table className="table mb-0 align-middle">
-          <thead>
-            <tr className="text-muted-ink small text-uppercase">
-              <th>Source</th>
-              <th>Date</th>
-              <th className="text-end">Amount</th>
-              <th className="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <SkeletonRows rows={6} columns={4} />
-            ) : (
-              incomes.map((income) => (
-                <tr key={income.id}>
-                  <td>
-                    <span className="badge bg-surface-sunken text-ink">{income.source}</span>
-                    {income.description && (
-                      <div className="small text-muted-ink mt-1">{income.description}</div>
-                    )}
-                  </td>
-                  <td className="text-muted-ink">{income.date}</td>
-                  <td className="text-end font-currency text-income fw-medium">
-                    +{formatCurrency(income.amount)}
-                  </td>
-                  <td className="text-end">
-                    <button
-                      className="btn btn-sm btn-link text-muted-ink"
-                      onClick={() => openEditModal(income)}
-                      aria-label="Edit"
-                    >
-                      <LuPencil size={16} />
-                    </button>
-                    <button
-                      className="btn btn-sm btn-link text-danger"
-                      onClick={() => setDeleteTarget(income)}
-                      aria-label="Delete"
-                    >
-                      <LuTrash2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      {timePeriod === "custom" && (
+        <div className="row g-2 mb-2">
+          <div className="col-6 col-md-2">
+            <input
+              type="date"
+              className="form-control"
+              value={customFrom}
+              onChange={(e) => setFilter("customFrom")(e.target.value)}
+              aria-label="From date"
+            />
+          </div>
+          <div className="col-6 col-md-2">
+            <input
+              type="date"
+              className="form-control"
+              value={customTo}
+              onChange={(e) => setFilter("customTo")(e.target.value)}
+              aria-label="To date"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="d-flex align-items-center justify-content-between">
+        <FilterChips chips={chips} />
+        {hasFilters && (
+          <Button variant="ghost" icon={LuFilterX} onClick={() => setFilters(emptyFilters)} className="mb-3">
+            Clear Filters
+          </Button>
+        )}
+      </div>
+
+      <div className="bg-surface rounded shadow-token-sm hover-card">
+        <div className="table-responsive" style={{ maxHeight: 640, overflowY: "auto" }}>
+          <table className="table mb-0 align-middle">
+            <thead className="sticky-top bg-surface">
+              <tr className="text-muted-ink small text-uppercase">
+                <th className="py-3">Source</th>
+                <th className="py-3">Date</th>
+                <th className="py-3 text-end">Amount</th>
+                <th className="py-3 text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <SkeletonRows rows={6} columns={4} />
+              ) : (
+                incomes.map((income) => (
+                  <tr key={income.id}>
+                    <td className="py-3">
+                      <span className="badge bg-surface-sunken text-ink">{income.source}</span>
+                      {income.description && (
+                        <div className="small text-muted-ink mt-1">{income.description}</div>
+                      )}
+                    </td>
+                    <td className="py-3 text-muted-ink">{income.date}</td>
+                    <td className="py-3 text-end font-currency text-income fw-medium">
+                      +{formatCurrency(income.amount)}
+                    </td>
+                    <td className="py-3 text-end">
+                      <button
+                        className="btn btn-sm btn-link text-muted-ink"
+                        onClick={() => openEditModal(income)}
+                        aria-label="Edit"
+                      >
+                        <LuPencil size={16} />
+                      </button>
+                      <button
+                        className="btn btn-sm btn-link text-danger"
+                        onClick={() => setDeleteTarget(income)}
+                        aria-label="Delete"
+                      >
+                        <LuTrash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {!loading && incomes.length === 0 && (
           <EmptyState
@@ -211,7 +302,11 @@ export default function Income() {
                 : "No income recorded yet — add your first entry to get started."
             }
             action={
-              !hasFilters && (
+              hasFilters ? (
+                <Button variant="ghost" icon={LuFilterX} onClick={() => setFilters(emptyFilters)}>
+                  Clear Filters
+                </Button>
+              ) : (
                 <Button icon={LuPlus} onClick={openAddModal}>
                   Add Income
                 </Button>
@@ -243,7 +338,7 @@ export default function Income() {
         title="Delete this income entry?"
         message={
           deleteTarget
-            ? `This "${deleteTarget.source}" entry will be permanently deleted. This can't be undone.`
+            ? `This "${deleteTarget.source}" entry (${deleteTarget.date}, ${formatCurrency(deleteTarget.amount)}) will be permanently deleted. This can't be undone.`
             : ""
         }
         confirmLabel="Delete"

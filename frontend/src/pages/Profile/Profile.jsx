@@ -186,7 +186,7 @@ export default function Profile() {
 
       <div className="row g-4">
         <div className="col-md-4">
-          <div className="bg-surface rounded shadow-token-sm p-4 text-center">
+          <div className="bg-surface rounded shadow-token-sm hover-card p-4 text-center">
             <div
               className="mx-auto mb-3 d-flex align-items-center justify-content-center rounded-circle bg-surface-sunken"
               style={{ width: 120, height: 120, overflow: "hidden" }}
@@ -293,7 +293,7 @@ export default function Profile() {
         </div>
 
         <div className="col-md-8">
-          <div className="bg-surface rounded shadow-token-sm p-4 mb-4">
+          <div className="bg-surface rounded shadow-token-sm hover-card p-4 mb-4">
             <h2 className="font-display fs-6 fw-semibold mb-3">Account Details</h2>
             <form onSubmit={handleSave}>
               <div className="row">
@@ -344,7 +344,7 @@ export default function Profile() {
             </form>
           </div>
 
-          <div className="bg-surface rounded shadow-token-sm p-4">
+          <div className="bg-surface rounded shadow-token-sm hover-card p-4">
             <h2 className="font-display fs-6 fw-semibold mb-3 d-flex align-items-center gap-2">
               <LuLock size={16} />
               Change Password

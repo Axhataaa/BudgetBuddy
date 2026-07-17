@@ -1,74 +1,120 @@
-# 💰 BudgetBuddy – Personal Budget Planning & Expense Management System
+# 💰 BudgetBuddy
 
-BudgetBuddy is a full-stack personal finance management application developed as part of the **Infosys Springboard 7.0 Internship Program**.
+A full-stack personal finance management application built using **Django REST Framework**, **React**, and **PostgreSQL** as part of the **Infosys Springboard 7.0 Internship Program**.
 
-The application enables users to efficiently manage their personal finances by tracking income, expenses, budgets, and savings goals through a secure web-based platform built using **Django REST Framework**, **React**, and **PostgreSQL**.
-
-> 🚀 **Project Status:** Currently under active development.
+BudgetBuddy helps users manage their personal finances by tracking income, expenses, budgets, and savings while providing an interactive dashboard with financial insights.
 
 ---
 
-# 📖 Project Overview
+# 🚀 Project Status
 
-BudgetBuddy is designed to simplify personal finance management by providing users with a centralized platform to organize and monitor their financial activities.
-
-The project follows a **RESTful API architecture**, where:
-
-- **Backend:** Django + Django REST Framework
-- **Frontend:** React + Vite
-- **Database:** PostgreSQL
-- **Authentication:** JWT (JSON Web Tokens)
+| Milestone                                            | Status         |
+| ---------------------------------------------------- | -------------- |
+| Milestone 1 – Project Setup & Authentication         | ✅ Completed   |
+| Milestone 2 – Finance Management Modules             | ✅ Completed   |
+| Milestone 3 – Reports, Savings Goals & Notifications | 🚧 In Progress |
+| Milestone 4 – Deployment & Final Testing             | ⏳ Pending     |
 
 ---
 
-# ✨ Current Features
+# ✨ Features
 
-## Backend
+## 🔐 Authentication
 
-- Django Project Setup
-- Django REST Framework Configuration
-- PostgreSQL Database Integration
+- User Registration
+- User Login
 - JWT Authentication
-- User Registration API
-- User Login API
-- User Logout API
-- Refresh Token API
-- Protected API Endpoint
-- Database Models
-- Django Admin Configuration
-- Initial Database Migrations
-- Postman API Testing
-
-## Frontend
-
-- React + Vite Setup
-- React Router Configuration
-- Axios Integration
-- Authentication Pages
-- Dashboard Page
-- Home Page
-- Income Page
-- Expenses Page
-- Budgets Page
-- Reports Page
-- Savings Page
-- Profile Page
-- Settings Page
-- JWT Token Storage
+- Refresh Token
+- Logout
+- Protected APIs
+- Password Change
+- User Profile
 
 ---
 
-# 🚧 Planned Features
+## 👤 Profile Management
 
-- Income Management
-- Expense Management
-- Budget Management
-- Savings Goals
-- Reports & Analytics
-- Notification System
-- User Profile Management
-- Dashboard Visualization
-- Responsive User Interface
+- Profile Picture Upload
+- Username Management
+- Email
+- Full Name
+- Phone Number
+- Bio
+- Member Since
+- User Role
+- Change Password
+
+---
+
+## 💸 Expense Management
+
+- Create Expense
+- View Expenses
+- Update Expense
+- Delete Expense
+- Expense Categories
+- Search
+- Category Filter
+- Payment Method Filter
+- Time Period Filter
+- Custom Date Range
+- Sorting
+- Pagination
+
+### Expense Categories
+
+- Food
+- Travel
+- Shopping
+- Education
+- Entertainment
+- Healthcare
+- Bills
+- Miscellaneous
+
+---
+
+## 💰 Income Management
+
+- Complete CRUD
+- Search
+- Sorting
+- Pagination
+
+---
+
+## 📊 Dashboard
+
+Interactive dashboard including
+
+- Total Income
+- Total Expenses
+- Net Savings
+- Budget Progress
+- Spending by Category
+- Recent Transactions
+- Month & Year Navigation
+
+---
+
+## 📁 Budget Management
+
+- Monthly Budgets
+- Budget Progress
+- Budget Utilization
+- Shared Period Selector
+
+---
+
+## 🎨 UI Features
+
+- Responsive Bootstrap UI
+- Indian Currency Formatting
+- Shared Components
+- Shared Period Selector
+- Skeleton Loading States
+- Toast Notifications
+- Form Validation
 
 ---
 
@@ -80,6 +126,7 @@ The project follows a **RESTful API architecture**, where:
 - Django 6
 - Django REST Framework
 - Simple JWT
+- PostgreSQL
 - Pillow
 
 ## Frontend
@@ -88,13 +135,10 @@ The project follows a **RESTful API architecture**, where:
 - Vite
 - JavaScript
 - Axios
+- Bootstrap 5
 - React Router DOM
 
-## Database
-
-- PostgreSQL
-
-## Tools
+## Development Tools
 
 - Git
 - GitHub
@@ -151,34 +195,39 @@ BudgetBuddy/
 
 ---
 
-# 🗄 Database Design
+# 🗄 Database Models
 
-The current database consists of the following models:
+The application currently contains the following database models.
 
-- User Profile
+## Users
+
+- User
+- Profile
+
+## Finance
+
 - Income
 - Expense
 - Budget
+
+## Upcoming
+
 - Savings Goal
 - Report
 - Notification
 
-These models form the foundation of the BudgetBuddy financial management system.
-
 ---
 
-# 🔐 Authentication
+# 🔐 Authentication APIs
 
-Authentication is implemented using **JSON Web Tokens (JWT)**.
-
-### Available Endpoints
-
-| Method | Endpoint               | Description          |
-| ------ | ---------------------- | -------------------- |
-| POST   | `/api/users/register/` | Register User        |
-| POST   | `/api/users/login/`    | User Login           |
-| POST   | `/api/users/refresh/`  | Refresh Access Token |
-| POST   | `/api/users/logout/`   | User Logout          |
+| Method    | Endpoint                         | Description     |
+| --------- | -------------------------------- | --------------- |
+| POST      | `/api/v1/users/register/`        | Register User   |
+| POST      | `/api/v1/users/login/`           | Login           |
+| POST      | `/api/v1/users/refresh/`         | Refresh Token   |
+| POST      | `/api/v1/users/logout/`          | Logout          |
+| GET/PATCH | `/api/v1/users/me/`              | Profile         |
+| POST      | `/api/v1/users/change-password/` | Change Password |
 
 ---
 
@@ -200,7 +249,7 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Backend
+Backend URL
 
 ```
 http://127.0.0.1:8000/
@@ -218,7 +267,7 @@ npm install
 npm run dev
 ```
 
-Frontend
+Frontend URL
 
 ```
 http://localhost:5173/
@@ -228,13 +277,13 @@ http://localhost:5173/
 
 # 👨‍💻 Django Administration
 
-Create a superuser:
+Create a superuser
 
 ```bash
 python manage.py createsuperuser
 ```
 
-Open:
+Open
 
 ```
 http://127.0.0.1:8000/admin/
@@ -242,63 +291,63 @@ http://127.0.0.1:8000/admin/
 
 ---
 
-# 📷 Project Screenshots
+# 📷 Screenshots
 
-The **Screenshots** directory contains important development milestones, including:
+The `Screenshots` directory contains development screenshots including
 
-- Project Structure
-- Requirements File
-- Django Welcome Page
-- Django Admin Login
-- Django Admin Dashboard
-- Registered Users
+- Authentication
+- Dashboard
+- Expenses
+- Income
+- Budgets
+- Profile
+- API Testing
 - Database Migrations
-- React + Vite Setup
-- Postman API Testing
-
----
-
-# 📊 Current Development Progress
-
-## Completed
-
-- Backend Project Setup
-- React Frontend Setup
-- PostgreSQL Configuration
-- Database Design
-- JWT Authentication
-- User Registration
-- User Login
-- User Logout
-- Protected API Endpoint
-- Postman API Testing
-- Django Admin Configuration
-- Initial Database Migrations
-- React–Django Integration
-
----
-
-## Upcoming Development
-
-- Income CRUD APIs
-- Expense CRUD APIs
-- Budget CRUD APIs
-- Savings Goal CRUD APIs
-- Reports Module
-- Notification Module
-- Dashboard UI
-- Charts & Analytics
-- Profile Management
 
 ---
 
 # 📚 Documentation
 
-Additional documentation is available in:
+Project documentation is organized into milestone-based reports.
 
+- README.md
 - PROJECT_OVERVIEW.md
 - INSTALLATION.md
 - DEVELOPMENT_LOG.md
+- MILESTONE_1_COMPLETION.md
+- MILESTONE_2_COMPLETION.md
+- MILESTONE_3_COMPLETION.md
+- MILESTONE_4_COMPLETION.md
+
+---
+
+# 📌 Roadmap
+
+### ✅ Completed
+
+- Authentication
+- Expense Management
+- Income Management
+- Budget Management
+- Dashboard
+- Profile Management
+- Filtering
+- Sorting
+- Pagination
+- Indian Currency Formatting
+
+### 🚧 In Progress
+
+- Savings Goals
+- Reports
+- Notifications
+
+### ⏳ Planned
+
+- Charts & Analytics
+- Export Reports
+- Production Deployment
+- Automated Testing
 
 ---
 
@@ -316,8 +365,8 @@ Developed as part of the **Infosys Springboard 7.0 Internship Program**
 
 # 📄 License
 
-This project is developed for educational and internship purposes.
+This project is intended for educational and internship purposes.
 
 ---
 
-⭐ **BudgetBuddy is actively being developed, with additional finance management modules and dashboard features planned in upcoming milestones.**
+⭐ **BudgetBuddy is actively evolving into a complete personal finance management platform with advanced analytics, reporting, and savings management features.**

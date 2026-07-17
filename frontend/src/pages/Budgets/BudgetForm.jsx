@@ -7,11 +7,7 @@ import Button from "../../components/ui/Button";
 // string exactly matches an expense's category string, so the frontend
 // constrains input to the same set rather than letting them drift apart.
 import { EXPENSE_CATEGORIES } from "../Expenses/expenseConstants";
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+import { MONTH_NAMES } from "../../components/ui/PeriodSelector";
 
 const today = new Date();
 
@@ -59,6 +55,7 @@ export default function BudgetForm({ initialValues, onSubmit, onCancel, submitti
         label="Monthly Limit"
         type="number"
         step="0.01"
+        min="0.01"
         value={form.monthly_limit}
         onChange={handleChange("monthly_limit")}
         error={errors.monthly_limit}

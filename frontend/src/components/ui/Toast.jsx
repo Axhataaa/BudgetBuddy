@@ -21,8 +21,7 @@ export function ToastProvider({ children }) {
     (message, variant = "info") => {
       const id = Date.now() + Math.random();
       setToasts((prev) => [...prev, { id, message, variant }]);
-      // Errors stay until dismissed; everything else auto-dismisses,
-      // per Design System's Toast component spec.
+     
       if (variant !== "error") {
         setTimeout(() => dismiss(id), 4000);
       }

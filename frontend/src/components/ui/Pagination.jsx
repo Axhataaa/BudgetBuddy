@@ -5,10 +5,13 @@ export default function Pagination({ count, pageSize, page, onPageChange }) {
   const totalPages = Math.max(1, Math.ceil(count / pageSize));
   if (totalPages <= 1) return null;
 
+  const rangeStart = (page - 1) * pageSize + 1;
+  const rangeEnd = Math.min(page * pageSize, count);
+
   return (
     <div className="d-flex align-items-center justify-content-between border-top px-3 py-3 small text-muted-ink">
       <span>
-        Page {page} of {totalPages} &middot; {count} total
+        Showing {rangeStart}–{rangeEnd} of {count}
       </span>
       <div className="d-flex gap-2">
         <Button

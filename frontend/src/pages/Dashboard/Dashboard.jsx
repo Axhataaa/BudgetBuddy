@@ -1,8 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { LuPlus, LuTrendingUp, LuTrendingDown, LuWallet, LuLayoutDashboard } from "react-icons/lu";
+import {
+  LuPlus,
+  LuTrendingUp,
+  LuTrendingDown,
+  LuWallet,
+  LuTarget,
+  LuCircleArrowDown,
+  LuCircleArrowUp,
+  LuInbox,
+  LuPiggyBank,
+  LuAward,
+  LuFolderOpen,
+} from "react-icons/lu";
 import EmptyState from "../../components/ui/EmptyState";
-import SkeletonRows from "../../components/ui/SkeletonRows";
 import PeriodSelector, { MONTH_NAMES } from "../../components/ui/PeriodSelector";
 import { useToast } from "../../components/ui/Toast";
 import { getDashboardSummary } from "../../services/dashboardService";
@@ -13,19 +24,55 @@ import { listExpenses } from "../../services/expenseService";
 import { listIncomes } from "../../services/incomeService";
 import { formatCurrency } from "../../utils/formatCurrency";
 import { getMonthDateRange } from "../../utils/dateRanges";
+import { getBudgetStatusColor } from "../../utils/budgetStatus";
+import ExpensePieChart from "../../components/dashboard/ExpensePieChart";
+import { formatRelativeDate } from "../../utils/formatRelativeDate";
+import { useNavigate } from "react-router-dom";
 
 const today = new Date();
 
-function StatCard({ label, amount, subtitle, colorClass, icon: Icon }) {
+function StatCard({
+    label,
+    amount,
+    subtitle,
+    colorClass,
+    icon: Icon,
+    onClick,
+    clickable = false,
+    isCurrency = true,
+}) {
   return (
-    <div className="col-md-4">
-      <div className="bg-surface rounded shadow-token-sm p-3 h-100">
+    <div className="col-6 col-md-3">
+      <div
+          className={`bg-surface rounded shadow-token-sm hover-card p-3 h-100 ${
+              clickable ? "cursor-pointer" : ""
+          }`}
+          onClick={onClick}
+          role={clickable ? "button" : undefined}
+          tabIndex={clickable ? 0 : undefined}
+          onKeyDown={(e) => {
+              if (
+                  clickable &&
+                  (e.key === "Enter" || e.key === " ")
+              ) {
+                  onClick?.();
+              }
+          }}
+      >
         <div className="d-flex align-items-center gap-2 text-muted-ink small mb-2">
           <Icon size={16} />
           {label}
         </div>
-        <div className={`font-currency fs-4 fw-medium ${colorClass}`}>
-          {formatCurrency(amount)}
+        <div className={`fs-5 fw-medium ${colorClass}`}>
+          {amount === null ? (
+            <span className="text-muted-ink fs-6">—</span>
+          ) : isCurrency ? (
+            <span className="font-currency">
+              {formatCurrency(amount)}
+            </span>
+          ) : (
+            amount
+          )}
         </div>
         {subtitle && <div className="text-muted-ink small mt-1">{subtitle}</div>}
       </div>
@@ -35,21 +82,36 @@ function StatCard({ label, amount, subtitle, colorClass, icon: Icon }) {
 
 function StatCardSkeleton() {
   return (
-    <div className="col-md-4">
-      <div className="bg-surface rounded shadow-token-sm p-3">
+    <div className="col-6 col-md-3">
+      <div className="bg-surface rounded shadow-token-sm hover-card  p-3">
         <span className="placeholder-glow d-block mb-2">
           <span className="placeholder col-6" />
         </span>
         <span className="placeholder-glow d-block">
-          <span className="placeholder col-8" style={{ height: 28 }} />
+          <span className="placeholder col-8" style={{ height: 24 }} />
         </span>
       </div>
     </div>
   );
 }
 
+function TransactionSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="d-flex align-items-center gap-3 py-2">
+          <span className="placeholder-glow"><span className="placeholder rounded-circle" style={{ width: 32, height: 32, display: "inline-block" }} /></span>
+          <span className="placeholder-glow flex-grow-1"><span className="placeholder col-6" /></span>
+          <span className="placeholder-glow"><span className="placeholder col-3" /></span>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function Dashboard() {
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [year, setYear] = useState(today.getFullYear());
@@ -78,9 +140,7 @@ export default function Dashboard() {
 
         // Merge the two already-fetched short lists and sort by date -
         // this is presentational reordering, not aggregation, so it
-        // belongs here rather than in a backend endpoint (§ architecture
-        // note: aggregation is backend's job, merging two small lists
-        // for display isn't the same kind of work).
+        // belongs here rather than in a backend endpoint.
         const merged = [
           ...expensesData.results.map((e) => ({ ...e, type: "expense", label: e.title })),
           ...incomesData.results.map((i) => ({ ...i, type: "income", label: i.source })),
@@ -102,11 +162,29 @@ export default function Dashboard() {
 
   const periodLabel = `${MONTH_NAMES[month - 1]} ${year}`;
   const hasCategoryData = summary?.expense_by_category?.length > 0;
+  const hasBudgetData = summary?.budget_utilization?.length > 0;
   const categoryMax = hasCategoryData
     ? Math.max(...summary.expense_by_category.map((c) => Number(c.total)))
     : 0;
   const isEmptyPeriod =
     !loading && summary && Number(summary.total_income) === 0 && Number(summary.total_expenses) === 0;
+
+  // Budget Remaining, and the overall utilization percentage - both
+  // derived entirely from the summary's existing budget_utilization
+  // array, no new backend endpoint needed.
+  const totalBudgetLimit = hasBudgetData
+    ? summary.budget_utilization.reduce((sum, b) => sum + Number(b.limit), 0)
+    : 0;
+  const totalBudgetSpent = hasBudgetData
+    ? summary.budget_utilization.reduce((sum, b) => sum + Number(b.spent), 0)
+    : 0;
+  const budgetRemaining = totalBudgetLimit - totalBudgetSpent;
+  const overallBudgetPercent = totalBudgetLimit > 0 ? (totalBudgetSpent / totalBudgetLimit) * 100 : 0;
+
+  // Highest spending category - expense_by_category is already sorted
+  // descending by the backend (analytics/views.py), so this is just
+  // the first entry, not a re-sort.
+  const highestCategory = hasCategoryData ? summary.expense_by_category[0] : null;
 
   return (
     <div>
@@ -132,8 +210,8 @@ export default function Dashboard() {
 
       {isEmptyPeriod ? (
         <EmptyState
-          icon={LuLayoutDashboard}
-          message={`No activity recorded for ${periodLabel} yet — add an expense or income to see this period come to life.`}
+          icon={LuInbox}
+          message={`No transactions for ${periodLabel}. Add an expense or income to see this period come to life.`}
           action={
             <div className="d-flex gap-2">
               <Link to="/expenses" className="btn btn-outline-primary">Add Expense</Link>
@@ -149,6 +227,7 @@ export default function Dashboard() {
                 <StatCardSkeleton />
                 <StatCardSkeleton />
                 <StatCardSkeleton />
+                <StatCardSkeleton />
               </>
             ) : (
               <>
@@ -158,6 +237,8 @@ export default function Dashboard() {
                   subtitle={periodLabel}
                   colorClass="text-income"
                   icon={LuTrendingUp}
+                  clickable
+                  onClick={() => navigate("/income")}
                 />
                 <StatCard
                   label="Total Expenses"
@@ -165,6 +246,8 @@ export default function Dashboard() {
                   subtitle={periodLabel}
                   colorClass="text-expense"
                   icon={LuTrendingDown}
+                  clickable
+                  onClick={() => navigate("/expenses")}
                 />
                 <StatCard
                   label="Net Savings"
@@ -173,40 +256,114 @@ export default function Dashboard() {
                   colorClass={Number(summary.net_savings) >= 0 ? "text-income" : "text-expense"}
                   icon={LuWallet}
                 />
+                <StatCard
+                  label="Budget Remaining"
+                  amount={hasBudgetData ? budgetRemaining : null}
+                  subtitle={
+                    hasBudgetData
+                      ? `${overallBudgetPercent.toFixed(0)}% of budget used`
+                      : "No budgets set"
+                  }
+                  colorClass={hasBudgetData && budgetRemaining < 0 ? "text-expense" : "text-ink"}
+                  icon={LuTarget}
+                  clickable
+                  onClick={() => navigate("/budgets")}
+                />
               </>
             )}
           </div>
 
-          {!loading && summary?.budget_utilization?.length > 0 && (
+          {/* ================= Savings & Goals ================= */}
+
+          {!loading && summary && (
+            <>
+
+              <h2 className="font-display fs-5 fw-semibold mt-4 mb-3">
+                Savings & Goals
+              </h2>
+
+              <div className="row g-3 mb-4">
+
+                <StatCard
+                  label="Total Savings"
+                  amount={summary.total_savings}
+                  subtitle="Across active goals"
+                  colorClass="text-income"
+                  icon={LuPiggyBank}
+                  clickable
+                  onClick={() => navigate("/savings-goals")}
+                />
+
+                <StatCard
+                  label="Active Goals"
+                  amount={summary.active_goals}
+                  isCurrency={false}
+                  subtitle="Currently in progress"
+                  colorClass="text-primary"
+                  icon={LuTarget}
+                  clickable
+                  onClick={() => navigate("/savings-goals")}
+                />
+
+                <StatCard
+                  label="Achievements"
+                  amount={summary.achievements}
+                  isCurrency={false}
+                  subtitle="Goals successfully completed"
+                  colorClass="text-warning"
+                  icon={LuAward}
+                  clickable
+                  onClick={() => navigate("/achievements")}
+                />
+
+                <StatCard
+                  label="Budgets Created"
+                  amount={summary.budgets_created}
+                  isCurrency={false}
+                  subtitle="Monthly budgets"
+                  colorClass="text-info"
+                  icon={LuFolderOpen}
+                  clickable
+                  onClick={() => navigate("/budgets")}
+                />
+
+              </div>
+
+            </>
+          )}
+
+          {/* ================= Budget Progress ================= */}
+
+          {!loading && hasBudgetData && (
             <div className="row g-3 mb-4">
               <div className="col-12">
-                <div className="bg-surface rounded shadow-token-sm p-3">
-                  <h2 className="font-display fs-6 fw-semibold mb-3">Budget Progress</h2>
+                <div className="bg-surface rounded shadow-token-sm hover-card  p-3">
+                  <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-1">
+                    <h2 className="font-display fs-6 fw-semibold mb-0">Budget Progress</h2>
+                    <span className="small text-muted-ink">
+                      {overallBudgetPercent.toFixed(0)}% of total budget used
+                    </span>
+                  </div>
                   <div className="row g-3">
-                    {summary.budget_utilization.map((b) => {
-                      const barColor =
-                        b.percent_used >= 100
-                          ? "var(--color-danger)"
-                          : b.percent_used >= 70
-                          ? "var(--color-warning)"
-                          : "var(--color-income)";
-                      return (
-                        <div key={b.category} className="col-md-4">
-                          <div className="d-flex justify-content-between small mb-1">
-                            <span>{b.category}</span>
-                            <span className="font-currency text-muted-ink">
-                              {formatCurrency(b.spent)} / {formatCurrency(b.limit)}
-                            </span>
-                          </div>
-                          <div className="progress" style={{ height: 6 }}>
-                            <div
-                              className="progress-bar"
-                              style={{ width: `${Math.min(b.percent_used, 100)}%`, backgroundColor: barColor }}
-                            />
-                          </div>
+                    {summary.budget_utilization.map((b) => (
+                      <div key={b.category} className="col-6 col-md-4">
+                        <div className="d-flex justify-content-between small mb-1">
+                          <span>{b.category}</span>
+                          <span className="font-currency text-muted-ink">
+                            {formatCurrency(b.spent)} / {formatCurrency(b.limit)}
+                          </span>
                         </div>
-                      );
-                    })}
+                        <div className="progress" style={{ height: 6 }}>
+                          <div
+                            className="progress-bar"
+                            style={{
+                              width: `${Math.min(b.percent_used, 100)}%`,
+                              backgroundColor: getBudgetStatusColor(b.percent_used),
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -215,66 +372,105 @@ export default function Dashboard() {
 
           <div className="row g-3">
             <div className="col-md-5">
-              <div className="bg-surface rounded shadow-token-sm p-3 h-100">
-                <h2 className="font-display fs-6 fw-semibold mb-3">Spending by Category</h2>
+              <div className="bg-surface rounded shadow-token-sm hover-card p-3 h-100">
+                <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-1">
+                  <h2 className="font-display fs-6 fw-semibold mb-0">Spending by Category</h2>
+                  {highestCategory && (
+                    <span className="badge bg-surface-sunken text-ink">
+                      Top: {highestCategory.category}
+                    </span>
+                  )}
+                </div>
                 {loading ? (
-                  <div className="text-muted-ink small">Loading...</div>
+                  <>
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="mb-3">
+                        <span className="placeholder-glow d-block mb-1">
+                          <span className="placeholder col-5" />
+                        </span>
+                        <span className="placeholder-glow d-block">
+                          <span
+                            className="placeholder col-12"
+                            style={{ height: 6 }}
+                          />
+                        </span>
+                      </div>
+                    ))}
+                  </>
                 ) : !hasCategoryData ? (
-                  <p className="text-muted-ink small mb-0">No expenses recorded for {periodLabel}.</p>
+                  <p className="text-muted-ink small mb-0">
+                    No expenses recorded for {periodLabel}.
+                  </p>
                 ) : (
-                  summary.expense_by_category.map((c) => (
-                    <div key={c.category} className="mb-3">
-                      <div className="d-flex justify-content-between small mb-1">
-                        <span>{c.category}</span>
-                        <span className="font-currency text-expense">{formatCurrency(c.total)}</span>
-                      </div>
-                      <div className="progress" style={{ height: 6 }}>
-                        <div
-                          className="progress-bar"
-                          style={{
-                            width: `${(Number(c.total) / categoryMax) * 100}%`,
-                            backgroundColor: "var(--color-expense)",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))
+                  <ExpensePieChart
+                    data={summary.expense_by_category}
+                  />
                 )}
               </div>
             </div>
 
             <div className="col-md-7">
-              <div className="bg-surface rounded shadow-token-sm p-3 h-100">
+              <div className="bg-surface rounded shadow-token-sm hover-card p-3 h-100">
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <h2 className="font-display fs-6 fw-semibold mb-0">Recent Transactions</h2>
-                  <Link to="/expenses" className="small text-primary">View all</Link>
+                  <Link
+                      to="/expenses"
+                      className="small text-primary view-all-link"
+                  >
+                      View all →
+                  </Link>
                 </div>
-                <table className="table table-sm mb-0 align-middle">
-                  <tbody>
-                    {loading ? (
-                      <SkeletonRows rows={5} columns={3} />
-                    ) : recent.length === 0 ? (
-                      <tr>
-                        <td className="text-muted-ink small py-3">No activity for {periodLabel}.</td>
-                      </tr>
-                    ) : (
-                      recent.map((item) => (
-                        <tr key={`${item.type}-${item.id}`}>
-                          <td>
-                            <span className={`badge ${item.type === "income" ? "bg-success" : "bg-danger"} bg-opacity-10 text-${item.type === "income" ? "income" : "expense"}`}>
-                              {item.type === "income" ? "Income" : "Expense"}
-                            </span>
-                          </td>
-                          <td>{item.label}</td>
-                          <td className="text-muted-ink small">{item.date}</td>
-                          <td className={`text-end font-currency ${item.type === "income" ? "text-income" : "text-expense"}`}>
-                            {item.type === "income" ? "+" : "-"}{formatCurrency(item.amount)}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+
+                {loading ? (
+                  <TransactionSkeleton />
+                ) : recent.length === 0 ? (
+                  <p className="text-muted-ink small mb-0 py-2">No transactions for {periodLabel}.</p>
+                ) : (
+                  <div className="d-flex flex-column gap-1">
+                    {recent.map((item) => {
+                      const isIncome = item.type === "income";
+                      return (
+                        <div
+                          key={`${item.type}-${item.id}`}
+                          className="transaction-item d-flex align-items-center gap-3 py-2 px-2"
+                        >
+                          {isIncome ? (
+                            <LuCircleArrowUp size={20} className="text-income flex-shrink-0" />
+                          ) : (
+                            <LuCircleArrowDown size={20} className="text-expense flex-shrink-0" />
+                          )}
+                          <div className="flex-grow-1 min-w-0">
+                            <div className="d-flex align-items-center gap-2">
+                              <span className="fw-medium text-truncate">{item.label}</span>
+                              {!isIncome && (
+                                <span className="badge bg-surface-sunken text-ink flex-shrink-0">
+                                  {item.category}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-muted-ink small">
+                                <span className="fw-medium text-dark">
+                                    {formatRelativeDate(item.date)}
+                                </span>
+
+                                <span className="text-muted">
+                                    {" • "}
+                                    {new Date(item.date).toLocaleDateString("en-IN", {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                    })}
+                                </span>
+                            </div>
+                          </div>
+                          <div className={`text-end fw-semibold font-currency flex-shrink-0 ${isIncome ? "text-income" : "text-expense"}`}>
+                            {isIncome ? "+" : "-"}{formatCurrency(item.amount)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>

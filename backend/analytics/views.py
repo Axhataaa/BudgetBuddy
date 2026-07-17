@@ -2,101 +2,439 @@ from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.db.models import Sum
+
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from budgets.models import Budget
+from budgets.models import (
+    Budget,
+    SavingsGoal,
+    SavingsTransaction,
+)
 from expenses.models import Expense
 from incomes.models import Income
 
-from .serializers import DashboardSummaryQuerySerializer
+from .serializers import (
+    DashboardSummaryQuerySerializer,
+    RecentActivitySerializer,
+)
+
 
 TWO_PLACES = Decimal("0.01")
 
 
 def _money(value):
     """
-    Sum() aggregation doesn't reliably preserve a DecimalField's
-    decimal_places across DB backends (verified: SQLite returns
-    Decimal('150.5') instead of Decimal('150.50') for a sum that should
-    have 2 places) - every amount is explicitly quantized before being
-    turned into the string the API contract promises, rather than
-    trusting the aggregate's scale.
+    Convert Decimal values into consistently formatted money strings.
     """
-    return str((value or Decimal("0")).quantize(TWO_PLACES, rounding=ROUND_HALF_UP))
+    return str(
+        (value or Decimal("0")).quantize(
+            TWO_PLACES,
+            rounding=ROUND_HALF_UP,
+        )
+    )
 
 
 class DashboardSummaryView(APIView):
     """
     GET /api/v1/dashboard/summary/?month=&year=
 
-    Read-only aggregate over the current user's Expense/Income/Budget
-    rows for one period (defaults to the current month/year). Recent
-    transactions are deliberately NOT included here - per API Design
-    Doc §26/§30, that's served by the existing /expenses/ and /incomes/
-    list endpoints, not duplicated here.
-
-    budget_utilization now included now that the Budget module exists -
-    previously omitted rather than stubbed out ahead of the data
-    existing. savings_goals_progress is still omitted for the same
-    reason: SavingsGoal isn't built yet.
+    Returns dashboard analytics for the selected month/year.
     """
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        query = DashboardSummaryQuerySerializer(data=request.query_params)
+        query = DashboardSummaryQuerySerializer(
+            data=request.query_params
+        )
         query.is_valid(raise_exception=True)
 
         today = date.today()
-        month = query.validated_data.get("month", today.month)
-        year = query.validated_data.get("year", today.year)
 
-        expense_qs = Expense.objects.filter(user=request.user, date__year=year, date__month=month)
-        income_qs = Income.objects.filter(user=request.user, date__year=year, date__month=month)
-        budget_qs = Budget.objects.filter(user=request.user, month=month, year=year)
+        month = query.validated_data.get(
+            "month",
+            today.month,
+        )
 
-        total_expenses = expense_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
-        total_income = income_qs.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
-        net_savings = total_income - total_expenses
+        year = query.validated_data.get(
+            "year",
+            today.year,
+        )
+
+        # =====================================================
+        # Monthly Income / Expenses
+        # =====================================================
+
+        expense_qs = Expense.objects.filter(
+            user=request.user,
+            date__year=year,
+            date__month=month,
+        )
+
+        income_qs = Income.objects.filter(
+            user=request.user,
+            date__year=year,
+            date__month=month,
+        )
+
+        budget_qs = Budget.objects.filter(
+            user=request.user,
+            month=month,
+            year=year,
+        )
+
+        total_expenses = (
+            expense_qs.aggregate(
+                total=Sum("amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        total_income = (
+            income_qs.aggregate(
+                total=Sum("amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        net_savings = (
+            total_income - total_expenses
+        )
+
+        current_balance = (
+            total_income - total_expenses
+        )
+
+        # =====================================================
+        # Savings Goals
+        # =====================================================
+
+        goals = SavingsGoal.objects.filter(
+            user=request.user
+        )
+
+        total_savings = (
+            goals.filter(
+                is_archived=False
+            )
+            .aggregate(
+                total=Sum("current_amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        active_goals = goals.filter(
+            is_archived=False,
+            is_completed=False,
+        ).count()
+
+        completed_goals = goals.filter(
+            is_completed=True,
+            is_archived=False,
+        ).count()
+
+        achievements = goals.filter(
+            is_archived=True
+        ).count()
+
+        budgets_created = Budget.objects.filter(
+            user=request.user
+        ).count()
+
+        # =====================================================
+        # Expense by Category
+        # =====================================================
 
         spend_by_category = {
             row["category"]: row["total"]
-            for row in expense_qs.values("category").annotate(total=Sum("amount"))
+            for row in expense_qs.values(
+                "category"
+            ).annotate(
+                total=Sum("amount")
+            )
         }
 
         expense_by_category = [
-            {"category": category, "total": _money(total)}
-            for category, total in sorted(spend_by_category.items(), key=lambda kv: kv[1], reverse=True)
+            {
+                "category": category,
+                "total": _money(total),
+            }
+            for category, total in sorted(
+                spend_by_category.items(),
+                key=lambda item: item[1],
+                reverse=True,
+            )
         ]
 
-        # Utilization is driven by the budgets that exist this period,
-        # not by every category that has spend - a category with no
-        # budget set has nothing to be "over" or "under", so it isn't
-        # part of this list (it still shows up in expense_by_category
-        # above).
+        # =====================================================
+        # Budget Utilization
+        # =====================================================
+
         budget_utilization = []
+
         for budget in budget_qs:
-            spent = spend_by_category.get(budget.category, Decimal("0.00"))
+
+            spent = spend_by_category.get(
+                budget.category,
+                Decimal("0.00"),
+            )
+
             limit = budget.monthly_limit
-            percent_used = float((spent / limit) * 100) if limit else 0.0
+
+            percent_used = (
+                float((spent / limit) * 100)
+                if limit
+                else 0.0
+            )
+
             budget_utilization.append(
                 {
                     "category": budget.category,
                     "limit": _money(limit),
                     "spent": _money(spent),
-                    "percent_used": round(percent_used, 1),
+                    "percent_used": round(
+                        percent_used,
+                        1,
+                    ),
                 }
             )
 
+        # =====================================================
+        # Response
+        # =====================================================
+
         return Response(
             {
-                "period": {"month": month, "year": year},
-                "total_income": _money(total_income),
-                "total_expenses": _money(total_expenses),
-                "net_savings": _money(net_savings),
+                "period": {
+                    "month": month,
+                    "year": year,
+                },
+
+                "total_income": _money(
+                    total_income
+                ),
+
+                "total_expenses": _money(
+                    total_expenses
+                ),
+
+                "net_savings": _money(
+                    net_savings
+                ),
+
+                "current_balance": _money(
+                    current_balance
+                ),
+
+                "total_savings": _money(
+                    total_savings
+                ),
+
+                "active_goals": active_goals,
+
+                "completed_goals": completed_goals,
+
+                "achievements": achievements,
+
+                "budgets_created": budgets_created,
+
                 "expense_by_category": expense_by_category,
+
                 "budget_utilization": budget_utilization,
             }
         )
+    
+
+class RecentActivityView(APIView):
+    """
+    GET /api/v1/dashboard/recent-activity/
+
+    Returns the user's latest activity across the application.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        activities = []
+
+        # ==========================================
+        # Income Activities
+        # ==========================================
+
+        incomes = (
+            Income.objects.filter(
+                user=request.user
+            )
+            .order_by("-created_at")[:10]
+        )
+
+        for income in incomes:
+            activities.append(
+                {
+                    "id": income.id,
+                    "type": "income",
+                    "action": "Added Income",
+                    "title": income.source,
+                    "description": income.description,
+                    "amount": income.amount,
+                    "created_at": income.created_at,
+                }
+            )
+
+        # ==========================================
+        # Expense Activities
+        # ==========================================
+
+        expenses = (
+            Expense.objects.filter(
+                user=request.user
+            )
+            .order_by("-created_at")[:10]
+        )
+
+        for expense in expenses:
+            activities.append(
+                {
+                    "id": expense.id,
+                    "type": "expense",
+                    "action": "Added Expense",
+                    "title": expense.category,
+                    "description": expense.description,
+                    "amount": expense.amount,
+                    "created_at": expense.created_at,
+                }
+            )
+
+        # ==========================================
+        # Budget Activities
+        # ==========================================
+
+        budgets = (
+            Budget.objects.filter(
+                user=request.user
+            )
+            .order_by("-created_at")[:10]
+        )
+
+        for budget in budgets:
+            activities.append(
+                {
+                    "id": budget.id,
+                    "type": "budget",
+                    "action": "Created Budget",
+                    "title": budget.category,
+                    "description": (
+                        f"Budget for {budget.month:02d}/{budget.year}"
+                    ),
+                    "amount": budget.monthly_limit,
+                    "created_at": budget.created_at,
+                }
+            )
+
+        # ==========================================
+        # Savings Goal Activities
+        # ==========================================
+
+        goals = (
+            SavingsGoal.objects.filter(
+                user=request.user
+            )
+            .order_by("-created_at")[:10]
+        )
+
+        for goal in goals:
+            activities.append(
+                {
+                    "id": goal.id,
+                    "type": "goal",
+                    "action": "Created Savings Goal",
+                    "title": goal.goal_name,
+                    "description": goal.description,
+                    "amount": goal.target_amount,
+                    "created_at": goal.created_at,
+                }
+            )
+
+
+        # ==========================================
+        # Savings Transaction Activities
+        # ==========================================
+
+        transactions = (
+            SavingsTransaction.objects.filter(
+                goal__user=request.user
+            )
+            .select_related("goal")
+            .order_by("-created_at")[:10]
+        )
+
+        for transaction in transactions:
+
+            activities.append(
+                {
+                    "id": transaction.id,
+                    "type": (
+                        "deposit"
+                        if transaction.transaction_type
+                        == SavingsTransaction.DEPOSIT
+                        else "withdrawal"
+                    ),
+                    "action": (
+                        "Added Money"
+                        if transaction.transaction_type
+                        == SavingsTransaction.DEPOSIT
+                        else "Withdrew Money"
+                    ),
+                    "title": transaction.goal.goal_name,
+                    "description": transaction.note,
+                    "amount": transaction.transaction_amount,
+                    "created_at": transaction.created_at,
+                }
+            )
+
+        
+        # ==========================================
+        # Achievement Activities
+        # ==========================================
+
+        achievements = (
+            SavingsGoal.objects.filter(
+                user=request.user,
+                is_archived=True,
+            )
+            .order_by("-purchase_date")[:10]
+        )
+
+        for goal in achievements:
+
+            activities.append(
+                {
+                    "id": goal.id,
+                    "type": "achievement",
+                    "action": "Goal Purchased",
+                    "title": goal.goal_name,
+                    "description": goal.purchase_note,
+                    "amount": goal.target_amount,
+                    "created_at": goal.updated_at,
+                }
+            )
+
+
+        # ==========================================
+        # Sort newest first
+        # ==========================================
+
+        activities.sort(
+            key=lambda x: x["created_at"],
+            reverse=True,
+        )
+
+        serializer = RecentActivitySerializer(
+            activities[:10],
+            many=True,
+        )
+
+        return Response(serializer.data)

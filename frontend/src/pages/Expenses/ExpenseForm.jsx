@@ -40,7 +40,7 @@ export default function ExpenseForm({ initialValues, onSubmit, onCancel, submitt
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validate()) return;
-    onSubmit(form);
+    onSubmit({ ...form, title: form.title.trim() });
   };
 
   return (
@@ -53,6 +53,7 @@ export default function ExpenseForm({ initialValues, onSubmit, onCancel, submitt
             label="Amount"
             type="number"
             step="0.01"
+            min="0.01"
             value={form.amount}
             onChange={handleChange("amount")}
             error={errors.amount}

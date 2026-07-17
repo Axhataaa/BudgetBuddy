@@ -35,7 +35,7 @@ export default function IncomeForm({ initialValues, onSubmit, onCancel, submitti
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validate()) return;
-    onSubmit(form);
+    onSubmit({ ...form, description: form.description.trim() });
   };
 
   return (
@@ -55,6 +55,7 @@ export default function IncomeForm({ initialValues, onSubmit, onCancel, submitti
             label="Amount"
             type="number"
             step="0.01"
+            min="0.01"
             value={form.amount}
             onChange={handleChange("amount")}
             error={errors.amount}

@@ -4,10 +4,12 @@ from django.contrib.auth.models import User
 
 class Income(models.Model):
     SOURCE_CHOICES = [
-        ('Pocket Money', 'Pocket Money'),
-        ('Scholarship', 'Scholarship'),
-        ('Freelance', 'Freelance'),
-        ('Other', 'Other'),
+        ("Salary", "Salary"),
+        ("Pocket Money", "Pocket Money"),
+        ("Scholarship", "Scholarship"),
+        ("Freelance", "Freelance"),
+        ("Business", "Business"),
+        ("Other", "Other"),
     ]
 
     user = models.ForeignKey(

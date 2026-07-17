@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import { LuPlus, LuPencil, LuTrash2, LuSearch, LuWallet } from "react-icons/lu";
+import { LuPlus, LuPencil, LuTrash2, LuSearch, LuWallet, LuFilterX } from "react-icons/lu";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import EmptyState from "../../components/ui/EmptyState";
 import SkeletonRows from "../../components/ui/SkeletonRows";
 import Pagination from "../../components/ui/Pagination";
+import FilterChips from "../../components/ui/FilterChips";
 import { useToast } from "../../components/ui/Toast";
 import ExpenseForm from "./ExpenseForm";
 import { formatCurrency } from "../../utils/formatCurrency";
 import { TIME_PERIOD_OPTIONS, getDateRangeForPeriod } from "../../utils/dateRanges";
+import { AMOUNT_DATE_SORT_OPTIONS } from "../../utils/sortOptions";
 import { EXPENSE_CATEGORIES, PAYMENT_METHODS } from "./expenseConstants";
 import {
   listExpenses,
@@ -20,15 +22,14 @@ import {
 
 const PAGE_SIZE = 20;
 
-// Maps a human-readable sort label to the `ordering` param the backend
-// already supports (ExpenseViewSet.ordering_fields, §15 of the API
-// Design Doc) - no backend change needed, just exposing what's there.
-const SORT_OPTIONS = [
-  { value: "-date", label: "Latest First" },
-  { value: "date", label: "Oldest First" },
-  { value: "-amount", label: "Highest Amount" },
-  { value: "amount", label: "Lowest Amount" },
-];
+const emptyFilters = {
+  search: "",
+  category: "",
+  paymentMethod: "",
+  timePeriod: "",
+  customFrom: "",
+  customTo: "",
+};
 
 export default function Expenses() {
   const { showToast } = useToast();
@@ -38,12 +39,8 @@ export default function Expenses() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("");
-  const [timePeriod, setTimePeriod] = useState("");
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
+  const [filters, setFilters] = useState(emptyFilters);
+  const { search, category, paymentMethod, timePeriod, customFrom, customTo } = filters;
   const [ordering, setOrdering] = useState("-date");
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -52,6 +49,8 @@ export default function Expenses() {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  const setFilter = (key) => (value) => setFilters((prev) => ({ ...prev, [key]: value }));
 
   const fetchExpenses = async () => {
     setLoading(true);
@@ -148,7 +147,32 @@ export default function Expenses() {
     }
   };
 
-  const hasFilters = search || category || paymentMethod || timePeriod;
+  const isTimePeriodActive = timePeriod && (timePeriod !== "custom" || customFrom || customTo);
+  const hasFilters = search || category || paymentMethod || isTimePeriodActive;
+
+  const timePeriodLabel = TIME_PERIOD_OPTIONS.find((o) => o.value === timePeriod)?.label;
+
+  const chips = [
+    search && { key: "search", label: `Search: "${search}"`, onRemove: () => setFilter("search")("") },
+    category && { key: "category", label: `Category: ${category}`, onRemove: () => setFilter("category")("") },
+    paymentMethod && {
+      key: "payment",
+      label: `Payment: ${paymentMethod}`,
+      onRemove: () => setFilter("paymentMethod")(""),
+    },
+    timePeriod &&
+      timePeriod !== "custom" && {
+        key: "period",
+        label: timePeriodLabel,
+        onRemove: () => setFilter("timePeriod")(""),
+      },
+    timePeriod === "custom" &&
+      (customFrom || customTo) && {
+        key: "custom",
+        label: `${customFrom || "…"} → ${customTo || "…"}`,
+        onRemove: () => setFilters((prev) => ({ ...prev, timePeriod: "", customFrom: "", customTo: "" })),
+      },
+  ].filter(Boolean);
 
   return (
     <div>
@@ -171,142 +195,137 @@ export default function Expenses() {
               className="form-control ps-5"
               placeholder="Search by title or description..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => setFilter("search")(e.target.value)}
             />
           </div>
         </div>
-        <div className="col-md-2">
-          <select
-            className="form-select"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
+        <div className="col-6 col-md-2">
+          <select className="form-select" value={category} onChange={(e) => setFilter("category")(e.target.value)}>
             <option value="">All categories</option>
             {EXPENSE_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
-        <div className="col-md-2">
+        <div className="col-6 col-md-2">
           <select
             className="form-select"
             value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
+            onChange={(e) => setFilter("paymentMethod")(e.target.value)}
           >
             <option value="">All payment methods</option>
             {PAYMENT_METHODS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
+              <option key={p} value={p}>{p}</option>
             ))}
           </select>
         </div>
-        <div className="col-md-2">
+        <div className="col-6 col-md-2">
           <select
             className="form-select"
             value={timePeriod}
-            onChange={(e) => setTimePeriod(e.target.value)}
+            onChange={(e) => setFilter("timePeriod")(e.target.value)}
           >
             {TIME_PERIOD_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
         </div>
-        <div className="col-md-2">
-          <select
-            className="form-select"
-            value={ordering}
-            onChange={(e) => setOrdering(e.target.value)}
-          >
-            {SORT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
+        <div className="col-6 col-md-2">
+          <select className="form-select" value={ordering} onChange={(e) => setOrdering(e.target.value)}>
+            {AMOUNT_DATE_SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
         </div>
       </div>
 
       {timePeriod === "custom" && (
-        <div className="row g-2 mb-3">
-          <div className="col-md-2">
+        <div className="row g-2 mb-2">
+          <div className="col-6 col-md-2">
             <input
               type="date"
               className="form-control"
               value={customFrom}
-              onChange={(e) => setCustomFrom(e.target.value)}
+              onChange={(e) => setFilter("customFrom")(e.target.value)}
               aria-label="From date"
             />
           </div>
-          <div className="col-md-2">
+          <div className="col-6 col-md-2">
             <input
               type="date"
               className="form-control"
               value={customTo}
-              onChange={(e) => setCustomTo(e.target.value)}
+              onChange={(e) => setFilter("customTo")(e.target.value)}
               aria-label="To date"
             />
           </div>
         </div>
       )}
 
-      <div className={`bg-surface rounded shadow-token-sm ${timePeriod === "custom" ? "" : "mt-1"}`}>
-        <table className="table mb-0 align-middle">
-          <thead>
-            <tr className="text-muted-ink small text-uppercase">
-              <th>Title</th>
-              <th>Category</th>
-              <th>Payment</th>
-              <th>Date</th>
-              <th className="text-end">Amount</th>
-              <th className="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <SkeletonRows rows={6} columns={6} />
-            ) : (
-              expenses.map((expense) => (
-                <tr key={expense.id}>
-                  <td>
-                    <div className="fw-medium">{expense.title}</div>
-                    {expense.description && (
-                      <div className="small text-muted-ink">{expense.description}</div>
-                    )}
-                  </td>
-                  <td>
-                    <span className="badge bg-surface-sunken text-ink">{expense.category}</span>
-                  </td>
-                  <td className="text-muted-ink">{expense.payment_method}</td>
-                  <td className="text-muted-ink">{expense.date}</td>
-                  <td className="text-end font-currency text-expense fw-medium">
-                    -{formatCurrency(expense.amount)}
-                  </td>
-                  <td className="text-end">
-                    <button
-                      className="btn btn-sm btn-link text-muted-ink"
-                      onClick={() => openEditModal(expense)}
-                      aria-label="Edit"
-                    >
-                      <LuPencil size={16} />
-                    </button>
-                    <button
-                      className="btn btn-sm btn-link text-danger"
-                      onClick={() => setDeleteTarget(expense)}
-                      aria-label="Delete"
-                    >
-                      <LuTrash2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="d-flex align-items-center justify-content-between">
+        <FilterChips chips={chips} />
+        {hasFilters && (
+          <Button variant="ghost" icon={LuFilterX} onClick={() => setFilters(emptyFilters)} className="mb-3">
+            Clear Filters
+          </Button>
+        )}
+      </div>
+
+      <div className="bg-surface rounded shadow-token-sm hover-card">
+        <div className="table-responsive" style={{ maxHeight: 640, overflowY: "auto" }}>
+          <table className="table mb-0 align-middle">
+            <thead className="sticky-top bg-surface">
+              <tr className="text-muted-ink small text-uppercase">
+                <th className="py-3">Title</th>
+                <th className="py-3">Category</th>
+                <th className="py-3">Payment</th>
+                <th className="py-3">Date</th>
+                <th className="py-3 text-end">Amount</th>
+                <th className="py-3 text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <SkeletonRows rows={6} columns={6} />
+              ) : (
+                expenses.map((expense) => (
+                  <tr key={expense.id}>
+                    <td className="py-3">
+                      <div className="fw-medium">{expense.title}</div>
+                      {expense.description && (
+                        <div className="small text-muted-ink">{expense.description}</div>
+                      )}
+                    </td>
+                    <td className="py-3">
+                      <span className="badge bg-surface-sunken text-ink">{expense.category}</span>
+                    </td>
+                    <td className="py-3 text-muted-ink">{expense.payment_method}</td>
+                    <td className="py-3 text-muted-ink">{expense.date}</td>
+                    <td className="py-3 text-end font-currency text-expense fw-medium">
+                      -{formatCurrency(expense.amount)}
+                    </td>
+                    <td className="py-3 text-end">
+                      <button
+                        className="btn btn-sm btn-link text-muted-ink"
+                        onClick={() => openEditModal(expense)}
+                        aria-label="Edit"
+                      >
+                        <LuPencil size={16} />
+                      </button>
+                      <button
+                        className="btn btn-sm btn-link text-danger"
+                        onClick={() => setDeleteTarget(expense)}
+                        aria-label="Delete"
+                      >
+                        <LuTrash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {!loading && expenses.length === 0 && (
           <EmptyState
@@ -317,7 +336,11 @@ export default function Expenses() {
                 : "No expenses yet — add your first one to get started."
             }
             action={
-              !hasFilters && (
+              hasFilters ? (
+                <Button variant="ghost" icon={LuFilterX} onClick={() => setFilters(emptyFilters)}>
+                  Clear Filters
+                </Button>
+              ) : (
                 <Button icon={LuPlus} onClick={openAddModal}>
                   Add Expense
                 </Button>
@@ -349,7 +372,7 @@ export default function Expenses() {
         title="Delete this expense?"
         message={
           deleteTarget
-            ? `"${deleteTarget.title}" will be permanently deleted. This can't be undone.`
+            ? `"${deleteTarget.title}" (${deleteTarget.date}, ${formatCurrency(deleteTarget.amount)}) will be permanently deleted. This can't be undone.`
             : ""
         }
         confirmLabel="Delete"
