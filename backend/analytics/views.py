@@ -139,6 +139,17 @@ class DashboardSummaryView(APIView):
             is_archived=True
         ).count()
 
+        latest_achievement = (
+            goals.filter(
+                is_archived=True,
+            )
+            .order_by(
+                "-purchase_date",
+                "-updated_at",
+            )
+            .first()
+        )
+        
         budgets_created = Budget.objects.filter(
             user=request.user
         ).count()
@@ -237,6 +248,24 @@ class DashboardSummaryView(APIView):
                 "completed_goals": completed_goals,
 
                 "achievements": achievements,
+
+                "latest_achievement": (
+                    {
+                        "id": latest_achievement.id,
+                        "goal_name": latest_achievement.goal_name,
+                        "target_amount": _money(
+                            latest_achievement.target_amount
+                        ),
+                        "purchase_date": latest_achievement.purchase_date,
+                        "purchase_note": (
+                            latest_achievement.purchase_note or None
+                        ),
+                        "is_purchased": latest_achievement.is_purchased,
+                        "is_completed": latest_achievement.is_completed,
+                    }
+                    if latest_achievement
+                    else None
+                ),
 
                 "budgets_created": budgets_created,
 
