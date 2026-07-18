@@ -16,12 +16,13 @@ import {
 import EmptyState from "../../components/ui/EmptyState";
 import PeriodSelector, { MONTH_NAMES } from "../../components/ui/PeriodSelector";
 import { useToast } from "../../components/ui/Toast";
-import { getDashboardSummary } from "../../services/dashboardService";
+import {
+  getDashboardSummary,
+  getRecentActivity,
+} from "../../services/dashboardService";
 // Recent transactions reuse the existing Expense/Income list endpoints
 // directly - per the approved API Design Doc §26/§30 decision, this
 // data is NOT duplicated inside the dashboard summary endpoint.
-import { listExpenses } from "../../services/expenseService";
-import { listIncomes } from "../../services/incomeService";
 import { formatCurrency } from "../../utils/formatCurrency";
 import { getMonthDateRange } from "../../utils/dateRanges";
 import { getBudgetStatusColor } from "../../utils/budgetStatus";
@@ -130,10 +131,9 @@ export default function Dashboard() {
         // which reads as broken rather than "viewing history."
         const { date_from, date_to } = getMonthDateRange(month, year);
 
-        const [summaryData, expensesData, incomesData] = await Promise.all([
+        const [summaryData, recentActivity] = await Promise.all([
           getDashboardSummary({ month, year }),
-          listExpenses({ page_size: 5, ordering: "-date", date_from, date_to }),
-          listIncomes({ page_size: 5, ordering: "-date", date_from, date_to }),
+          getRecentActivity({ month, year }),
         ]);
 
         setSummary(summaryData);
@@ -141,14 +141,7 @@ export default function Dashboard() {
         // Merge the two already-fetched short lists and sort by date -
         // this is presentational reordering, not aggregation, so it
         // belongs here rather than in a backend endpoint.
-        const merged = [
-          ...expensesData.results.map((e) => ({ ...e, type: "expense", label: e.title })),
-          ...incomesData.results.map((i) => ({ ...i, type: "income", label: i.source })),
-        ]
-          .sort((a, b) => new Date(b.date) - new Date(a.date))
-          .slice(0, 5);
-
-        setRecent(merged);
+        setRecent(recentActivity);
       } catch {
         showToast("Couldn't load dashboard data. Please try again.", "error");
       } finally {
@@ -185,6 +178,52 @@ export default function Dashboard() {
   // descending by the backend (analytics/views.py), so this is just
   // the first entry, not a re-sort.
   const highestCategory = hasCategoryData ? summary.expense_by_category[0] : null;
+
+  const getActivityMeta = (type) => {
+    switch (type) {
+      case "income":
+        return {
+          icon: LuCircleArrowUp,
+          color: "text-income",
+        };
+
+      case "expense":
+        return {
+          icon: LuCircleArrowDown,
+          color: "text-expense",
+        };
+
+      case "deposit":
+        return {
+          icon: LuPiggyBank,
+          color: "text-success",
+        };
+
+      case "withdrawal":
+        return {
+          icon: LuWallet,
+          color: "text-warning",
+        };
+
+      case "goal":
+        return {
+          icon: LuTarget,
+          color: "text-primary",
+        };
+
+      case "achievement":
+        return {
+          icon: LuAward,
+          color: "text-warning",
+        };
+
+      default:
+        return {
+          icon: LuWallet,
+          color: "text-muted",
+        };
+    }
+  };
 
   return (
     <div>
@@ -412,7 +451,7 @@ export default function Dashboard() {
             <div className="col-md-7">
               <div className="bg-surface rounded shadow-token-sm hover-card p-3 h-100">
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h2 className="font-display fs-6 fw-semibold mb-0">Recent Transactions</h2>
+                  <h2 className="font-display fs-6 fw-semibold mb-0">Recent Activity</h2>
                   <Link
                       to="/expenses"
                       className="small text-primary view-all-link"
@@ -424,47 +463,61 @@ export default function Dashboard() {
                 {loading ? (
                   <TransactionSkeleton />
                 ) : recent.length === 0 ? (
-                  <p className="text-muted-ink small mb-0 py-2">No transactions for {periodLabel}.</p>
+                  <p className="text-muted-ink small mb-0 py-2">No recent activity for {periodLabel}.</p>
                 ) : (
                   <div className="d-flex flex-column gap-1">
                     {recent.map((item) => {
-                      const isIncome = item.type === "income";
+                      const { icon: Icon, color } = getActivityMeta(item.type);
+
                       return (
                         <div
                           key={`${item.type}-${item.id}`}
                           className="transaction-item d-flex align-items-center gap-3 py-2 px-2"
                         >
-                          {isIncome ? (
-                            <LuCircleArrowUp size={20} className="text-income flex-shrink-0" />
-                          ) : (
-                            <LuCircleArrowDown size={20} className="text-expense flex-shrink-0" />
-                          )}
-                          <div className="flex-grow-1 min-w-0">
-                            <div className="d-flex align-items-center gap-2">
-                              <span className="fw-medium text-truncate">{item.label}</span>
-                              {!isIncome && (
-                                <span className="badge bg-surface-sunken text-ink flex-shrink-0">
-                                  {item.category}
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-muted-ink small">
-                                <span className="fw-medium text-dark">
-                                    {formatRelativeDate(item.date)}
-                                </span>
+                          <Icon
+                            size={20}
+                            className={`${color} flex-shrink-0`}
+                          />
 
-                                <span className="text-muted">
-                                    {" • "}
-                                    {new Date(item.date).toLocaleDateString("en-IN", {
-                                        day: "numeric",
-                                        month: "short",
-                                        year: "numeric",
-                                    })}
-                                </span>
+                          <div className="flex-grow-1 min-w-0">
+                            <div className="d-flex align-items-center gap-2 flex-wrap">
+                              <span className="fw-medium text-truncate">
+                                {item.title}
+                              </span>
+
+                              <span className="badge bg-surface-sunken text-ink">
+                                {item.action}
+                              </span>
+                            </div>
+
+                            <div className="text-muted-ink small">
+                              {item.description && (
+                                <>
+                                  <span>{item.description}</span>
+                                  <span>{" • "}</span>
+                                </>
+                              )}
+
+                              <span className="fw-medium text-dark">
+                                {formatRelativeDate(item.created_at)}
+                              </span>
+
+                              <span className="text-muted">
+                                {" • "}
+                                {new Date(item.created_at).toLocaleDateString(
+                                  "en-IN",
+                                  {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  }
+                                )}
+                              </span>
                             </div>
                           </div>
-                          <div className={`text-end fw-semibold font-currency flex-shrink-0 ${isIncome ? "text-income" : "text-expense"}`}>
-                            {isIncome ? "+" : "-"}{formatCurrency(item.amount)}
+
+                          <div className={`fw-semibold font-currency ${color}`}>
+                            {formatCurrency(item.amount)}
                           </div>
                         </div>
                       );
