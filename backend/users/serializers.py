@@ -133,6 +133,22 @@ class ProfileSerializer(serializers.ModelSerializer):
             if update_fields:
                 instance.user.save(update_fields=update_fields)
         return super().update(instance, validated_data)
+    
+    
+class UserListSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(source="profile.role")
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "role",
+            "date_joined",
+        ]
 
 
 class ChangePasswordSerializer(serializers.Serializer):

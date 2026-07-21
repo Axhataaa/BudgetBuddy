@@ -10,15 +10,21 @@ def create_user_profile(sender, instance, created, **kwargs):
     """
     Ensure every User has exactly one Profile.
 
-    The registration serializer immediately updates the role chosen by
-    the user after the profile is created. Until then, every newly
-    created profile starts as Student.
+    Users created through registration initially receive the default
+    Student role, while Django superusers automatically receive the
+    Admin role.
     """
     if created:
         full_name = f"{instance.first_name} {instance.last_name}".strip()
 
+        role = (
+            Profile.Role.ADMIN
+            if instance.is_superuser
+            else Profile.Role.STUDENT
+        )
+
         Profile.objects.create(
             user=instance,
             full_name=full_name,
-            role=Profile.Role.STUDENT,
+            role=role,
         )

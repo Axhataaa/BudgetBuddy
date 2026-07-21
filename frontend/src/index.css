@@ -294,3 +294,140 @@ img {
 .cursor-pointer{
     cursor:pointer;
 }
+
+/* =====================================================================
+   Dashboard redesign — locked design language (July 2026)
+   Adds new tokens/classes only; every rule above this line is
+   untouched so existing pages keep working without changes.
+===================================================================== */
+
+:root {
+  --color-primary-deep: #1B2050;
+}
+
+/* ---------- Hero / financial health banner ---------- */
+
+.finance-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  padding: 2rem 2.25rem;
+  color: #fff;
+  background: linear-gradient(200deg, var(--color-primary) 0%, var(--color-primary-deep) 85%);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 575.98px) {
+  .finance-hero {
+    padding: 1.5rem 1.35rem;
+  }
+}
+
+.finance-hero .coin-ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.finance-hero-eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 600;
+}
+
+.finance-hero-balance {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  font-variant-numeric: tabular-nums;
+  margin: 0.25rem 0 0.15rem;
+  letter-spacing: -0.01em;
+}
+
+.finance-hero-sub {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+.hero-chip.good { color: #7FE0AE; }
+.hero-chip.warn { color: #F0C77E; }
+.hero-chip.bad { color: #F0897E; }
+
+.health-ring-label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.health-ring-caption {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.55);
+  max-width: 190px;
+  line-height: 1.4;
+}
+
+/* ---------- Stat cards ---------- */
+
+.stat-card {
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.stat-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- Insights ---------- */
+
+.insight-row {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--color-surface-sunken);
+}
+.insight-row:last-child {
+  border-bottom: none;
+}
+.insight-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ---------- Recent activity day grouping ---------- */
+
+.activity-day-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  opacity: 0.75;
+  margin: 1rem 0 0.5rem;
+}
+.activity-day-label:first-child {
+  margin-top: 0;
+}

@@ -3,9 +3,16 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.contrib.auth.models import User
 
 from .logout_serializer import LogoutSerializer
-from .serializers import ChangePasswordSerializer, ProfileSerializer, RegisterSerializer
+from .serializers import (
+    ChangePasswordSerializer,
+    ProfileSerializer,
+    RegisterSerializer,
+    UserListSerializer,
+)
+from .permissions import IsAdmin
 
 
 class RegisterView(generics.CreateAPIView):
@@ -52,3 +59,15 @@ class ChangePasswordView(APIView):
         request.user.set_password(serializer.validated_data["new_password"])
         request.user.save(update_fields=["password"])
         return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+    
+
+class UserListView(generics.ListAPIView):
+    """
+    Admin-only endpoint to list all registered users.
+    """
+
+    serializer_class = UserListSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get_queryset(self):
+        return User.objects.select_related("profile").all()

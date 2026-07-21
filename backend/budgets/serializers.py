@@ -77,6 +77,17 @@ class BudgetSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    usage_percentage = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+    )
+
+    is_overspent = serializers.BooleanField()
+    alert = serializers.CharField(
+        allow_null=True,
+        required=False,
+    )
+
 
 # ==========================================================
 # Savings Transaction Summary (Nested inside Goal)

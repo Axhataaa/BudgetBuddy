@@ -38,6 +38,80 @@ class BudgetViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="summary",
+    )
+    def summary(self, request):
+
+        budgets = self.get_queryset()
+
+        summary = []
+
+        for budget in budgets:
+
+            total_expense = (
+                Expense.objects.filter(
+                    user=request.user,
+                    category=budget.category,
+                    date__month=budget.month,
+                    date__year=budget.year,
+                ).aggregate(
+                    total=Sum("amount")
+                )["total"]
+                or Decimal("0.00")
+            )
+
+            remaining_budget = budget.monthly_limit - total_expense
+
+            overspent_amount = Decimal("0.00")
+
+            if remaining_budget < 0:
+                overspent_amount = abs(remaining_budget)
+                remaining_budget = Decimal("0.00")
+
+            usage_percentage = (
+                round((total_expense / budget.monthly_limit) * 100, 2)
+                if budget.monthly_limit > 0
+                else Decimal("0.00")
+            )
+
+            is_overspent = usage_percentage >= 100
+
+            if is_overspent:
+                alert = (
+                    f"Budget exceeded for {budget.get_category_display()} "
+                    f"by ₹{overspent_amount}."
+                )
+            elif usage_percentage >= 90:
+                alert = (
+                    f"Warning: You have used {usage_percentage}% "
+                    f"of your {budget.get_category_display()} budget."
+                )
+            else:
+                alert = None
+
+            summary.append(
+                {
+                    "category": budget.category,
+                    "budget_amount": budget.monthly_limit,
+                    "total_expense": total_expense,
+                    "remaining_budget": remaining_budget,
+                    "overspent_amount": overspent_amount,
+                    "usage_percentage": usage_percentage,
+                    "is_overspent": is_overspent,
+                    "alert": alert,
+                }
+            )
+
+        serializer = BudgetSummarySerializer(
+            summary,
+            many=True,
+        )
+
+        return Response(serializer.data)
+
 class SavingsGoalViewSet(viewsets.ModelViewSet):
     """
     Full CRUD on the current user's savings goals.

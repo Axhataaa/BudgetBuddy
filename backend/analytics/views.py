@@ -103,10 +103,19 @@ class DashboardSummaryView(APIView):
             total_income - total_expenses
         )
 
+        if total_income > 0:
+            savings_rate = round(
+                float((net_savings / total_income) * 100),
+                1,
+            )
+        else:
+            savings_rate = 0.0
+
         current_balance = (
             total_income - total_expenses
         )
 
+        
         # =====================================================
         # Savings Goals
         # =====================================================
@@ -123,6 +132,12 @@ class DashboardSummaryView(APIView):
                 total=Sum("current_amount")
             )["total"]
             or Decimal("0.00")
+        )
+
+        remaining_cash = (
+            total_income
+            - total_expenses
+            - total_savings
         )
 
         active_goals = goals.filter(
@@ -183,6 +198,9 @@ class DashboardSummaryView(APIView):
         # Budget Utilization
         # =====================================================
 
+        overspent_categories = 0
+        warning_categories = 0
+
         budget_utilization = []
 
         for budget in budget_qs:
@@ -199,6 +217,11 @@ class DashboardSummaryView(APIView):
                 if limit
                 else 0.0
             )
+
+            if percent_used >= 100:
+                overspent_categories += 1
+            elif percent_used >= 90:
+                warning_categories += 1
 
             budget_utilization.append(
                 {
@@ -235,13 +258,22 @@ class DashboardSummaryView(APIView):
                     net_savings
                 ),
 
-                "current_balance": _money(
-                    current_balance
-                ),
+                "current_balance": _money(current_balance),
 
-                "total_savings": _money(
-                    total_savings
-                ),
+                "remaining_cash": _money(remaining_cash),
+
+                "savings_rate": savings_rate,
+
+                "total_budget": _money(total_budget),
+
+                "remaining_budget": _money(remaining_budget),
+
+                "budget_status": {
+                    "overspent_categories": overspent_categories,
+                    "warning_categories": warning_categories,
+                },
+
+                "total_savings": _money(total_savings),
 
                 "active_goals": active_goals,
 

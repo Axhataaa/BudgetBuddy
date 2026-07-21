@@ -8,7 +8,13 @@ Finance Management Modules
 
 ## Objective
 
-Develop the core finance management system including expenses, income, budgets, dashboard, filtering, sorting, and profile management.
+| Task                                  | Status  | Notes                                                                                                             |
+| ------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
+| Implement expense tracking APIs       | ✅ Done | Full CRUD (`ExpenseViewSet`), 8 categories, 4 payment methods, amount/date/title validation                       |
+| Build income management functionality | ✅ Done | Full CRUD (`IncomeViewSet`), 6 sources, amount/date validation                                                    |
+| Create transaction dashboard          | ✅ Done | Implemented within the analytics dashboard via `RecentActivityView`, providing recent income and expense activity |
+| Add expense categorization            | ✅ Done | `Expense.CATEGORY_CHOICES`: Food, Travel, Shopping, Education, Entertainment, Healthcare, Bills, Miscellaneous    |
+| Build budget creation system          | ✅ Done | `Budget` model + `BudgetViewSet`, one budget per user/category/month/year                                         |
 
 ---
 
@@ -16,26 +22,10 @@ Develop the core finance management system including expenses, income, budgets, 
 
 ## Backend
 
-- Create Expense
-- View Expenses
-- Update Expense
-- Delete Expense
-- User ownership protection
-- Pagination
-- Search
-- Category filtering
-- Payment method filtering
-- Time period filtering
-- Date range filtering
-- Sorting
-  - Latest First
-  - Oldest First
-  - Highest Amount
-  - Lowest Amount
-- Total expense calculation
-- Validation
-- Authentication
-- PostgreSQL integration
+- ✅ Expense tracking fully operational, including validation and ownership isolation
+- ✅ Income management fully functional
+- ✅ Budget planning implemented, including category-level utilization tracking
+- ✅ Budget planning implemented, including category-level utilization tracking and overspending alerts.
 
 ## Categories
 
