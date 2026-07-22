@@ -18,16 +18,16 @@ const COLORS = [
   "#F97316",
 ];
 
-export default function ExpensePieChart({ data }) {
+export default function ExpensePieChart({ data, labelKey = "category", valueKey = "total", emptyMessage = "No expense data available." }) {
   const chartData = data.map((item) => ({
     ...item,
-    total: Number(item.total),
+    [valueKey]: Number(item[valueKey]),
   }));
 
   if (!chartData.length) {
     return (
       <div className="text-center text-muted py-5">
-        No expense data available.
+        {emptyMessage}
       </div>
     );
   }
@@ -37,8 +37,8 @@ export default function ExpensePieChart({ data }) {
       <PieChart>
         <Pie
           data={chartData}
-          dataKey="total"
-          nameKey="category"
+          dataKey={valueKey}
+          nameKey={labelKey}
           cx="50%"
           cy="50%"
           outerRadius={90}

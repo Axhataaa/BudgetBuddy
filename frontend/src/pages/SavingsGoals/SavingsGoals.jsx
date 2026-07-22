@@ -174,16 +174,16 @@ function SavingsGoals() {
   }, [goals]);
 
   return (
-    <div className="container-fluid py-4">
+    <div>
 
       {/* ================= Header ================= */}
 
       <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
 
         <div>
-          <h2 className="font-display fw-bold mb-1">
+          <h1 className="font-display fs-3 fw-semibold mb-1">
             Savings Goals
-          </h2>
+          </h1>
 
           <p className="text-muted-ink mb-0">
             Plan, track and achieve your financial goals.

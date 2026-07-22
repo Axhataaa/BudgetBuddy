@@ -431,3 +431,239 @@ img {
 .activity-day-label:first-child {
   margin-top: 0;
 }
+
+/* =====================================================================
+   Dark theme — Settings > Appearance (July 2026)
+
+   CORRECTED: this block previously used token names (--ink, --canvas,
+   --surface, --surface-alt, --surface-sunken, --border) that do not
+   exist anywhere in this file - the real tokens are --color-ink,
+   --color-bg, --color-surface, --color-surface-sunken, --color-border
+   (see :root at the top of this file). Because CSS silently accepts
+   undefined custom properties, that mismatch didn't throw an error -
+   it just meant almost nothing was actually themed, except one
+   coincidental rule that gave form-control a real (but wrong,
+   unreadable) dark navy background. This version uses the real names
+   throughout and was verified against the current file's :root block.
+
+   Overriding the base --color-* tokens here is enough for most of the
+   app automatically: --bs-body-bg, --bs-body-color, --bs-border-color,
+   .bg-surface, .text-muted-ink, .bg-surface-sunken etc. are already
+   written as var(--color-bg) / var(--color-ink) / etc. at :root, so
+   they re-resolve to the dark values the moment data-theme="dark" is
+   set on <html> (PreferencesContext). Forms, placeholders and a few
+   Bootstrap components that hardcode their own colors still need
+   explicit rules below, since they don't route through these tokens.
+===================================================================== */
+
+[data-theme="dark"] {
+  --color-bg: #0F1120;
+  --color-surface: #1A1D33;
+  --color-surface-sunken: #242840;
+  --color-ink: #F1F2F6;
+  --color-ink-muted: #A6ACBD;
+  --color-border: #333856;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 1px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 10px 24px -8px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 24px 48px -12px rgba(0, 0, 0, 0.65);
+}
+
+/* Form fields: a level lighter than the page but distinct from cards,
+   with an explicit border, text color and placeholder color - none of
+   these route through the base tokens automatically, since Bootstrap's
+   compiled CSS sets its own literal color/border values by default. */
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] textarea.form-control {
+  background-color: var(--color-surface-sunken);
+  border-color: var(--color-border);
+  color: var(--color-ink);
+}
+
+[data-theme="dark"] .form-control::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--color-ink-muted);
+  opacity: 1;
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus,
+[data-theme="dark"] textarea:focus {
+  background-color: var(--color-surface-sunken);
+  color: var(--color-ink);
+  border-color: var(--color-primary);
+}
+
+[data-theme="dark"] .form-label {
+  color: var(--color-ink);
+}
+
+/* Bootstrap's disabled-field color and select-arrow are hardcoded to
+   light-mode values in the compiled CSS; both need an explicit
+   dark-mode override or they render invisible against a dark field. */
+[data-theme="dark"] .form-control:disabled,
+[data-theme="dark"] .form-select:disabled {
+  background-color: var(--color-surface);
+  color: var(--color-ink-muted);
+}
+
+[data-theme="dark"] .form-select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23A6ACBD' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+}
+
+/* Native date/time input picker icon - otherwise renders as a near-
+   invisible dark glyph on a dark field. */
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+[data-theme="dark"] .table {
+  color: var(--color-ink);
+}
+
+[data-theme="dark"] .table > thead th {
+  color: var(--color-ink-muted);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .table tbody td {
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .modal-content {
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .btn-close {
+  filter: invert(1) grayscale(100%) brightness(1.6);
+}
+
+[data-theme="dark"] hr {
+  border-color: var(--color-border);
+  opacity: 1;
+}
+
+[data-theme="dark"] .app-topbar {
+  background: rgba(15, 17, 32, 0.86);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .badge.bg-surface-sunken {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--color-ink) !important;
+}
+
+[data-theme="dark"] ::selection {
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--color-ink);
+}
+
+/* =====================================================================
+   App shell content padding — single definition, used by every page
+   since they all render through AppShell's <main>. Responsive so
+   small screens aren't stuck with the same fixed padding as desktop.
+===================================================================== */
+
+.app-content {
+  padding: 1.75rem;
+}
+
+@media (max-width: 767.98px) {
+  .app-content {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .app-content {
+    padding: 1rem;
+  }
+}
+
+/* =====================================================================
+   Sidebar — mobile off-canvas (July 2026)
+   Desktop/tablet (≥992px): sidebar renders normally, inline, always
+   visible - nothing here changes that.
+   Mobile (<992px): sidebar is fixed off-screen by default and slides
+   in when open; a backdrop closes it on tap-outside.
+===================================================================== */
+
+.topbar-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.sidebar-scrim {
+  display: none;
+}
+
+@media (max-width: 991.98px) {
+  .topbar-menu-btn {
+    display: inline-flex;
+  }
+
+  .app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1040;
+    transform: translateX(-100%);
+    transition: transform var(--transition-normal);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .app-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1035;
+    background: rgba(15, 17, 32, 0.45);
+  }
+}
+
+/* =====================================================================
+   Flex layout safeguard (July 2026)
+   The app shell is a flex row (sidebar + main content). Flex items
+   default to min-width: auto, which means wide content (a table, a
+   long unbreakable string) refuses to shrink and instead forces the
+   whole row to overflow - visually compressing or overlapping the
+   fixed-width sidebar next to it. This is what caused the "Title" /
+   "Source" field appearing to overlap the sidebar on the Expenses and
+   Income pages. min-width: 0 lets the content area shrink properly
+   and scroll internally (each table already has its own
+   .table-responsive wrapper) instead of blowing out the layout;
+   flex-shrink: 0 on the sidebar makes sure it never gets compressed
+   by an overflowing sibling in the first place, as a second line of
+   defense.
+===================================================================== */
+
+.app-content {
+  min-width: 0;
+}
+
+.app-sidebar {
+  flex-shrink: 0;
+}
+
+html, body, #root {
+  overflow-x: hidden;
+}

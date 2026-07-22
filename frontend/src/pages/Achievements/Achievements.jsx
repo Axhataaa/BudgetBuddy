@@ -102,17 +102,17 @@ function Achievements() {
 
   return (
 
-    <div className="container-fluid py-4">
+    <div>
 
       {/* Header */}
 
       <div className="mb-4">
 
-        <h2 className="fw-bold">
+        <h1 className="font-display fs-3 fw-semibold mb-1">
           🏆 Achievements
-        </h2>
+        </h1>
 
-        <p className="text-muted-ink">
+        <p className="text-muted-ink mb-0">
           Celebrate your completed financial goals.
         </p>
 

@@ -2,21 +2,16 @@ import { NavLink } from "react-router-dom";
 import {
   LuAward,
   LuChartColumn,
-  LuCircleUserRound,
   LuFlag,
   LuLayoutDashboard,
-  LuLogOut,
   LuPiggyBank,
   LuSettings,
   LuTarget,
   LuWallet,
+  LuX,
 } from "react-icons/lu";
 
-import { useAuth } from "../../hooks/useAuth";
-
-export default function Sidebar() {
-  const { logout } = useAuth();
-
+export default function Sidebar({ open = false, onClose }) {
   const navClass = ({ isActive }) =>
     `d-flex align-items-center gap-2 px-3 py-2 rounded text-decoration-none ${
       isActive
@@ -26,7 +21,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="d-flex flex-column bg-surface border-end p-3"
+      className={`app-sidebar d-flex flex-column bg-surface border-end p-3 ${open ? "open" : ""}`}
       style={{
         width: 220,
         minHeight: "100vh",
@@ -34,16 +29,27 @@ export default function Sidebar() {
     >
       {/* ================= Logo ================= */}
 
-      <div className="d-flex align-items-center gap-2 mb-4 px-2">
+      <div className="d-flex align-items-center justify-content-between gap-2 mb-4 px-2">
 
-        <LuWallet
-          size={22}
-          className="text-primary"
-        />
+        <div className="d-flex align-items-center gap-2">
+          <LuWallet
+            size={22}
+            className="text-primary"
+          />
 
-        <span className="font-display fw-semibold fs-5">
-          BudgetBuddy
-        </span>
+          <span className="font-display fw-semibold fs-5">
+            BudgetBuddy
+          </span>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-sm btn-link text-muted-ink d-lg-none p-1"
+          onClick={onClose}
+          aria-label="Close menu"
+        >
+          <LuX size={20} />
+        </button>
 
       </div>
 
@@ -54,6 +60,7 @@ export default function Sidebar() {
         <NavLink
           to="/dashboard"
           className={navClass}
+          onClick={onClose}
         >
           <LuLayoutDashboard size={18} />
           Dashboard
@@ -62,6 +69,7 @@ export default function Sidebar() {
         <NavLink
           to="/expenses"
           className={navClass}
+          onClick={onClose}
         >
           <LuWallet size={18} />
           Expenses
@@ -70,6 +78,7 @@ export default function Sidebar() {
         <NavLink
           to="/income"
           className={navClass}
+          onClick={onClose}
         >
           <LuPiggyBank size={18} />
           Income
@@ -78,6 +87,7 @@ export default function Sidebar() {
         <NavLink
           to="/budgets"
           className={navClass}
+          onClick={onClose}
         >
           <LuTarget size={18} />
           Budgets
@@ -86,6 +96,7 @@ export default function Sidebar() {
         <NavLink
           to="/savings-goals"
           className={navClass}
+          onClick={onClose}
         >
           <LuFlag size={18} />
           Savings Goals
@@ -94,6 +105,7 @@ export default function Sidebar() {
         <NavLink
           to="/achievements"
           className={navClass}
+          onClick={onClose}
         >
           <LuAward size={18} />
           Achievements
@@ -102,6 +114,7 @@ export default function Sidebar() {
         <NavLink
           to="/reports"
           className={navClass}
+          onClick={onClose}
         >
           <LuChartColumn size={18} />
           Reports
@@ -110,36 +123,13 @@ export default function Sidebar() {
         <NavLink
           to="/settings"
           className={navClass}
+          onClick={onClose}
         >
           <LuSettings size={18} />
           Settings
         </NavLink>
 
       </nav>
-
-      {/* ================= Footer ================= */}
-
-      <div>
-
-        <hr className="my-2" />
-
-        <NavLink
-          to="/profile"
-          className={navClass}
-        >
-          <LuCircleUserRound size={18} />
-          My Profile
-        </NavLink>
-
-        <button
-          onClick={logout}
-          className="btn btn-link text-muted-ink text-decoration-none d-flex align-items-center gap-2 px-2 mt-2"
-        >
-          <LuLogOut size={18} />
-          Log out
-        </button>
-
-      </div>
 
     </aside>
   );

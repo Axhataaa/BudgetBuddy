@@ -201,6 +201,14 @@ class DashboardSummaryView(APIView):
         overspent_categories = 0
         warning_categories = 0
 
+        # Was hardcoded to 90 - now reads the user's own Settings >
+        # Financial Preferences > "Budget warning threshold" value,
+        # falling back to the model's own default (90) if for any
+        # reason the profile lookup comes back empty.
+        warning_threshold = getattr(
+            request.user.profile, "budget_warning_threshold", 90
+        )
+
         budget_utilization = []
 
         for budget in budget_qs:
@@ -220,7 +228,7 @@ class DashboardSummaryView(APIView):
 
             if percent_used >= 100:
                 overspent_categories += 1
-            elif percent_used >= 90:
+            elif percent_used >= warning_threshold:
                 warning_categories += 1
 
             budget_utilization.append(

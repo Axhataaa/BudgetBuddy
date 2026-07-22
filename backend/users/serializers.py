@@ -93,8 +93,24 @@ class ProfileSerializer(serializers.ModelSerializer):
             "role",
             "profile_picture",
             "date_joined",
+            "theme",
+            "currency",
+            "monthly_saving_target",
+            "budget_warning_threshold",
+            "email_notifications",
+            "budget_alert_notifications",
         ]
         read_only_fields = ["role"]
+
+    def validate_budget_warning_threshold(self, value):
+        if not (1 <= value <= 100):
+            raise serializers.ValidationError("Must be between 1 and 100.")
+        return value
+
+    def validate_monthly_saving_target(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Cannot be negative.")
+        return value
 
     def validate_username(self, value):
         request = self.context["request"]
