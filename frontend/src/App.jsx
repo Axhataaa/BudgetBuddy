@@ -10,6 +10,7 @@ import Budgets from "./pages/Budgets/Budgets";
 import SavingsGoals from "./pages/SavingsGoals/SavingsGoals";
 import Achievements from "./pages/Achievements/Achievements";
 import Reports from "./pages/Reports/Reports";
+import Notifications from "./pages/Notifications/Notifications";
 import Profile from "./pages/Profile/Profile";
 import Settings from "./pages/Settings/Settings";
 
@@ -76,6 +77,11 @@ function App() {
           <Route
             path="/reports"
             element={<Reports />}
+          />
+
+          <Route
+            path="/notifications"
+            element={<Notifications />}
           />
 
           <Route

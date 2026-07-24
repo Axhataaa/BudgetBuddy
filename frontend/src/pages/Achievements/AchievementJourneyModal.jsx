@@ -3,8 +3,8 @@ import {
   LuFlag,
   LuPiggyBank,
   LuWallet,
-  LuX,
 } from "react-icons/lu";
+import { formatCurrency } from "../../utils/formatCurrency";
 
 function AchievementJourneyModal({
   show,
@@ -112,7 +112,7 @@ function AchievementJourneyModal({
         return {
           icon: LuPiggyBank,
           iconClass: "bg-success",
-          title: `Saved ₹${item.amount.toLocaleString()}`,
+          title: `Saved ${formatCurrency(item.amount)}`,
           subtitle: item.description,
         };
 
@@ -120,7 +120,7 @@ function AchievementJourneyModal({
         return {
           icon: LuWallet,
           iconClass: "bg-danger",
-          title: `Withdrew ₹${item.amount.toLocaleString()}`,
+          title: `Withdrew ${formatCurrency(item.amount)}`,
           subtitle: item.description,
         };
 
@@ -152,7 +152,7 @@ function AchievementJourneyModal({
       >
         <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
 
-          <div className="modal-content border-0 shadow-lg">
+          <div className="modal-content bg-surface border-0 shadow-lg">
 
             {/* Header */}
 
@@ -276,7 +276,7 @@ function AchievementJourneyModal({
 
                         <div className="ms-4 flex-grow-1">
 
-                          <div className="border rounded shadow-sm bg-light p-3">
+                          <div className="border rounded shadow-sm bg-surface-sunken p-3">
 
                             <div className="d-flex justify-content-between align-items-start">
 
@@ -325,14 +325,14 @@ function AchievementJourneyModal({
 
                 <div className="col-md-3">
 
-                  <div className="border rounded shadow-sm p-3 h-100 bg-light">
+                  <div className="border rounded shadow-sm p-3 h-100 bg-surface-sunken">
 
                     <small className="text-muted">
                       Purchase Value
                     </small>
 
                     <h4 className="fw-bold mt-2 text-primary">
-                      ₹{Number(goal.target_amount).toLocaleString()}
+                      {formatCurrency(goal.target_amount)}
                     </h4>
 
                   </div>
@@ -341,14 +341,14 @@ function AchievementJourneyModal({
 
                 <div className="col-md-3">
 
-                  <div className="border rounded shadow-sm p-3 h-100 bg-light">
+                  <div className="border rounded shadow-sm p-3 h-100 bg-surface-sunken">
 
                     <small className="text-muted">
                       Total Deposited
                     </small>
 
                     <h4 className="fw-bold mt-2 text-success">
-                      ₹{totalDeposited.toLocaleString()}
+                      {formatCurrency(totalDeposited)}
                     </h4>
 
                   </div>
@@ -357,14 +357,14 @@ function AchievementJourneyModal({
 
                 <div className="col-md-3">
 
-                  <div className="border rounded shadow-sm p-3 h-100 bg-light">
+                  <div className="border rounded shadow-sm p-3 h-100 bg-surface-sunken">
 
                     <small className="text-muted">
                       Total Withdrawn
                     </small>
 
                     <h4 className="fw-bold mt-2 text-danger">
-                      ₹{totalWithdrawn.toLocaleString()}
+                      {formatCurrency(totalWithdrawn)}
                     </h4>
 
                   </div>
@@ -373,7 +373,7 @@ function AchievementJourneyModal({
 
                 <div className="col-md-3">
 
-                  <div className="border rounded shadow-sm p-3 h-100 bg-light">
+                  <div className="border rounded shadow-sm p-3 h-100 bg-surface-sunken">
 
                     <small className="text-muted">
                       Days Taken
@@ -393,7 +393,7 @@ function AchievementJourneyModal({
 
                 <div className="col-md-6">
 
-                  <div className="border rounded shadow-sm p-3 bg-light h-100">
+                  <div className="border rounded shadow-sm p-3 bg-surface-sunken h-100">
 
                     <small className="text-muted">
                       Savings Transactions
@@ -409,7 +409,7 @@ function AchievementJourneyModal({
 
                 <div className="col-md-6">
 
-                  <div className="border rounded shadow-sm p-3 bg-light h-100">
+                  <div className="border rounded shadow-sm p-3 bg-surface-sunken h-100">
 
                     <small className="text-muted">
                       Purchase Date

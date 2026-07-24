@@ -26,38 +26,61 @@ function getFormatter(currency) {
   return formatterCache.get(code);
 }
 
-// The user's chosen currency (Settings > Currency), applied here as a
-// module-level default rather than threading a `currency` prop through
-// every page that already calls formatCurrency(amount) - Dashboard,
-// Expenses, Income, Budgets, SavingsGoals and their child components
-// all keep their existing single-argument calls unchanged.
-// PreferencesContext is the only thing that calls setActiveCurrency,
-// whenever the user's saved currency loads or changes.
+// The database always stores amounts in INR (Backend API Design Doc -
+// no currency field on Expense/Income/Budget/SavingsGoal). The user's
+// chosen display currency (Settings > Currency) is applied here as a
+// real conversion, not just a relabeled symbol: activeRate is "how
+// many units of activeCurrency one INR is worth", fetched from
+// utils/exchangeRates.js and kept in sync by PreferencesContext.
+// Defaulting to INR/rate=1 means every existing call site
+// (Dashboard, Expenses, Income, Budgets, SavingsGoals, Achievements,
+// Reports) keeps working unchanged - they still just call
+// formatCurrency(amountInINR).
 let activeCurrency = "INR";
+let activeRate = 1;
 
-export function setActiveCurrency(currency) {
-  if (CURRENCY_LOCALES[currency]) activeCurrency = currency;
+export function setActiveCurrency(currency, rate = 1) {
+  if (!CURRENCY_LOCALES[currency]) return;
+  activeCurrency = currency;
+  activeRate = typeof rate === "number" && rate > 0 ? rate : 1;
 }
 
 export function getActiveCurrency() {
   return activeCurrency;
 }
 
+export function getActiveRate() {
+  return activeRate;
+}
+
 /**
- * Formats a number using the active currency, Indian-grouped for INR
- * (₹1,25,000.00) and standard grouping for others ($1,250,000.00).
- *
- * Accepts number, numeric string, null, or undefined - API responses
- * send amounts as decimal strings (e.g. "1250.00"), so this coerces
- * rather than requiring every call site to remember to wrap Number(...).
- *
- * `currency` is an optional explicit override; omit it to use the
- * user's active preference (the normal case for every existing call
- * site in the app).
+ * Converts an INR amount to the active currency, without formatting -
+ * used where the raw converted number is needed (e.g. CSV export
+ * columns) rather than a formatted string.
  */
-export function formatCurrency(amount, currency = activeCurrency) {
-  const value = Number(amount);
+export function convertFromInr(amountInInr) {
+  const value = Number(amountInInr);
+  if (Number.isNaN(value)) return 0;
+  return value * activeRate;
+}
+
+/**
+ * Formats an INR amount in the user's active currency, converting it
+ * first. Accepts number, numeric string, null, or undefined - API
+ * responses send amounts as decimal strings (e.g. "1250.00"), so this
+ * coerces rather than requiring every call site to remember to wrap
+ * Number(...).
+ *
+ * `currency`/`rate` are optional explicit overrides; omit both to use
+ * the user's active preference (the normal case for every existing
+ * call site in the app). Passing an explicit `currency` without a
+ * `rate` formats the raw amount unconverted in that currency (rarely
+ * needed, kept for flexibility).
+ */
+export function formatCurrency(amountInInr, currency = activeCurrency, rate) {
+  const value = Number(amountInInr);
+  const effectiveRate = rate ?? (currency === activeCurrency ? activeRate : 1);
   const formatter = getFormatter(currency);
   if (Number.isNaN(value)) return formatter.format(0);
-  return formatter.format(value);
+  return formatter.format(value * effectiveRate);
 }

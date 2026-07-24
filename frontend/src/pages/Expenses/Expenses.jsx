@@ -19,6 +19,7 @@ import {
   updateExpense,
   deleteExpense,
 } from "../../services/expenseService";
+import { getDashboardSummary } from "../../services/dashboardService";
 
 const PAGE_SIZE = 20;
 
@@ -121,6 +122,7 @@ export default function Expenses() {
       }
       setModalOpen(false);
       fetchExpenses();
+      checkResultingBalance(formValues.date);
     } catch (err) {
       // Backend validation errors arrive in the approved envelope shape
       // (API Design Doc §7) - surfacing the message here; per-field
@@ -130,6 +132,32 @@ export default function Expenses() {
       showToast(message, "error");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Task 13: BudgetBuddy is a tracker, not a wallet - expenses are
+  // never blocked for exceeding the balance (handleSubmit above always
+  // saves first). This only informs the user afterward if the balance
+  // for that expense's month has gone negative, reusing the same
+  // dashboard summary endpoint the Dashboard page already calls rather
+  // than duplicating the balance calculation on the frontend. Errors
+  // here are swallowed deliberately - the expense itself already saved
+  // successfully, so a failed balance check shouldn't surface as if
+  // something went wrong with the save.
+  const checkResultingBalance = async (dateString) => {
+    if (!dateString) return;
+    const [year, month] = dateString.split("-").map(Number);
+    try {
+      const summary = await getDashboardSummary({ month, year });
+      if (Number(summary.current_balance) < 0) {
+        showToast(
+          "Heads up! This transaction results in a negative current balance.",
+          "warning"
+        );
+      }
+    } catch {
+      // Non-critical - silently skip the warning rather than
+      // implying the expense save itself failed.
     }
   };
 

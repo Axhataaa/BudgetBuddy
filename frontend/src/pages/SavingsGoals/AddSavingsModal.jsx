@@ -50,7 +50,7 @@ function AddSavingsModal({
       <div className="modal fade show d-block">
         <div className="modal-dialog modal-dialog-centered">
 
-          <div className="modal-content">
+          <div className="modal-content bg-surface">
 
             <form onSubmit={handleSubmit}>
 

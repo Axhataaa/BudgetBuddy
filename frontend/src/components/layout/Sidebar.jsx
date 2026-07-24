@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import {
   LuAward,
+  LuBellRing,
   LuChartColumn,
   LuFlag,
   LuLayoutDashboard,
@@ -118,6 +119,15 @@ export default function Sidebar({ open = false, onClose }) {
         >
           <LuChartColumn size={18} />
           Reports
+        </NavLink>
+
+        <NavLink
+          to="/notifications"
+          className={navClass}
+          onClick={onClose}
+        >
+          <LuBellRing size={18} />
+          Notifications
         </NavLink>
 
         <NavLink

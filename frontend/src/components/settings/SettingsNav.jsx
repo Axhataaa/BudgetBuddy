@@ -8,6 +8,7 @@ const SECTIONS = [
   { id: "data-management", label: "Data Management" },
   { id: "about", label: "About" },
   { id: "logout", label: "Log Out" },
+  { id: "danger-zone", label: "Danger Zone" },
 ];
 
 function scrollToSection(id) {
@@ -23,7 +24,7 @@ export default function SettingsNav() {
             key={s.id}
             type="button"
             className={`btn btn-sm btn-link text-decoration-none d-block w-100 text-start px-3 py-2 ${
-              s.id === "logout" ? "text-danger" : "text-ink"
+              s.id === "logout" || s.id === "danger-zone" ? "text-danger" : "text-ink"
             }`}
             onClick={() => scrollToSection(s.id)}
           >

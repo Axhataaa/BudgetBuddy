@@ -30,3 +30,8 @@ export const changePassword = async (payload) => {
   const response = await api.post("users/change-password/", payload);
   return response.data;
 };
+
+export const deleteAccount = async (payload) => {
+  const response = await api.post("users/delete-account/", payload);
+  return response.data;
+};

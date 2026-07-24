@@ -3,6 +3,8 @@ import {
   listSavingsGoals,
   deleteSavingsGoal,
 } from "../../services/savingsGoalService";
+import { formatCurrency } from "../../utils/formatCurrency";
+import Button from "../../components/ui/Button";
 import GoalCard from "./GoalCard";
 import GoalFormModal from "./GoalFormModal";
 import {
@@ -190,13 +192,9 @@ function SavingsGoals() {
           </p>
         </div>
 
-        <button
-          className="btn btn-primary"
-          onClick={handleAddGoal}
-        >
-          <LuPlus className="me-2" />
+        <Button icon={LuPlus} onClick={handleAddGoal}>
           Add Goal
-        </button>
+        </Button>
 
       </div>
 
@@ -215,7 +213,7 @@ function SavingsGoals() {
         <div className="col-lg-3 col-md-6">
           <SummaryCard
             title="Saved Amount"
-            value={`₹${totalSaved.toLocaleString()}`}
+            value={formatCurrency(totalSaved)}
             icon={LuPiggyBank}
             colorClass="text-income"
           />
@@ -224,14 +222,14 @@ function SavingsGoals() {
         <div className="col-lg-3 col-md-6">
           <SummaryCard
             title="Target Amount"
-            value={`₹${totalTarget.toLocaleString()}`}
+            value={formatCurrency(totalTarget)}
             icon={LuWallet}
           />
         </div>
 
         <div className="col-lg-3 col-md-6">
           <SummaryCard
-            title="Completed Goals"
+            title="Ready to Purchase"
             value={completedGoals.length}
             icon={LuTarget}
             colorClass="text-income"
@@ -293,13 +291,9 @@ function SavingsGoals() {
             and celebrate every milestone along the way.
           </p>
 
-          <button
-            className="btn btn-primary btn-lg"
-            onClick={handleAddGoal}
-          >
-            <LuPlus className="me-2" />
+          <Button icon={LuPlus} size="lg" onClick={handleAddGoal}>
             Create Your First Goal
-          </button>
+          </Button>
 
         </div>
       )}
@@ -307,7 +301,7 @@ function SavingsGoals() {
       {/* ================= Goal Cards ================= */}
 
       {!loading && !error && goals.length > 0 && (
-        <div className="row g-4">
+        <div className="goals-grid">
 
           {goals.map((goal) => (
             <GoalCard

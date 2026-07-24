@@ -12,6 +12,7 @@ import FinancialPreferencesSection from "../../components/settings/FinancialPref
 import DataManagementSection from "../../components/settings/DataManagementSection";
 import AboutSection from "../../components/settings/AboutSection";
 import LogoutSection from "../../components/settings/LogoutSection";
+import DangerZoneSection from "../../components/settings/DangerZoneSection";
 
 export default function Settings() {
   const { showToast } = useToast();
@@ -94,6 +95,8 @@ export default function Settings() {
           <AboutSection />
 
           <LogoutSection />
+
+          <DangerZoneSection />
         </div>
       </div>
     </div>

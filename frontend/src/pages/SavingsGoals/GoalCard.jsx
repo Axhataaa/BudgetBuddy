@@ -1,4 +1,6 @@
 import TransactionHistory from "./TransactionHistory";
+import { formatCurrency } from "../../utils/formatCurrency";
+import Button from "../../components/ui/Button";
 import {
   LuCalendarDays,
   LuClock3,
@@ -6,7 +8,6 @@ import {
   LuTrash2,
   LuTarget,
   LuPiggyBank,
-  LuWallet,
 } from "react-icons/lu";
 
 function GoalCard({
@@ -39,7 +40,7 @@ function GoalCard({
   let badge = "bg-success-subtle text-success";
 
   if (goal.is_completed) {
-    status = "Completed";
+    status = "Ready to Purchase";
     badge = "bg-success text-white";
   } else if (daysLeft < 0) {
     status = "Overdue";
@@ -50,13 +51,11 @@ function GoalCard({
   }
 
   return (
-    <div className="col-xl-4 col-lg-6">
+    <div className="bg-surface rounded shadow-token-sm hover-card p-4 h-100 d-flex flex-column">
 
-      <div className="bg-surface rounded shadow-token-sm hover-card p-4 h-100 d-flex flex-column">
+      {/* ================= Header ================= */}
 
-        {/* ================= Header ================= */}
-
-        <div className="d-flex justify-content-between align-items-start">
+      <div className="d-flex justify-content-between align-items-start">
 
           <div>
 
@@ -84,7 +83,7 @@ function GoalCard({
 
         {/* ================= Progress ================= */}
 
-        <div className="mt-4">
+        <div className="mt-3">
 
           <div className="d-flex justify-content-between mb-2">
 
@@ -94,9 +93,9 @@ function GoalCard({
 
             <small className="text-muted">
 
-              ₹{Number(goal.current_amount).toLocaleString()}
+              {formatCurrency(goal.current_amount)}
               {" / "}
-              ₹{Number(goal.target_amount).toLocaleString()}
+              {formatCurrency(goal.target_amount)}
 
             </small>
 
@@ -121,7 +120,7 @@ function GoalCard({
 
         {/* ================= Goal Info ================= */}
 
-        <div className="mt-4">
+        <div className="mt-3">
 
           <div className="d-flex justify-content-between mb-2">
 
@@ -130,7 +129,7 @@ function GoalCard({
             </span>
 
             <strong>
-              ₹{remaining.toLocaleString()}
+              {formatCurrency(remaining)}
             </strong>
 
           </div>
@@ -175,7 +174,7 @@ function GoalCard({
 
         {/* ================= Bottom Section ================= */}
 
-        <div className="mt-auto pt-4">
+        <div className="mt-auto pt-3">
 
           <TransactionHistory
             transactions={goal.transactions || []}
@@ -184,7 +183,7 @@ function GoalCard({
           {!goal.is_completed && (
             <>
               <button
-                className="btn btn-success w-100 mt-4 mb-2"
+                className="btn btn-success w-100 mt-3 mb-2"
                 onClick={() => onAddSavings(goal)}
               >
                 <LuPiggyBank className="me-2" />
@@ -202,7 +201,7 @@ function GoalCard({
 
           {goal.is_completed && !goal.is_purchased && (
             <button
-              className="btn btn-warning w-100 mt-4 mb-3"
+              className="btn btn-warning w-100 mt-3 mb-3"
               onClick={() => onPurchase(goal)}
             >
               🎉 Purchase Completed
@@ -210,7 +209,7 @@ function GoalCard({
           )}
 
           {goal.is_purchased && (
-            <div className="alert alert-success mt-4 mb-3">
+            <div className="alert alert-success mt-3 mb-3">
               <strong>✓ Purchased</strong>
 
               <br />
@@ -221,35 +220,29 @@ function GoalCard({
 
           <div className="d-flex gap-2 mt-3">
 
-            <button
-              className="btn btn-outline-primary flex-grow-1"
+            <Button
+              variant="secondary"
+              icon={LuPencil}
+              className="flex-grow-1"
               onClick={() => onEdit(goal)}
             >
-
-              <LuPencil className="me-2" />
-
               Edit
+            </Button>
 
-            </button>
-
-            <button
-              className="btn btn-outline-danger flex-grow-1"
+            <Button
+              variant="danger"
+              icon={LuTrash2}
+              className="flex-grow-1"
               onClick={() => onDelete(goal)}
             >
-
-              <LuTrash2 className="me-2" />
-
               Delete
-
-            </button>
+            </Button>
 
           </div>
 
         </div>
 
       </div>
-
-    </div>
   );
 }
 

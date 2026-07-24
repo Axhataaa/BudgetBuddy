@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createSavingsTransaction } from "../../services/savingsTransactionService";
+import { formatCurrency } from "../../utils/formatCurrency";
 import { LuWallet, LuX } from "react-icons/lu";
 
 function WithdrawSavingsModal({
@@ -57,7 +58,7 @@ function WithdrawSavingsModal({
       <div className="modal fade show d-block">
         <div className="modal-dialog modal-dialog-centered">
 
-          <div className="modal-content">
+          <div className="modal-content bg-surface">
 
             <form onSubmit={handleSubmit}>
 
@@ -87,7 +88,7 @@ function WithdrawSavingsModal({
                 <small className="text-muted d-block mb-3">
                   Available Savings:
                   {" "}
-                  ₹{Number(goal.current_amount).toLocaleString()}
+                  {formatCurrency(goal.current_amount)}
                 </small>
 
                 <div className="mb-3">

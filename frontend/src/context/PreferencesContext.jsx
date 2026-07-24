@@ -1,6 +1,7 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { getProfile } from "../services/profileService";
 import { setActiveCurrency } from "../utils/formatCurrency";
+import { getExchangeRates, getCachedRatesSync } from "../utils/exchangeRates";
 import { useAuth } from "../hooks/useAuth";
 
 const PreferencesContext = createContext(null);
@@ -29,14 +30,17 @@ function applyThemeToDocument(theme) {
  * custom properties (App design system, index.css), no component
  * needs to know about theming at all.
  *
- * Currency is applied through formatCurrency's module-level active
- * currency (utils/formatCurrency.js) instead of threading a currency
- * prop through every page that calls formatCurrency(amount) - every
- * existing call site (Dashboard, Expenses, Income, Budgets,
- * SavingsGoals, ...) keeps working unchanged. Because that function
- * isn't itself reactive, AppShell remounts the current route
- * (key={currency}) whenever currency changes, so already-rendered
- * amounts refresh immediately instead of only on next navigation.
+ * Currency is a real conversion, not a relabeled symbol: amounts are
+ * always stored and sent by the backend in INR (no currency field on
+ * any financial model), and formatCurrency() converts them using a
+ * live INR-based exchange rate (utils/exchangeRates.js) before
+ * formatting. Rates are fetched once per session (cached ~12h in
+ * localStorage, with a hardcoded fallback if the network and cache
+ * are both unavailable) and re-applied whenever the user's currency
+ * changes. Because formatCurrency isn't itself reactive, AppShell
+ * remounts the current route (key={currency}) whenever currency
+ * changes, so already-rendered amounts refresh immediately instead of
+ * only on next navigation.
  *
  * Settings remains the only place these are edited - this context
  * just applies whatever is current and caches it in localStorage so
@@ -50,6 +54,8 @@ export function PreferencesProvider({ children }) {
   const [theme, setThemeState] = useState(() => localStorage.getItem(THEME_STORAGE_KEY) || "system");
   const [currency, setCurrencyState] = useState(() => localStorage.getItem(CURRENCY_STORAGE_KEY) || "INR");
   const [resolvedTheme, setResolvedTheme] = useState(() => applyThemeToDocument(theme));
+  const [rates, setRates] = useState(() => getCachedRatesSync());
+  const [ratesLoading, setRatesLoading] = useState(true);
 
   useEffect(() => {
     setResolvedTheme(applyThemeToDocument(theme));
@@ -65,10 +71,27 @@ export function PreferencesProvider({ children }) {
     return () => mq.removeEventListener("change", handler);
   }, [theme]);
 
+  // Fetch real rates once per session (getExchangeRates itself uses
+  // the ~12h localStorage cache, so this is cheap on repeat visits).
   useEffect(() => {
-    setActiveCurrency(currency);
+    let cancelled = false;
+    getExchangeRates()
+      .then((fetched) => {
+        if (!cancelled) setRates(fetched);
+      })
+      .finally(() => {
+        if (!cancelled) setRatesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const rate = rates[currency] ?? 1;
+    setActiveCurrency(currency, rate);
     localStorage.setItem(CURRENCY_STORAGE_KEY, currency);
-  }, [currency]);
+  }, [currency, rates]);
 
   // Reconcile against the real backend value after login - the
   // backend is the source of truth; localStorage is only a pre-fetch
@@ -95,8 +118,8 @@ export function PreferencesProvider({ children }) {
   const setCurrency = useCallback((next) => setCurrencyState(next), []);
 
   const value = useMemo(
-    () => ({ theme, resolvedTheme, setTheme, currency, setCurrency }),
-    [theme, resolvedTheme, setTheme, currency, setCurrency]
+    () => ({ theme, resolvedTheme, setTheme, currency, setCurrency, rates, ratesLoading }),
+    [theme, resolvedTheme, setTheme, currency, setCurrency, rates, ratesLoading]
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;

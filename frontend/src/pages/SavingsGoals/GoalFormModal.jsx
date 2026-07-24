@@ -108,7 +108,7 @@ function GoalFormModal({
         tabIndex="-1"
       >
         <div className="modal-dialog modal-dialog-centered modal-lg">
-          <div className="modal-content border-0 shadow-lg">
+          <div className="modal-content border-0 shadow-lg bg-surface">
 
             {/* Header */}
 

@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { formatCurrency } from "./formatCurrency";
+import { formatCurrency, convertFromInr, getActiveCurrency } from "./formatCurrency";
 
 function downloadBlob(filename, content, mimeType) {
   const blob = new Blob([content], { type: mimeType });
@@ -26,46 +26,62 @@ function csvSection(title, rows) {
   return lines.join("\n") + "\n\n";
 }
 
+// Rounds a converted amount to 2 decimal places as a plain number (not
+// a formatted currency string) - CSV columns should stay numeric so
+// spreadsheet apps can sum/chart them directly.
+function money(amountInInr) {
+  return Math.round(convertFromInr(amountInInr) * 100) / 100;
+}
+
 /**
  * Exports the exact data currently shown on the Reports page - same
  * payload from getReportSummary(), no separate aggregation logic and
  * no backend involvement (client-side export, per the agreed plan).
+ * The backend always returns amounts in INR; every monetary column
+ * here is converted to the user's active display currency (the same
+ * conversion formatCurrency() applies on-screen) so the export isn't
+ * silently in a different currency than what the page shows.
  */
 export function exportReportCsv(report, periodLabel) {
   const { summary, trend, expense_by_category, income_by_source, budget_performance } = report;
+  const currency = getActiveCurrency();
 
   let csv = `BudgetBuddy Report - ${periodLabel}\n`;
-  csv += `Generated,${new Date().toLocaleString("en-IN")}\n\n`;
+  csv += `Generated,${new Date().toLocaleString("en-IN")}\n`;
+  csv += `Currency,${currency}\n\n`;
 
   csv += csvSection("Summary", [
-    { Metric: "Total Income", Value: summary.total_income },
-    { Metric: "Total Expenses", Value: summary.total_expenses },
-    { Metric: "Net Savings", Value: summary.net_savings },
-    { Metric: "Current Balance", Value: summary.current_balance },
-    { Metric: "Savings Rate (%)", Value: summary.savings_rate },
+    { Metric: "Total Income", [`Value (${currency})`]: money(summary.total_income) },
+    { Metric: "Total Expenses", [`Value (${currency})`]: money(summary.total_expenses) },
+    { Metric: "Current Balance", [`Value (${currency})`]: money(summary.current_balance) },
+    { Metric: "Savings Rate (%)", [`Value (${currency})`]: summary.savings_rate },
   ]);
 
   csv += csvSection(
     "Income vs Expense Trend",
-    trend.map((t) => ({ Period: t.period, Income: t.income, Expenses: t.expenses }))
+    trend.map((t) => ({
+      Period: t.period,
+      [`Income (${currency})`]: money(t.income),
+      [`Expenses (${currency})`]: money(t.expenses),
+    }))
   );
 
   csv += csvSection(
     "Expense by Category",
-    expense_by_category.map((c) => ({ Category: c.category, Total: c.total }))
+    expense_by_category.map((c) => ({ Category: c.category, [`Total (${currency})`]: money(c.total) }))
   );
 
   csv += csvSection(
     "Income by Source",
-    income_by_source.map((s) => ({ Source: s.source, Total: s.total }))
+    income_by_source.map((s) => ({ Source: s.source, [`Total (${currency})`]: money(s.total) }))
   );
 
   csv += csvSection(
     "Budget Performance",
     budget_performance.map((b) => ({
       Category: b.category,
-      Limit: b.limit,
-      Spent: b.spent,
+      [`Limit (${currency})`]: money(b.limit),
+      [`Spent (${currency})`]: money(b.spent),
       "Percent Used": b.percent_used,
     }))
   );
@@ -81,7 +97,11 @@ export function exportReportPdf(report, periodLabel) {
   doc.text("BudgetBuddy Report", 14, 18);
   doc.setFontSize(10);
   doc.setTextColor(100);
-  doc.text(`${periodLabel}  |  Generated ${new Date().toLocaleString("en-IN")}`, 14, 25);
+  doc.text(
+    `${periodLabel}  |  Generated ${new Date().toLocaleString("en-IN")}  |  Currency: ${getActiveCurrency()}`,
+    14,
+    25
+  );
 
   autoTable(doc, {
     startY: 32,
@@ -89,7 +109,6 @@ export function exportReportPdf(report, periodLabel) {
     body: [
       ["Total Income", formatCurrency(summary.total_income)],
       ["Total Expenses", formatCurrency(summary.total_expenses)],
-      ["Net Savings", formatCurrency(summary.net_savings)],
       ["Current Balance", formatCurrency(summary.current_balance)],
       ["Savings Rate", `${Number(summary.savings_rate).toFixed(1)}%`],
     ],

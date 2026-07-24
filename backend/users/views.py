@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from .logout_serializer import LogoutSerializer
 from .serializers import (
     ChangePasswordSerializer,
+    DeleteAccountSerializer,
     ProfileSerializer,
     RegisterSerializer,
     UserListSerializer,
@@ -59,6 +60,34 @@ class ChangePasswordView(APIView):
         request.user.set_password(serializer.validated_data["new_password"])
         request.user.save(update_fields=["password"])
         return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+
+
+class DeleteAccountView(APIView):
+    """
+    POST /api/v1/users/delete-account/
+
+    Permanently deletes the authenticated user, requiring either their
+    current password or the literal text "DELETE" as confirmation
+    (Settings > Danger Zone). Deleting the User row cascades (all
+    user-owned models use on_delete=models.CASCADE) to Profile,
+    Expenses, Incomes, Budgets, SavingsGoals and their
+    SavingsTransactions - nothing is left orphaned, and there is no
+    undo.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = DeleteAccountSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        user.delete()
+
+        return Response(
+            {"message": "Your account has been permanently deleted."},
+            status=status.HTTP_200_OK,
+        )
     
 
 class UserListView(generics.ListAPIView):

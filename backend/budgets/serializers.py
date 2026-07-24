@@ -1,6 +1,9 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from reports.notification_service import create_notification
+from reports.models import Notification
+
 from .models import (
     Budget,
     SavingsGoal,
@@ -77,17 +80,6 @@ class BudgetSerializer(serializers.ModelSerializer):
 
         return attrs
 
-    usage_percentage = serializers.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-    )
-
-    is_overspent = serializers.BooleanField()
-    alert = serializers.CharField(
-        allow_null=True,
-        required=False,
-    )
-
 
 # ==========================================================
 # Savings Transaction Summary (Nested inside Goal)
@@ -106,6 +98,7 @@ class SavingsTransactionSummarySerializer(
             "note",
             "created_at",
         ]
+
 
 
 # ==========================================================
@@ -287,6 +280,8 @@ class SavingsTransactionSerializer(
             validated_data
         )
 
+        was_completed = goal.is_completed
+
         if (
             transaction_obj.transaction_type
             == SavingsTransaction.DEPOSIT
@@ -297,4 +292,58 @@ class SavingsTransactionSerializer(
 
         goal.save()
 
+        # Task 3: goal.save() (SavingsGoal.save(), budgets/models.py)
+        # recomputes is_completed from current_amount/target_amount -
+        # only notify on the transition into completed, not on every
+        # later deposit into an already-completed goal.
+        if goal.is_completed and not was_completed:
+            create_notification(
+                user=goal.user,
+                message=(
+                    f'Your savings goal "{goal.goal_name}" has reached its '
+                    f"target of ₹{goal.target_amount}! You can now mark it as purchased."
+                ),
+                notification_type=Notification.NotificationType.SAVINGS_GOAL,
+                dedup_key=f"savings_goal:{goal.id}:completed",
+            )
+
         return transaction_obj
+
+
+# ==========================================================
+# Budget Summary Serializer
+# ==========================================================
+
+class BudgetSummarySerializer(serializers.Serializer):
+    category = serializers.CharField()
+
+    budget_amount = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+    )
+
+    total_expense = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+    )
+
+    remaining_budget = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+    )
+
+    overspent_amount = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+    )
+
+    usage_percentage = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+    )
+
+    is_overspent = serializers.BooleanField()
+
+    alert = serializers.CharField(
+        allow_null=True,
+    )

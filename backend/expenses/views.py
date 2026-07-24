@@ -3,6 +3,7 @@ from rest_framework import viewsets
 from .filters import ExpenseFilter
 from .models import Expense
 from .serializers import ExpenseSerializer
+from budgets.notifications import check_and_notify_budget_alerts
 
 
 class ExpenseViewSet(viewsets.ModelViewSet):
@@ -30,5 +31,17 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         return Expense.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        expense = serializer.save(user=self.request.user)
+        # Task 2: only the specific budget this expense's category/
+        # month/year belongs to can have changed - not a full re-scan
+        # of every budget the user has.
+        check_and_notify_budget_alerts(
+            self.request.user, expense.category, expense.date.month, expense.date.year
+        )
+
+    def perform_update(self, serializer):
+        expense = serializer.save()
+        check_and_notify_budget_alerts(
+            self.request.user, expense.category, expense.date.month, expense.date.year
+        )
 

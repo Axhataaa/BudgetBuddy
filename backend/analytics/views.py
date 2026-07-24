@@ -85,6 +85,13 @@ class DashboardSummaryView(APIView):
             year=year,
         )
 
+        total_budget = (
+            budget_qs.aggregate(
+                total=Sum("monthly_limit")
+            )["total"]
+            or Decimal("0.00")
+        )
+
         total_expenses = (
             expense_qs.aggregate(
                 total=Sum("amount")
@@ -97,6 +104,10 @@ class DashboardSummaryView(APIView):
                 total=Sum("amount")
             )["total"]
             or Decimal("0.00")
+        )
+
+        remaining_budget = (
+            total_budget - total_expenses
         )
 
         net_savings = (

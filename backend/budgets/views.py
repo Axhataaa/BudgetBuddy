@@ -4,6 +4,9 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django.utils import timezone
 
+from reports.notification_service import create_notification
+from reports.models import Notification
+
 from .filters import BudgetFilter
 from .models import (
     Budget,
@@ -13,9 +16,14 @@ from .models import (
 
 from .serializers import (
     BudgetSerializer,
+    BudgetSummarySerializer,
     SavingsGoalSerializer,
     SavingsTransactionSerializer,
 )
+
+from decimal import Decimal
+from django.db.models import Sum
+from expenses.models import Expense
 
 
 class BudgetViewSet(viewsets.ModelViewSet):
@@ -140,10 +148,17 @@ class SavingsGoalViewSet(viewsets.ModelViewSet):
     ]
 
     def get_queryset(self):
-        return SavingsGoal.objects.filter(
-            user=self.request.user,
-            is_archived=False,
-        )
+        queryset = SavingsGoal.objects.filter(user=self.request.user)
+
+        # Only the list endpoint (the main Savings Goals page) should
+        # exclude archived/purchased goals - retrieve, update, destroy,
+        # and the complete-purchase action all need to reach an already-
+        # archived goal by id (e.g. deleting an achievement from the
+        # Achievements page, which is just an archived SavingsGoal row).
+        if self.action == "list":
+            queryset = queryset.filter(is_archived=False)
+
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(
@@ -193,6 +208,16 @@ class SavingsGoalViewSet(viewsets.ModelViewSet):
                 "purchase_note",
                 "updated_at",
             ]
+        )
+
+        create_notification(
+            user=request.user,
+            message=(
+                f'You marked "{goal.goal_name}" as purchased. '
+                f"Find it in your Achievements."
+            ),
+            notification_type=Notification.NotificationType.SAVINGS_GOAL,
+            dedup_key=f"savings_goal:{goal.id}:purchased",
         )
 
         return Response(

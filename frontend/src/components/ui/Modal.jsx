@@ -1,7 +1,9 @@
+import { createPortal } from "react-dom";
+
 export default function Modal({ open, onClose, title, children }) {
   if (!open) return null;
 
-  return (
+  return createPortal(
     <>
       <div className="modal d-block" tabIndex="-1" onClick={onClose}>
         <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()}>
@@ -20,6 +22,7 @@ export default function Modal({ open, onClose, title, children }) {
         </div>
       </div>
       <div className="modal-backdrop show" />
-    </>
+    </>,
+    document.body
   );
 }

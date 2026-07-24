@@ -183,3 +183,36 @@ class ChangePasswordSerializer(serializers.Serializer):
         # separate password-strength policy for this one endpoint.
         validate_password(value)
         return value
+
+
+class DeleteAccountSerializer(serializers.Serializer):
+    """
+    Requires EITHER the account password OR the literal text "DELETE"
+    (case-sensitive), matching the two confirmation methods the
+    Settings > Danger Zone UI offers. Whichever is provided is
+    validated; at least one is required.
+    """
+
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    confirmation_text = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        password = attrs.get("password", "")
+        confirmation_text = attrs.get("confirmation_text", "")
+        user = self.context["request"].user
+
+        if confirmation_text:
+            if confirmation_text != "DELETE":
+                raise serializers.ValidationError(
+                    {"confirmation_text": 'Type "DELETE" exactly to confirm.'}
+                )
+            return attrs
+
+        if password:
+            if not user.check_password(password):
+                raise serializers.ValidationError({"password": "Incorrect password."})
+            return attrs
+
+        raise serializers.ValidationError(
+            "Enter your password or type \"DELETE\" to confirm account deletion."
+        )

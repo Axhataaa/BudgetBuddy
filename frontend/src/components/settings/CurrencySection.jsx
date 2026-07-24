@@ -1,5 +1,4 @@
 import { useState } from "react";
-import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { usePreferences } from "../../hooks/usePreferences";
 
@@ -13,11 +12,24 @@ const CURRENCY_OPTIONS = [
 
 /**
  * Reads/writes the currency through PreferencesContext, which is what
- * actually makes formatCurrency() render every amount in the app in
- * this currency (see utils/formatCurrency.js and AppShell.jsx for how
- * that takes effect immediately, not just on the next page load).
- * Persists the choice the same way every other section does, via
- * onSave -> updateProfile; reverts on failure.
+ * actually makes formatCurrency() convert and render every amount in
+ * the app in this currency (see utils/formatCurrency.js,
+ * utils/exchangeRates.js, and AppShell.jsx for how that takes effect
+ * immediately, not just on the next page load). Persists the choice
+ * the same way every other section does, via onSave -> updateProfile;
+ * reverts on failure.
+ *
+ * Renders the <select> directly rather than through the shared Input
+ * component: Input's wrapper hardcodes a hierarchy-relative "mb-3
+ * ${className}" class string, and since Bootstrap's .mb-3 and .mb-0
+ * utility classes have equal CSS specificity, which one wins is
+ * decided by their order in Bootstrap's compiled stylesheet (not the
+ * order they're listed in the class attribute) - .mb-3 is declared
+ * later there, so it silently won over an .mb-0 override passed via
+ * `className`, leaving an extra ~1rem of bottom margin under the
+ * select that the adjacent Button didn't have, throwing off their
+ * alignment. Rendering the control directly here avoids relying on
+ * overriding that margin at all.
  */
 export default function CurrencySection({ onSave }) {
   const { currency, setCurrency } = usePreferences();
@@ -47,20 +59,28 @@ export default function CurrencySection({ onSave }) {
       <h2 className="font-display fs-6 fw-semibold mb-1">Currency</h2>
       <p className="text-muted-ink small mb-3">Amounts across BudgetBuddy will display in this currency.</p>
 
-      <form onSubmit={handleSave} className="d-flex align-items-end gap-2 flex-wrap">
-        <div style={{ minWidth: 240 }}>
-          <Input
-            as="select"
-            label="Preferred currency"
+      <form onSubmit={handleSave}>
+        <label className="form-label fw-medium" htmlFor="currency-select">
+          Preferred currency
+        </label>
+        <div className="d-flex align-items-stretch gap-2">
+          <select
+            id="currency-select"
+            className="form-select"
+            style={{ maxWidth: 260 }}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            options={CURRENCY_OPTIONS}
-            className="mb-0"
-          />
+          >
+            {CURRENCY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <Button type="submit" variant="secondary" loading={saving} disabled={!dirty}>
+            Save
+          </Button>
         </div>
-        <Button type="submit" variant="secondary" loading={saving} disabled={!dirty}>
-          Save
-        </Button>
       </form>
     </div>
   );

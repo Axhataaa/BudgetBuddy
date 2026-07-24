@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import Button from "./Button";
 
 export default function ConfirmDialog({
@@ -9,10 +10,11 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
   loading = false,
+  children,
 }) {
   if (!open) return null;
 
-  return (
+  return createPortal(
     <>
       <div className="modal d-block" tabIndex="-1" onClick={onCancel}>
         <div className="modal-dialog modal-sm modal-dialog-centered" onClick={(e) => e.stopPropagation()}>
@@ -20,6 +22,7 @@ export default function ConfirmDialog({
             <div className="modal-body">
               <h3 className="font-display fs-6 fw-semibold mb-2">{title}</h3>
               <p className="text-muted-ink small mb-0">{message}</p>
+              {children}
             </div>
             <div className="modal-footer border-0 pt-0">
               <Button variant="ghost" onClick={onCancel} disabled={loading}>
@@ -33,6 +36,7 @@ export default function ConfirmDialog({
         </div>
       </div>
       <div className="modal-backdrop show" />
-    </>
+    </>,
+    document.body
   );
 }

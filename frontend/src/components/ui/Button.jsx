@@ -5,8 +5,14 @@ const VARIANT_CLASSES = {
   danger: "btn-outline-danger",
 };
 
+const SIZE_CLASSES = {
+  sm: "btn-sm",
+  lg: "btn-lg",
+};
+
 export default function Button({
   variant = "primary",
+  size,
   loading = false,
   disabled = false,
   icon: Icon,
@@ -17,7 +23,7 @@ export default function Button({
   return (
     <button
       disabled={disabled || loading}
-      className={`btn d-inline-flex align-items-center gap-2 ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`btn d-inline-flex align-items-center justify-content-center gap-2 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size] || ""} ${className}`}
       {...props}
     >
       {loading ? (

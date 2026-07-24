@@ -5,7 +5,7 @@ import Sidebar from "../components/layout/Sidebar";
 import { usePreferences } from "../hooks/usePreferences";
 
 export default function AppShell() {
-  const { currency } = usePreferences();
+  const { currency, rates } = usePreferences();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -30,12 +30,15 @@ export default function AppShell() {
           <LuMenu size={18} />
         </button>
 
-        {/* Keyed on currency: formatCurrency's active currency (see
-            utils/formatCurrency.js) isn't itself reactive, so this
-            remounts whichever page is currently showing when the
-            user changes their currency in Settings, refreshing every
-            already-rendered amount immediately. */}
-        <Outlet key={currency} />
+        {/* Keyed on currency AND its resolved rate: formatCurrency's
+            active currency/rate (see utils/formatCurrency.js) isn't
+            itself reactive, so this remounts whichever page is
+            currently showing whenever either changes - when the user
+            switches currency in Settings, and also when the async
+            exchange-rate fetch resolves after initial load (the rate
+            for the current currency can change independently of the
+            currency code itself). */}
+        <Outlet key={`${currency}-${rates[currency] ?? 1}`} />
       </main>
     </div>
   );

@@ -6,7 +6,10 @@ import {
   LuTrophy,
 } from "react-icons/lu";
 
-import { listAchievements } from "../../services/achievementService";
+import { listAchievements, deleteAchievement } from "../../services/achievementService";
+import { formatCurrency } from "../../utils/formatCurrency";
+import { useToast } from "../../components/ui/Toast";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 
 import AchievementCard from "./AchievementCard";
 import AchievementJourneyModal from "./AchievementJourneyModal";
@@ -43,6 +46,8 @@ function SummaryCard({
 
 function Achievements() {
 
+  const { showToast } = useToast();
+
   const [goals, setGoals] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -52,6 +57,9 @@ function Achievements() {
 
   const [selectedGoal, setSelectedGoal] =
     useState(null);
+
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadAchievements();
@@ -80,6 +88,26 @@ function Achievements() {
 
   }
 
+  function handleDeleteRequest(goal) {
+    setDeleteTarget(goal);
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+
+    setDeleting(true);
+    try {
+      await deleteAchievement(deleteTarget.id);
+      setGoals((prev) => prev.filter((g) => g.id !== deleteTarget.id));
+      showToast("Achievement deleted.", "success");
+      setDeleteTarget(null);
+    } catch {
+      showToast("Couldn't delete this achievement. Please try again.", "error");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const totalAmount = useMemo(() => {
 
     return goals.reduce(
@@ -89,16 +117,6 @@ function Achievements() {
     );
 
   }, [goals]);
-
-  if (loading) {
-
-    return (
-      <div className="text-center py-5">
-        Loading...
-      </div>
-    );
-
-  }
 
   return (
 
@@ -118,85 +136,114 @@ function Achievements() {
 
       </div>
 
-      {/* Summary */}
+      {loading ? (
 
-      <div className="row g-3 mb-4">
-
-        <div className="col-md-6">
-
-          <SummaryCard
-            title="Goals Achieved"
-            value={goals.length}
-            icon={LuAward}
-          />
-
-        </div>
-
-        <div className="col-md-6">
-
-          <SummaryCard
-            title="Total Value Achieved"
-            value={`₹${totalAmount.toLocaleString()}`}
-            icon={LuIndianRupee}
-          />
-
-        </div>
-
-      </div>
-
-      {/* Empty State */}
-
-      {goals.length === 0 ? (
-
-        <div className="bg-surface rounded shadow-token-sm p-5 text-center">
-
+        // Matches the Savings Goals page's loading pattern (a
+        // centered Bootstrap spinner within the normal page layout,
+        // not a bare "Loading..." text replacing the whole page) -
+        // this used to be an early return before the header, so the
+        // page title disappeared and reappeared as loading finished.
+        <div className="text-center py-5">
           <div
-            className="d-inline-flex align-items-center justify-content-center rounded-circle bg-surface-sunken mb-4"
-            style={{
-              width: 90,
-              height: 90,
-            }}
-          >
-
-            <LuTrophy
-              size={40}
-              className="text-warning"
-            />
-
-          </div>
-
-          <h3 className="fw-bold">
-            No Achievements Yet
-          </h3>
-
-          <p
-            className="text-muted-ink mx-auto"
-            style={{
-              maxWidth: 500,
-            }}
-          >
-            Complete your first savings goal and
-            mark it as purchased to unlock your
-            first achievement.
-          </p>
-
+            className="spinner-border text-primary"
+            role="status"
+          />
         </div>
 
       ) : (
 
-        <div className="row g-4">
+        <>
 
-          {goals.map((goal) => (
+          {/* Summary */}
 
-            <AchievementCard
-              key={goal.id}
-              goal={goal}
-              onViewJourney={handleViewJourney}
-            />
+          <div className="row g-3 mb-4">
 
-          ))}
+            <div className="col-md-6">
 
-        </div>
+              <SummaryCard
+                title="Goals Achieved"
+                value={goals.length}
+                icon={LuAward}
+              />
+
+            </div>
+
+            <div className="col-md-6">
+
+              <SummaryCard
+                title="Total Value Achieved"
+                value={formatCurrency(totalAmount)}
+                icon={LuIndianRupee}
+              />
+
+            </div>
+
+          </div>
+
+          {/* Empty State */}
+
+          {goals.length === 0 ? (
+
+            <div className="bg-surface rounded shadow-token-sm p-5 text-center">
+
+              <div
+                className="d-inline-flex align-items-center justify-content-center rounded-circle bg-surface-sunken mb-4"
+                style={{
+                  width: 90,
+                  height: 90,
+                }}
+              >
+
+                <LuTrophy
+                  size={40}
+                  className="text-warning"
+                />
+
+              </div>
+
+              <h3 className="fw-bold">
+                No Achievements Yet
+              </h3>
+
+              <p
+                className="text-muted-ink mx-auto"
+                style={{
+                  maxWidth: 500,
+                }}
+              >
+                Complete your first savings goal and
+                mark it as purchased to unlock your
+                first achievement.
+              </p>
+
+            </div>
+
+          ) : (
+
+            // Reuses the same .goals-grid CSS (index.css) built for
+            // the Savings Goals page: a Bootstrap row with fixed-
+            // fraction columns leaves an obviously empty gap when
+            // there are only 1-2 achievements, the same issue fixed
+            // there - this is the identical layout pattern, so it
+            // gets the identical fix rather than a new one.
+            <div className="goals-grid">
+
+              {goals.map((goal) => (
+
+                <AchievementCard
+                  key={goal.id}
+                  goal={goal}
+                  onViewJourney={handleViewJourney}
+                  onDelete={handleDeleteRequest}
+                />
+
+              ))}
+
+            </div>
+
+          )}
+
+        </>
 
       )}
 
@@ -210,6 +257,21 @@ function Achievements() {
           setSelectedGoal(null);
 
         }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete this achievement?"
+        message={
+          deleteTarget
+            ? `This removes "${deleteTarget.goal_name}" from your achievement history. This can't be undone, and it won't recreate the goal or affect your income/expense records.`
+            : ""
+        }
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
       />
 
     </div>

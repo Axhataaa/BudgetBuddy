@@ -667,3 +667,45 @@ img {
 html, body, #root {
   overflow-x: hidden;
 }
+
+/* =====================================================================
+   Savings Goals grid (Task 8, this pass)
+   Previously a Bootstrap row with col-xl-4/col-lg-6 children - that
+   always reserves a fixed fraction of the row per card regardless of
+   how many cards exist, so 1-2 goals left an obviously empty gap next
+   to them. A CSS grid with auto-fit + a capped minmax() sizes each
+   card naturally (never stretches to an awkward full-row width, never
+   leaves a big empty column) and wraps into more rows as more goals
+   are added - no goal-count-based logic needed, it's just how grid
+   track sizing works.
+===================================================================== */
+
+.goals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 460px));
+  gap: 1.5rem;
+  justify-content: center;
+}
+
+/* =====================================================================
+   Savings Goal card - Recent Activity expand/collapse (this pass)
+   grid-template-rows: 0fr -> 1fr animates to the section's real
+   content height regardless of how many extra transactions there are,
+   which a max-height transition (needs a fixed guessed value) can't
+   do smoothly. The inner overflow:hidden wrapper is what actually
+   clips content while the row is sized at 0fr.
+===================================================================== */
+
+.activity-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--transition-normal);
+}
+
+.activity-collapse[data-expanded="true"] {
+  grid-template-rows: 1fr;
+}
+
+.activity-collapse-inner {
+  overflow: hidden;
+}
