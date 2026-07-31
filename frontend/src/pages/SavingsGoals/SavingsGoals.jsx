@@ -16,6 +16,7 @@ import {
 import AddSavingsModal from "./AddSavingsModal";
 import WithdrawSavingsModal from "./WithdrawSavingsModal";
 import PurchaseCompletedModal from "./PurchaseCompletedModal";
+import { useToast } from "../../components/ui/Toast";
 
 function SummaryCard({
   title,
@@ -49,6 +50,7 @@ function SummaryCard({
 }
 
 function SavingsGoals() {
+  const { showToast } = useToast();
 
   // -----------------------------
   // State
@@ -143,7 +145,7 @@ function SavingsGoals() {
     } catch (error) {
       console.error(error);
 
-      alert("Failed to delete goal.");
+      showToast("Failed to delete goal.", "error");
     }
   }
 

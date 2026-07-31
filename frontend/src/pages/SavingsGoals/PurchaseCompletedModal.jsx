@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { LuPartyPopper } from "react-icons/lu";
 import { completePurchase } from "../../services/savingsGoalService";
+import { useToast } from "../../components/ui/Toast";
 
 function PurchaseCompletedModal({
   show,
@@ -8,6 +9,7 @@ function PurchaseCompletedModal({
   onHide,
   onSuccess,
 }) {
+  const { showToast } = useToast();
   const [purchaseDate, setPurchaseDate] = useState("");
   const [purchaseNote, setPurchaseNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -40,9 +42,17 @@ function PurchaseCompletedModal({
     } catch (error) {
       console.error(error);
 
-      alert(
+      // Bug fix: alert() replaced with the app's toast system for
+      // consistency with every other modal - the extraction here was
+      // already correct as-is: complete-purchase's business-logic
+      // errors (budgets/views.py) return a raw {"error": "message"}
+      // Response() directly rather than raising a ValidationError, so
+      // they bypass the wrapped {error:{message,details}} shape the
+      // other savings modals need to account for.
+      showToast(
         error.response?.data?.error ||
-        "Failed to complete purchase."
+        "Failed to complete purchase.",
+        "error"
       );
     } finally {
       setSaving(false);

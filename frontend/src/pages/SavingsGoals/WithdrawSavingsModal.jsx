@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createSavingsTransaction } from "../../services/savingsTransactionService";
 import { formatCurrency } from "../../utils/formatCurrency";
 import { LuWallet, LuX } from "react-icons/lu";
+import { useToast } from "../../components/ui/Toast";
 
 function WithdrawSavingsModal({
   show,
@@ -9,6 +10,7 @@ function WithdrawSavingsModal({
   goal,
   onSuccess,
 }) {
+  const { showToast } = useToast();
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -19,7 +21,7 @@ function WithdrawSavingsModal({
     e.preventDefault();
 
     if (Number(amount) <= 0) {
-      alert("Please enter a valid amount.");
+      showToast("Please enter a valid amount.", "error");
       return;
     }
 
@@ -40,12 +42,28 @@ function WithdrawSavingsModal({
     } catch (error) {
       console.error(error);
 
-      const apiError =
-        error.response?.data?.transaction_amount?.[0] ||
-        error.response?.data?.detail ||
-        "Failed to withdraw savings.";
+      // Bug fix: this read error.response.data.transaction_amount[0],
+      // but the API's actual error shape (config/exceptions.py) nests
+      // field errors under data.error.details - so a real "Withdrawal
+      // cannot make savings negative" validation failure was silently
+      // falling through to the generic message below. Also swapped
+      // alert() for the app's toast system for consistency.
+      //
+      // details.transaction_amount can be either a string (manual
+      // `raise ValidationError({"field": "message"})` in this view)
+      // or an array (DRF's own field-validator errors), so this
+      // normalizes both instead of assuming one shape - `?.[0]` alone
+      // would silently grab just the first character of a string.
+      const apiError = error.response?.data?.error;
+      const firstDetail = (value) => (Array.isArray(value) ? value[0] : value);
+      const detail =
+        firstDetail(apiError?.details?.transaction_amount) ||
+        firstDetail(Object.values(apiError?.details || {})[0]);
 
-      alert(apiError);
+      showToast(
+        detail || apiError?.message || "Failed to withdraw savings.",
+        "error"
+      );
     } finally {
       setSaving(false);
     }

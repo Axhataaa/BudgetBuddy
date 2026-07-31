@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 import { formatCurrency, convertFromInr, getActiveCurrency } from "./formatCurrency";
 
 function downloadBlob(filename, content, mimeType) {
@@ -89,6 +90,71 @@ export function exportReportCsv(report, periodLabel) {
   downloadBlob(`budgetbuddy-report-${report.date_from}-to-${report.date_to}.csv`, csv, "text/csv;charset=utf-8;");
 }
 
+/**
+ * Milestone 3 audit gap: the app previously only had CSV export,
+ * which is Excel-*openable* but not an actual Excel *file* (no real
+ * sheets, no cell types, no formatting). This builds a genuine
+ * multi-sheet .xlsx workbook - one sheet per report section, mirroring
+ * the CSV export's sections exactly - using the same row-shaping and
+ * the same money()/currency-label conventions already established
+ * there, rather than a second, divergent data-formatting path.
+ */
+export function exportReportExcel(report, periodLabel) {
+  const { summary, trend, expense_by_category, income_by_source, budget_performance } = report;
+  const currency = getActiveCurrency();
+
+  const workbook = XLSX.utils.book_new();
+
+  const summarySheet = XLSX.utils.json_to_sheet([
+    { Metric: "Report Period", [`Value (${currency})`]: periodLabel },
+    { Metric: "Generated", [`Value (${currency})`]: new Date().toLocaleString("en-IN") },
+    { Metric: "Total Income", [`Value (${currency})`]: money(summary.total_income) },
+    { Metric: "Total Expenses", [`Value (${currency})`]: money(summary.total_expenses) },
+    { Metric: "Current Balance", [`Value (${currency})`]: money(summary.current_balance) },
+    { Metric: "Savings Rate (%)", [`Value (${currency})`]: summary.savings_rate },
+  ]);
+  XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+
+  if (trend.length) {
+    const trendSheet = XLSX.utils.json_to_sheet(
+      trend.map((t) => ({
+        Period: t.period,
+        [`Income (${currency})`]: money(t.income),
+        [`Expenses (${currency})`]: money(t.expenses),
+      }))
+    );
+    XLSX.utils.book_append_sheet(workbook, trendSheet, "Trend");
+  }
+
+  if (expense_by_category.length) {
+    const categorySheet = XLSX.utils.json_to_sheet(
+      expense_by_category.map((c) => ({ Category: c.category, [`Total (${currency})`]: money(c.total) }))
+    );
+    XLSX.utils.book_append_sheet(workbook, categorySheet, "Expense by Category");
+  }
+
+  if (income_by_source.length) {
+    const sourceSheet = XLSX.utils.json_to_sheet(
+      income_by_source.map((s) => ({ Source: s.source, [`Total (${currency})`]: money(s.total) }))
+    );
+    XLSX.utils.book_append_sheet(workbook, sourceSheet, "Income by Source");
+  }
+
+  if (budget_performance.length) {
+    const budgetSheet = XLSX.utils.json_to_sheet(
+      budget_performance.map((b) => ({
+        Category: b.category,
+        [`Limit (${currency})`]: money(b.limit),
+        [`Spent (${currency})`]: money(b.spent),
+        "Percent Used": b.percent_used,
+      }))
+    );
+    XLSX.utils.book_append_sheet(workbook, budgetSheet, "Budget Performance");
+  }
+
+  XLSX.writeFile(workbook, `budgetbuddy-report-${report.date_from}-to-${report.date_to}.xlsx`);
+}
+
 export function exportReportPdf(report, periodLabel) {
   const { summary, expense_by_category, income_by_source, budget_performance } = report;
   const doc = new jsPDF();
@@ -161,6 +227,23 @@ export function exportReportPdf(report, periodLabel) {
       ]),
       theme: "striped",
       headStyles: { fillColor: [48, 59, 142] },
+    });
+  }
+
+  // Task: stamp a professional "Page X of Y" footer on every page,
+  // rather than leaving raw page-count numbers unlabeled - added last,
+  // after all sections/tables are drawn, since only at this point does
+  // jsPDF know the final total page count for the whole document.
+  const pageCount = doc.internal.getNumberOfPages();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  for (let i = 1; i <= pageCount; i += 1) {
+    doc.setPage(i);
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, pageHeight - 8, {
+      align: "right",
     });
   }
 

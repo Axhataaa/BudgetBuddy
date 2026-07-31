@@ -43,7 +43,43 @@ class BudgetViewSet(viewsets.ModelViewSet):
         return Budget.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        budget = serializer.save(user=self.request.user)
+
+        # "Budget Created" - reuses the same create_notification()
+        # helper as every other notification in the app; dedup_key
+        # keeps this a one-time notification per budget.
+        create_notification(
+            user=self.request.user,
+            message=(
+                f"Your {budget.get_category_display()} budget of "
+                f"₹{budget.monthly_limit} for {budget.month}/{budget.year} "
+                f"has been created."
+            ),
+            notification_type=Notification.NotificationType.GENERAL,
+            dedup_key=f"budget:{budget.id}:created",
+        )
+
+    def perform_update(self, serializer):
+        budget = serializer.save()
+
+        # "Budget Updated" - each edit is its own notification (unlike
+        # "created", which only ever happens once per budget). Budget
+        # has no updated_at field (confirmed in budgets/models.py, and
+        # this task is explicitly notification-only - no model/migration
+        # changes), so the dedup_key uses the current timestamp instead,
+        # which is still unique per save and guards against an
+        # accidental duplicate create_notification() call within the
+        # same request.
+        create_notification(
+            user=self.request.user,
+            message=(
+                f"Your {budget.get_category_display()} budget for "
+                f"{budget.month}/{budget.year} has been updated to "
+                f"₹{budget.monthly_limit}."
+            ),
+            notification_type=Notification.NotificationType.GENERAL,
+            dedup_key=f"budget:{budget.id}:updated:{timezone.now().isoformat()}",
+        )
 
 
     @action(
@@ -161,8 +197,21 @@ class SavingsGoalViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(
+        goal = serializer.save(
             user=self.request.user
+        )
+
+        # Task: "Goal Created" was never surfaced as a notification -
+        # every other lifecycle event (completed, purchased) already
+        # notifies via this same create_notification() helper, so this
+        # closes that gap rather than inventing a separate mechanism.
+        # dedup_key keeps this a one-time notification per goal even if
+        # perform_create were ever retried for the same instance.
+        create_notification(
+            user=self.request.user,
+            message=f'Your savings goal "{goal.goal_name}" has been created.',
+            notification_type=Notification.NotificationType.SAVINGS_GOAL,
+            dedup_key=f"savings_goal:{goal.id}:created",
         )
 
     @action(

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createSavingsTransaction } from "../../services/savingsTransactionService";
 import { LuPiggyBank, LuX } from "react-icons/lu";
+import { useToast } from "../../components/ui/Toast";
 
 function AddSavingsModal({
   show,
@@ -8,6 +9,7 @@ function AddSavingsModal({
   goal,
   onSuccess,
 }) {
+  const { showToast } = useToast();
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -34,9 +36,20 @@ function AddSavingsModal({
     } catch (error) {
       console.error(error);
 
-      alert(
-        error.response?.data?.error?.message ||
-        "Failed to add savings."
+      // Bug fix: this used window.alert(), a blocking native dialog
+      // inconsistent with the toast pattern used everywhere else in
+      // the app (Expenses, Income, etc.) - also surface the first
+      // field-level validation detail when the generic message alone
+      // ("Please fix the highlighted fields.") wouldn't explain why.
+      // A details value can be a string (manual dict-raise) or an
+      // array (DRF's own field-validator errors), so this normalizes
+      // both rather than assuming one shape.
+      const apiError = error.response?.data?.error;
+      const firstValue = Object.values(apiError?.details || {})[0];
+      const detail = Array.isArray(firstValue) ? firstValue[0] : firstValue;
+      showToast(
+        detail || apiError?.message || "Failed to add savings.",
+        "error"
       );
     } finally {
       setSaving(false);

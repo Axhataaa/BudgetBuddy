@@ -1,5 +1,8 @@
 from rest_framework import viewsets
 
+from reports.notification_service import create_notification
+from reports.models import Notification
+
 from .filters import IncomeFilter
 from .models import Income
 from .serializers import IncomeSerializer
@@ -25,5 +28,19 @@ class IncomeViewSet(viewsets.ModelViewSet):
         return Income.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        income = serializer.save(user=self.request.user)
+
+        # "Income Added" - reuses the same create_notification() helper
+        # every other notification in the app goes through. dedup_key
+        # keys off the created income row's own id, so it's inherently
+        # unique per income and safe against an accidental duplicate
+        # call for the same request.
+        create_notification(
+            user=self.request.user,
+            message=(
+                f"Income of ₹{income.amount} added from {income.source}."
+            ),
+            notification_type=Notification.NotificationType.GENERAL,
+            dedup_key=f"income:{income.id}:added",
+        )
 

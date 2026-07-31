@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import serializers
 
 from reports.notification_service import create_notification
@@ -205,6 +206,18 @@ class SavingsGoalSerializer(serializers.ModelSerializer):
                 }
             )
 
+        # Only enforced on creation - editing an existing goal whose
+        # target_date has since passed (a goal the user is still
+        # actively funding) shouldn't be blocked from being saved.
+        if self.instance is None and target_date < timezone.localdate():
+            raise serializers.ValidationError(
+                {
+                    "target_date": (
+                        "Target date must be in the future."
+                    )
+                }
+            )
+
         return attrs
 
     def get_progress_percentage(self, obj):
@@ -281,16 +294,49 @@ class SavingsTransactionSerializer(
         )
 
         was_completed = goal.is_completed
-
-        if (
+        is_deposit = (
             transaction_obj.transaction_type
             == SavingsTransaction.DEPOSIT
-        ):
+        )
+
+        if is_deposit:
             goal.current_amount += amount
         else:
             goal.current_amount -= amount
 
         goal.save()
+
+        if is_deposit:
+            # Task: "Deposit Added" was never surfaced as a
+            # notification - only the separate "goal completed"
+            # transition below was. dedup_key includes this specific
+            # transaction's id so every deposit gets its own
+            # notification (unlike budget alerts, which intentionally
+            # dedupe across many expenses) while still being safe
+            # against an accidental duplicate create_notification()
+            # call for the same transaction.
+            create_notification(
+                user=goal.user,
+                message=(
+                    f'You added ₹{amount} to "{goal.goal_name}". '
+                    f"Current balance: ₹{goal.current_amount}."
+                ),
+                notification_type=Notification.NotificationType.SAVINGS_GOAL,
+                dedup_key=f"savings_goal:{goal.id}:deposit:{transaction_obj.id}",
+            )
+        else:
+            # "Withdrawal Made" - same reasoning/dedup pattern as the
+            # deposit notification above, just for the opposite
+            # transaction type.
+            create_notification(
+                user=goal.user,
+                message=(
+                    f'You withdrew ₹{amount} from "{goal.goal_name}". '
+                    f"Current balance: ₹{goal.current_amount}."
+                ),
+                notification_type=Notification.NotificationType.SAVINGS_GOAL,
+                dedup_key=f"savings_goal:{goal.id}:withdrawal:{transaction_obj.id}",
+            )
 
         # Task 3: goal.save() (SavingsGoal.save(), budgets/models.py)
         # recomputes is_completed from current_amount/target_amount -

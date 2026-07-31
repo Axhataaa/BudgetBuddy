@@ -4,6 +4,7 @@ import {
   updateSavingsGoal,
 } from "../../services/savingsGoalService";
 import { LuTarget } from "react-icons/lu";
+import { useToast } from "../../components/ui/Toast";
 
 function GoalFormModal({
   show,
@@ -11,6 +12,7 @@ function GoalFormModal({
   goal,
   onSuccess,
 }) {
+  const { showToast } = useToast();
   const isEdit = Boolean(goal);
 
   const [formData, setFormData] = useState({
@@ -46,17 +48,22 @@ function GoalFormModal({
 
   async function handleSubmit() {
     if (!formData.goal_name.trim()) {
-      alert("Goal name is required.");
+      showToast("Goal name is required.", "error");
       return;
     }
 
     if (!formData.target_amount) {
-      alert("Target amount is required.");
+      showToast("Target amount is required.", "error");
       return;
     }
 
     if (!formData.target_date) {
-      alert("Target date is required.");
+      showToast("Target date is required.", "error");
+      return;
+    }
+
+    if (!isEdit && formData.target_date < new Date().toISOString().slice(0, 10)) {
+      showToast("Target date must be in the future.", "error");
       return;
     }
 
@@ -83,15 +90,22 @@ function GoalFormModal({
           apiError.details
         )[0];
 
+        // Bug fix: only the array-shaped case was handled here, but
+        // manual `raise ValidationError({"field": "message"})` calls
+        // (as used elsewhere in this API) produce a plain string, not
+        // an array - that case silently fell through to the generic
+        // message before.
         if (
           Array.isArray(firstFieldErrors) &&
           firstFieldErrors.length > 0
         ) {
           message = firstFieldErrors[0];
+        } else if (typeof firstFieldErrors === "string") {
+          message = firstFieldErrors;
         }
       }
 
-      alert(message);
+      showToast(message, "error");
     } finally {
       setSaving(false);
     }

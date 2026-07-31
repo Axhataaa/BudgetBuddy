@@ -27,7 +27,11 @@ function NotificationSkeleton() {
   return (
     <>
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="d-flex align-items-start gap-3 py-3 border-bottom">
+        // Polish: px-2 added here to match the real row's own px-2
+        // (see the mapped notification row below) so the loading
+        // skeleton lines up pixel-for-pixel with the loaded content
+        // instead of shifting slightly once data arrives.
+        <div key={i} className="d-flex align-items-center gap-3 py-3 px-2 border-bottom">
           <span className="placeholder-glow">
             <span className="placeholder rounded-circle" style={{ width: 36, height: 36, display: "inline-block" }} />
           </span>
@@ -140,7 +144,12 @@ export default function Notifications() {
               return (
                 <div
                   key={notification.id}
-                  className="d-flex align-items-start gap-3 py-3 border-bottom transaction-item px-2"
+                  // Polish: align-items-start -> align-items-center so
+                  // the icon sits centered against its (usually
+                  // two-line) text block instead of pinned to the very
+                  // top - a cleaner default for these short, single-
+                  // sentence notification messages.
+                  className="d-flex align-items-center gap-3 py-3 border-bottom transaction-item px-2"
                   style={{
                     cursor: notification.is_read ? "default" : "pointer",
                     backgroundColor: notification.is_read ? "transparent" : "var(--color-surface-sunken)",
@@ -154,8 +163,17 @@ export default function Notifications() {
                   </span>
 
                   <div className="flex-grow-1 min-w-0">
-                    <div className="d-flex align-items-center gap-2 flex-wrap">
-                      <span className={notification.is_read ? "" : "fw-semibold"}>{notification.message}</span>
+                    <div className="d-flex align-items-center gap-2">
+                      {/*
+                        Polish: the unread dot now leads the title
+                        instead of trailing it. Trailing meant a long
+                        message + flex-wrap could push the dot onto
+                        its own line, visually drifting it down toward
+                        the badge/timestamp row below. As a fixed
+                        leading marker it always stays put right next
+                        to the title, which is the clearer read/unread
+                        cue.
+                      */}
                       {!notification.is_read && (
                         <span
                           className="rounded-circle bg-primary flex-shrink-0"
@@ -163,8 +181,14 @@ export default function Notifications() {
                           aria-label="Unread"
                         />
                       )}
+                      <span className={notification.is_read ? "" : "fw-semibold"}>
+                        {notification.message}
+                      </span>
                     </div>
-                    <div className="d-flex align-items-center gap-2 text-muted-ink small mt-1">
+                    {/* Polish: mt-1 -> mt-2 for a touch more breathing
+                        room between the title line and the badge/
+                        timestamp line below it. */}
+                    <div className="d-flex align-items-center gap-2 text-muted-ink small mt-2">
                       <span className={`badge ${meta.badge}`}>{meta.label}</span>
                       <span>{formatRelativeDate(notification.created_at)}</span>
                     </div>

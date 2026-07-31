@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { LuFileDown, LuFileText, LuChartColumn } from "react-icons/lu";
+import { LuFileDown, LuFileSpreadsheet, LuFileText, LuChartColumn } from "react-icons/lu";
 import Button from "../../components/ui/Button";
 import EmptyState from "../../components/ui/EmptyState";
 import { useToast } from "../../components/ui/Toast";
 import { getReportSummary } from "../../services/reportService";
 import { getDateRangeForPeriod } from "../../utils/dateRanges";
-import { exportReportCsv, exportReportPdf } from "../../utils/exportReport";
+import { exportReportCsv, exportReportExcel, exportReportPdf } from "../../utils/exportReport";
 
 import DateRangeFilter from "../../components/reports/DateRangeFilter";
 import SummaryCards from "../../components/reports/SummaryCards";
@@ -37,18 +37,29 @@ export default function Reports() {
 
   useEffect(() => {
     if (!customFrom || !customTo) return;
+    // Bug 4: without this guard, an in-flight request from a previous
+    // date_from/date_to (or a duplicate fire, e.g. React 18 StrictMode
+    // in dev) can resolve AFTER a newer one and overwrite fresh trend
+    // data with stale data - the graph would then "not reflect" a
+    // just-added transaction even though the latest request's data
+    // was correct. `ignore` makes sure only the most recent request
+    // for the currently-selected range is ever applied to state.
+    let ignore = false;
     const fetchReport = async () => {
       setLoading(true);
       try {
         const data = await getReportSummary({ date_from: customFrom, date_to: customTo });
-        setReport(data);
+        if (!ignore) setReport(data);
       } catch {
-        showToast("Couldn't load report data. Please try again.", "error");
+        if (!ignore) showToast("Couldn't load report data. Please try again.", "error");
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
     fetchReport();
+    return () => {
+      ignore = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customFrom, customTo]);
 
@@ -60,6 +71,12 @@ export default function Reports() {
     if (!report) return;
     exportReportCsv(report, label);
     showToast("Report exported as CSV.", "success");
+  };
+
+  const handleExportExcel = () => {
+    if (!report) return;
+    exportReportExcel(report, label);
+    showToast("Report exported as Excel.", "success");
   };
 
   const handleExportPdf = () => {
@@ -78,6 +95,9 @@ export default function Reports() {
         <div className="d-flex gap-2">
           <Button variant="secondary" icon={LuFileText} onClick={handleExportCsv} disabled={!report || loading}>
             Export CSV
+          </Button>
+          <Button variant="secondary" icon={LuFileSpreadsheet} onClick={handleExportExcel} disabled={!report || loading}>
+            Export Excel
           </Button>
           <Button variant="primary" icon={LuFileDown} onClick={handleExportPdf} disabled={!report || loading}>
             Export PDF
