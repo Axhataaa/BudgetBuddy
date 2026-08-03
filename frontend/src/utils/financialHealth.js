@@ -4,7 +4,12 @@
  * invented numbers. Used by <FinancialHealth /> on the dashboard hero.
  *
  * Weighting:
- *   50% savings rate      - summary.savings_rate, clamped to 0-100
+ *   50% savings rate      - summary.lifetime.savings_rate, clamped to
+ *                           0-100. Uses the lifetime figure rather
+ *                           than the month-scoped summary.savings_rate
+ *                           so the score doesn't swing to 0 just
+ *                           because the selected month had no
+ *                           transactions (Part 2).
  *   35% budget discipline - penalised per over/near-limit category
  *                           (neutral 65 when no budgets exist yet)
  *   15% goal engagement   - rewards having an active savings goal
@@ -12,7 +17,7 @@
 export function getFinancialHealth(summary) {
   if (!summary) return { score: 0, label: "—" };
 
-  const savingsRate = Number(summary.savings_rate) || 0;
+  const savingsRate = Number(summary.lifetime?.savings_rate) || 0;
   const savingsScore = Math.min(Math.max(savingsRate, 0), 100);
 
   const hasBudgets = Number(summary.total_budget) > 0;

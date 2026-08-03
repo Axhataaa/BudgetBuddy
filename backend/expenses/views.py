@@ -1,5 +1,9 @@
 from rest_framework import viewsets
 
+from common.formatting import format_inr
+from notifications.notification_service import create_notification
+from notifications.models import Notification
+
 from .filters import ExpenseFilter
 from .models import Expense
 from .serializers import ExpenseSerializer
@@ -32,6 +36,26 @@ class ExpenseViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         expense = serializer.save(user=self.request.user)
+
+        # "Expense Added" - was missing entirely; every other CRUD
+        # module (Income, Budget, Savings Goal) already notifies on
+        # create via this same create_notification() helper. Mirrors
+        # Income Added exactly: fires only on create (not update, same
+        # as Income), LOW priority, dedup_key keyed on this specific
+        # expense's own id so it's inherently unique and idempotent.
+        create_notification(
+            user=self.request.user,
+            title="Expense Recorded",
+            priority=Notification.Priority.LOW,
+            message=(
+                f"Expense of ₹{format_inr(expense.amount)} added for "
+                f"{expense.category}."
+            ),
+            notification_type=Notification.NotificationType.GENERAL,
+            action_url="/expenses",
+            dedup_key=f"expense:{expense.id}:added",
+        )
+
         # Task 2: only the specific budget this expense's category/
         # month/year belongs to can have changed - not a full re-scan
         # of every budget the user has.

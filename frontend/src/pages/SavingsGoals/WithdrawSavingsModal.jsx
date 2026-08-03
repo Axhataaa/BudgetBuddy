@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { createSavingsTransaction } from "../../services/savingsTransactionService";
 import { formatCurrency } from "../../utils/formatCurrency";
-import { LuWallet, LuX } from "react-icons/lu";
+import { LuWallet } from "react-icons/lu";
 import { useToast } from "../../components/ui/Toast";
+import Modal from "../../components/ui/Modal";
+import Button from "../../components/ui/Button";
+import Input from "../../components/ui/Input";
 
 function WithdrawSavingsModal({
   show,
@@ -15,7 +18,12 @@ function WithdrawSavingsModal({
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
-  if (!show || !goal) return null;
+  // Note: this guard stays here (rather than folding into Modal's own
+  // `open` check) because the form below reads goal.goal_name/
+  // goal.current_amount - that JSX is evaluated by this component
+  // before Modal ever gets to decide whether to render it, so `goal`
+  // must be confirmed non-null first regardless of what `show` is.
+  if (!goal) return null;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -70,112 +78,51 @@ function WithdrawSavingsModal({
   }
 
   return (
-    <>
-      <div className="modal-backdrop fade show"></div>
+    <Modal
+      open={show}
+      onClose={onHide}
+      title={
+        <span className="d-flex align-items-center">
+          <LuWallet className="me-2 text-danger" />
+          Withdraw Savings
+        </span>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        <p className="fw-semibold mb-1">{goal.goal_name}</p>
 
-      <div className="modal fade show d-block">
-        <div className="modal-dialog modal-dialog-centered">
+        <small className="text-muted d-block mb-3">
+          Available Savings: {formatCurrency(goal.current_amount)}
+        </small>
 
-          <div className="modal-content bg-surface">
+        <Input
+          label="Withdrawal Amount"
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          max={goal.current_amount}
+          required
+        />
 
-            <form onSubmit={handleSubmit}>
+        <Input
+          label="Reason"
+          as="textarea"
+          rows={3}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="e.g. Bought Laptop"
+        />
 
-              <div className="modal-header">
-
-                <h4 className="modal-title d-flex align-items-center">
-                  <LuWallet className="me-2 text-danger" />
-                  Withdraw Savings
-                </h4>
-
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  onClick={onHide}
-                >
-                  <LuX />
-                </button>
-
-              </div>
-
-              <div className="modal-body">
-
-                <p className="fw-semibold mb-1">
-                  {goal.goal_name}
-                </p>
-
-                <small className="text-muted d-block mb-3">
-                  Available Savings:
-                  {" "}
-                  {formatCurrency(goal.current_amount)}
-                </small>
-
-                <div className="mb-3">
-
-                  <label className="form-label">
-                    Withdrawal Amount
-                  </label>
-
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={amount}
-                    onChange={(e) =>
-                      setAmount(e.target.value)
-                    }
-                    max={goal.current_amount}
-                    required
-                  />
-
-                </div>
-
-                <div>
-
-                  <label className="form-label">
-                    Reason
-                  </label>
-
-                  <textarea
-                    rows={3}
-                    className="form-control"
-                    value={note}
-                    onChange={(e) =>
-                      setNote(e.target.value)
-                    }
-                    placeholder="e.g. Bought Laptop"
-                  />
-
-                </div>
-
-              </div>
-
-              <div className="modal-footer">
-
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  onClick={onHide}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  className="btn btn-danger"
-                  disabled={saving}
-                >
-                  {saving
-                    ? "Withdrawing..."
-                    : "Withdraw"}
-                </button>
-
-              </div>
-
-            </form>
-
-          </div>
-
+        <div className="d-flex justify-content-end gap-2 mt-3">
+          <Button variant="ghost" type="button" onClick={onHide} disabled={saving}>
+            Cancel
+          </Button>
+          <Button variant="danger" type="submit" loading={saving}>
+            Withdraw
+          </Button>
         </div>
-      </div>
-    </>
+      </form>
+    </Modal>
   );
 }
 

@@ -1,7 +1,5 @@
 from rest_framework import serializers
 
-from .models import Notification
-
 
 class ReportQuerySerializer(serializers.Serializer):
     """
@@ -19,16 +17,3 @@ class ReportQuerySerializer(serializers.Serializer):
                 {"date_to": "date_to must be on or after date_from."}
             )
         return attrs
-
-
-class NotificationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Notification
-        fields = [
-            "id",
-            "message",
-            "notification_type",
-            "is_read",
-            "created_at",
-        ]
-        read_only_fields = fields

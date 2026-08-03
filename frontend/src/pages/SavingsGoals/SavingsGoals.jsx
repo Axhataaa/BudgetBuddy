@@ -26,17 +26,29 @@ function SummaryCard({
 }) {
   return (
     <div className="bg-surface rounded shadow-token-sm hover-card p-3 h-100">
-      <div className="d-flex justify-content-between align-items-start">
-        <div>
-          <small className="text-muted-ink">{title}</small>
+      {/* Polish: align-items-start -> align-items-center so the icon
+          centers against the label+value block as a whole, rather
+          than pinning to the top of it - the two looked visually
+          unbalanced before, especially once values of different
+          lengths (a plain count vs. a formatted currency string)
+          sit side by side across the 4 cards. gap-3 keeps a minimum
+          gap between text and icon at narrow widths instead of
+          relying solely on justify-content-between. */}
+      <div className="d-flex justify-content-between align-items-center gap-3">
+        <div className="min-w-0">
+          <small className="text-muted-ink d-block">{title}</small>
 
-          <h3 className={`mt-2 mb-0 fw-bold ${colorClass}`}>
+          {/* text-truncate as a safety net for longer formatted
+              currency values (e.g. "₹12,34,567.00") so a long number
+              can never wrap and throw off the card's height/alignment
+              relative to its siblings. */}
+          <h3 className={`mt-1 mb-0 fw-bold text-truncate ${colorClass}`}>
             {value}
           </h3>
         </div>
 
         <div
-          className="rounded-circle bg-surface-sunken d-flex align-items-center justify-content-center"
+          className="rounded-circle bg-surface-sunken d-flex align-items-center justify-content-center flex-shrink-0"
           style={{
             width: 46,
             height: 46,
@@ -202,41 +214,33 @@ function SavingsGoals() {
 
       {/* ================= Summary ================= */}
 
-      <div className="row g-3 mb-4">
+      <div className="savings-summary-grid mb-4">
 
-        <div className="col-lg-3 col-md-6">
-          <SummaryCard
-            title="Active Goals"
-            value={activeGoals.length}
-            icon={LuTarget}
-          />
-        </div>
+        <SummaryCard
+          title="Active Goals"
+          value={activeGoals.length}
+          icon={LuTarget}
+        />
 
-        <div className="col-lg-3 col-md-6">
-          <SummaryCard
-            title="Saved Amount"
-            value={formatCurrency(totalSaved)}
-            icon={LuPiggyBank}
-            colorClass="text-income"
-          />
-        </div>
+        <SummaryCard
+          title="Saved Amount"
+          value={formatCurrency(totalSaved)}
+          icon={LuPiggyBank}
+          colorClass="text-income"
+        />
 
-        <div className="col-lg-3 col-md-6">
-          <SummaryCard
-            title="Target Amount"
-            value={formatCurrency(totalTarget)}
-            icon={LuWallet}
-          />
-        </div>
+        <SummaryCard
+          title="Target Amount"
+          value={formatCurrency(totalTarget)}
+          icon={LuWallet}
+        />
 
-        <div className="col-lg-3 col-md-6">
-          <SummaryCard
-            title="Ready to Purchase"
-            value={completedGoals.length}
-            icon={LuTarget}
-            colorClass="text-income"
-          />
-        </div>
+        <SummaryCard
+          title="Ready to Purchase"
+          value={completedGoals.length}
+          icon={LuTarget}
+          colorClass="text-income"
+        />
 
       </div>
 

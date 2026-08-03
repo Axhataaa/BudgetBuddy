@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { LuPartyPopper } from "react-icons/lu";
 import { completePurchase } from "../../services/savingsGoalService";
 import { useToast } from "../../components/ui/Toast";
+import Modal from "../../components/ui/Modal";
+import Button from "../../components/ui/Button";
+import Input from "../../components/ui/Input";
 
 function PurchaseCompletedModal({
   show,
@@ -23,7 +26,13 @@ function PurchaseCompletedModal({
     }
   }, [show]);
 
-  if (!show || !goal) {
+  // Note: this guard stays here (rather than folding into Modal's own
+  // `open` check) because the form below reads goal.goal_name - that
+  // JSX is evaluated by this component before Modal ever gets to
+  // decide whether to render it, so `goal` must be confirmed non-null
+  // first regardless of what `show` is. Kept after the useEffect
+  // above, same as before, since hooks can't follow an early return.
+  if (!goal) {
     return null;
   }
 
@@ -60,103 +69,48 @@ function PurchaseCompletedModal({
   }
 
   return (
-    <>
-      <div className="modal-backdrop fade show"></div>
+    <Modal
+      open={show}
+      onClose={onHide}
+      title={
+        <span className="d-flex align-items-center">
+          <LuPartyPopper className="me-2 text-success" />
+          Purchase Completed
+        </span>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        <p className="mb-3">
+          Congratulations on purchasing
+          <strong> {goal.goal_name}</strong> 🎉
+        </p>
 
-      <div className="modal fade show d-block">
-        <div className="modal-dialog modal-dialog-centered">
+        <Input
+          label="Purchase Date"
+          type="date"
+          value={purchaseDate}
+          onChange={(e) => setPurchaseDate(e.target.value)}
+        />
 
-          <div className="modal-content bg-surface">
+        <Input
+          label="Purchase Note"
+          as="textarea"
+          rows={3}
+          placeholder="Bought during Flipkart sale..."
+          value={purchaseNote}
+          onChange={(e) => setPurchaseNote(e.target.value)}
+        />
 
-            <form onSubmit={handleSubmit}>
-
-              <div className="modal-header">
-
-                <h4 className="modal-title d-flex align-items-center">
-                  <LuPartyPopper className="me-2 text-success" />
-                  Purchase Completed
-                </h4>
-
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={onHide}
-                />
-
-              </div>
-
-              <div className="modal-body">
-
-                <p className="mb-3">
-                  Congratulations on purchasing
-                  <strong> {goal.goal_name}</strong> 🎉
-                </p>
-
-                <div className="mb-3">
-
-                  <label className="form-label">
-                    Purchase Date
-                  </label>
-
-                  <input
-                    type="date"
-                    className="form-control"
-                    value={purchaseDate}
-                    onChange={(e) =>
-                      setPurchaseDate(e.target.value)
-                    }
-                  />
-
-                </div>
-
-                <div>
-
-                  <label className="form-label">
-                    Purchase Note
-                  </label>
-
-                  <textarea
-                    rows={3}
-                    className="form-control"
-                    placeholder="Bought during Flipkart sale..."
-                    value={purchaseNote}
-                    onChange={(e) =>
-                      setPurchaseNote(e.target.value)
-                    }
-                  />
-
-                </div>
-
-              </div>
-
-              <div className="modal-footer">
-
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  onClick={onHide}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  className="btn btn-success"
-                  disabled={saving}
-                >
-                  {saving
-                    ? "Saving..."
-                    : "Complete Purchase"}
-                </button>
-
-              </div>
-
-            </form>
-
-          </div>
-
+        <div className="d-flex justify-content-end gap-2 mt-3">
+          <Button variant="ghost" type="button" onClick={onHide} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={saving}>
+            Complete Purchase
+          </Button>
         </div>
-      </div>
-    </>
+      </form>
+    </Modal>
   );
 }
 

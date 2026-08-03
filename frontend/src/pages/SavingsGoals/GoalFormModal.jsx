@@ -5,6 +5,9 @@ import {
 } from "../../services/savingsGoalService";
 import { LuTarget } from "react-icons/lu";
 import { useToast } from "../../components/ui/Toast";
+import Modal from "../../components/ui/Modal";
+import Button from "../../components/ui/Button";
+import Input from "../../components/ui/Input";
 
 function GoalFormModal({
   show,
@@ -46,7 +49,9 @@ function GoalFormModal({
     });
   }, [goal]);
 
-  async function handleSubmit() {
+  async function handleSubmit(e) {
+    e.preventDefault();
+
     if (!formData.goal_name.trim()) {
       showToast("Goal name is required.", "error");
       return;
@@ -111,161 +116,86 @@ function GoalFormModal({
     }
   }
 
-  if (!show) return null;
-
   return (
-    <>
-      <div className="modal-backdrop fade show"></div>
+    <Modal
+      open={show}
+      onClose={onHide}
+      title={
+        <span className="d-flex align-items-center">
+          <LuTarget className="me-2 text-primary" />
+          {isEdit ? "Edit Savings Goal" : "Add Savings Goal"}
+        </span>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        <div className="row g-3">
+          <div className="col-12">
+            <Input
+              label="Goal Name"
+              value={formData.goal_name}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  goal_name: e.target.value,
+                })
+              }
+            />
+          </div>
 
-      <div
-        className="modal fade show d-block"
-        tabIndex="-1"
-      >
-        <div className="modal-dialog modal-dialog-centered modal-lg">
-          <div className="modal-content border-0 shadow-lg bg-surface">
+          <div className="col-12">
+            <Input
+              label="Description"
+              as="textarea"
+              rows={3}
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  description: e.target.value,
+                })
+              }
+            />
+          </div>
 
-            {/* Header */}
+          <div className="col-12">
+            <Input
+              label="Target Amount"
+              type="number"
+              value={formData.target_amount}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  target_amount: e.target.value,
+                })
+              }
+            />
+          </div>
 
-            <div className="modal-header">
-
-              <h4 className="modal-title d-flex align-items-center">
-
-                <LuTarget className="me-2 text-primary" />
-
-                {isEdit
-                  ? "Edit Savings Goal"
-                  : "Add Savings Goal"}
-
-              </h4>
-
-              <button
-                type="button"
-                className="btn-close"
-                aria-label="Close"
-                onClick={onHide}
-              />
-
-            </div>
-
-            {/* Body */}
-
-            <div className="modal-body">
-
-              <div className="row g-3">
-
-                <div className="col-12">
-
-                  <label className="form-label">
-                    Goal Name
-                  </label>
-
-                  <input
-                    className="form-control"
-                    value={formData.goal_name}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        goal_name: e.target.value,
-                      })
-                    }
-                  />
-
-                </div>
-
-                <div className="col-12">
-
-                  <label className="form-label">
-                    Description
-                  </label>
-
-                  <textarea
-                    rows={3}
-                    className="form-control"
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        description: e.target.value,
-                      })
-                    }
-                  />
-
-                </div>
-
-                <div className="col-12">
-
-                  <label className="form-label">
-                    Target Amount
-                  </label>
-
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.target_amount}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        target_amount: e.target.value,
-                      })
-                    }
-                  />
-
-                </div>
-
-                <div className="col-md-6">
-
-                  <label className="form-label">
-                    Target Date
-                  </label>
-
-                  <input
-                    type="date"
-                    className="form-control"
-                    value={formData.target_date}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        target_date: e.target.value,
-                      })
-                    }
-                  />
-
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* Footer */}
-
-            <div className="modal-footer">
-
-              <button
-                className="btn btn-light"
-                onClick={onHide}
-                disabled={saving}
-              >
-                Cancel
-              </button>
-
-              <button
-                className="btn btn-primary"
-                onClick={handleSubmit}
-                disabled={saving}
-              >
-                {saving
-                  ? "Saving..."
-                  : isEdit
-                  ? "Save Changes"
-                  : "Create Goal"}
-              </button>
-
-            </div>
-
+          <div className="col-md-6">
+            <Input
+              label="Target Date"
+              type="date"
+              value={formData.target_date}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  target_date: e.target.value,
+                })
+              }
+            />
           </div>
         </div>
-      </div>
-    </>
+
+        <div className="d-flex justify-content-end gap-2 mt-3">
+          <Button variant="ghost" type="button" onClick={onHide} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={saving}>
+            {isEdit ? "Save Changes" : "Create Goal"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

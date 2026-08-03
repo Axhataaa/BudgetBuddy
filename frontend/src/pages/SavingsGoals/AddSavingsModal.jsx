@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { createSavingsTransaction } from "../../services/savingsTransactionService";
-import { LuPiggyBank, LuX } from "react-icons/lu";
+import { LuPiggyBank } from "react-icons/lu";
 import { useToast } from "../../components/ui/Toast";
+import Modal from "../../components/ui/Modal";
+import Button from "../../components/ui/Button";
+import Input from "../../components/ui/Input";
 
 function AddSavingsModal({
   show,
@@ -14,7 +17,12 @@ function AddSavingsModal({
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
-  if (!show || !goal) return null;
+  // Note: this guard stays here (rather than folding into Modal's own
+  // `open` check) because the form below reads goal.goal_name - that
+  // JSX is evaluated by this component before Modal ever gets to
+  // decide whether to render it, so `goal` must be confirmed non-null
+  // first regardless of what `show` is.
+  if (!goal) return null;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -57,104 +65,45 @@ function AddSavingsModal({
   }
 
   return (
-    <>
-      <div className="modal-backdrop fade show"></div>
+    <Modal
+      open={show}
+      onClose={onHide}
+      title={
+        <span className="d-flex align-items-center">
+          <LuPiggyBank className="me-2 text-income" />
+          Add Savings
+        </span>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        <p className="fw-semibold mb-3">{goal.goal_name}</p>
 
-      <div className="modal fade show d-block">
-        <div className="modal-dialog modal-dialog-centered">
+        <Input
+          label="Amount"
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          required
+        />
 
-          <div className="modal-content bg-surface">
+        <Input
+          label="Note"
+          as="textarea"
+          rows={3}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
 
-            <form onSubmit={handleSubmit}>
-
-              <div className="modal-header">
-
-                <h4 className="modal-title d-flex align-items-center">
-                  <LuPiggyBank className="me-2 text-income" />
-                  Add Savings
-                </h4>
-
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  onClick={onHide}
-                >
-                  <LuX />
-                </button>
-
-              </div>
-
-              <div className="modal-body">
-
-                <p className="fw-semibold mb-3">
-                  {goal.goal_name}
-                </p>
-
-                <div className="mb-3">
-
-                  <label className="form-label">
-                    Amount
-                  </label>
-
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={amount}
-                    onChange={(e) =>
-                      setAmount(e.target.value)
-                    }
-                    required
-                  />
-
-                </div>
-
-                <div>
-
-                  <label className="form-label">
-                    Note
-                  </label>
-
-                  <textarea
-                    rows={3}
-                    className="form-control"
-                    value={note}
-                    onChange={(e) =>
-                      setNote(e.target.value)
-                    }
-                  />
-
-                </div>
-
-              </div>
-
-              <div className="modal-footer">
-
-                <button
-                  type="button"
-                  className="btn btn-light"
-                  onClick={onHide}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  className="btn btn-success"
-                  disabled={saving}
-                >
-                  {saving
-                    ? "Saving..."
-                    : "Add Savings"}
-                </button>
-
-              </div>
-
-            </form>
-
-          </div>
-
+        <div className="d-flex justify-content-end gap-2 mt-3">
+          <Button variant="ghost" type="button" onClick={onHide} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={saving}>
+            Add Savings
+          </Button>
         </div>
-      </div>
-    </>
+      </form>
+    </Modal>
   );
 }
 

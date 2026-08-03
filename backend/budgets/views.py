@@ -4,8 +4,9 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django.utils import timezone
 
-from reports.notification_service import create_notification
-from reports.models import Notification
+from common.formatting import format_inr
+from notifications.notification_service import create_notification
+from notifications.models import Notification
 
 from .filters import BudgetFilter
 from .models import (
@@ -47,15 +48,20 @@ class BudgetViewSet(viewsets.ModelViewSet):
 
         # "Budget Created" - reuses the same create_notification()
         # helper as every other notification in the app; dedup_key
-        # keeps this a one-time notification per budget.
+        # keeps this a one-time notification per budget. action_url
+        # points at the Budgets page, where this specific budget can
+        # be reviewed.
         create_notification(
             user=self.request.user,
+            title="Budget Created",
+            priority=Notification.Priority.LOW,
             message=(
                 f"Your {budget.get_category_display()} budget of "
-                f"₹{budget.monthly_limit} for {budget.month}/{budget.year} "
-                f"has been created."
+                f"₹{format_inr(budget.monthly_limit)} for "
+                f"{budget.month}/{budget.year} has been created."
             ),
             notification_type=Notification.NotificationType.GENERAL,
+            action_url="/budgets",
             dedup_key=f"budget:{budget.id}:created",
         )
 
@@ -65,19 +71,22 @@ class BudgetViewSet(viewsets.ModelViewSet):
         # "Budget Updated" - each edit is its own notification (unlike
         # "created", which only ever happens once per budget). Budget
         # has no updated_at field (confirmed in budgets/models.py, and
-        # this task is explicitly notification-only - no model/migration
-        # changes), so the dedup_key uses the current timestamp instead,
-        # which is still unique per save and guards against an
-        # accidental duplicate create_notification() call within the
-        # same request.
+        # this task is explicitly notification-only - no unrelated
+        # model changes), so the dedup_key uses the current timestamp
+        # instead, which is still unique per save and guards against
+        # an accidental duplicate create_notification() call within
+        # the same request.
         create_notification(
             user=self.request.user,
+            title="Budget Updated",
+            priority=Notification.Priority.MEDIUM,
             message=(
                 f"Your {budget.get_category_display()} budget for "
                 f"{budget.month}/{budget.year} has been updated to "
-                f"₹{budget.monthly_limit}."
+                f"₹{format_inr(budget.monthly_limit)}."
             ),
             notification_type=Notification.NotificationType.GENERAL,
+            action_url="/budgets",
             dedup_key=f"budget:{budget.id}:updated:{timezone.now().isoformat()}",
         )
 
@@ -123,17 +132,34 @@ class BudgetViewSet(viewsets.ModelViewSet):
 
             is_overspent = usage_percentage >= 100
 
-            if is_overspent:
+            # Task 1: mentor spec requires an explicit alert_level
+            # field with 4 tiers. The existing `alert` message below
+            # previously only distinguished ">=90%" vs "nothing" - the
+            # 80-89.99% band silently produced alert=None, which would
+            # now contradict alert_level="warning" existing at the same
+            # time. Extending `alert`'s own tiering to match keeps the
+            # two fields consistent with each other rather than adding
+            # a new field that disagrees with the old one.
+            if usage_percentage >= 100:
+                alert_level = "budget_exceeded"
                 alert = (
                     f"Budget exceeded for {budget.get_category_display()} "
                     f"by ₹{overspent_amount}."
                 )
             elif usage_percentage >= 90:
+                alert_level = "high_warning"
                 alert = (
                     f"Warning: You have used {usage_percentage}% "
                     f"of your {budget.get_category_display()} budget."
                 )
+            elif usage_percentage >= 80:
+                alert_level = "warning"
+                alert = (
+                    f"Heads up: You have used {usage_percentage}% "
+                    f"of your {budget.get_category_display()} budget."
+                )
             else:
+                alert_level = None
                 alert = None
 
             summary.append(
@@ -146,6 +172,7 @@ class BudgetViewSet(viewsets.ModelViewSet):
                     "usage_percentage": usage_percentage,
                     "is_overspent": is_overspent,
                     "alert": alert,
+                    "alert_level": alert_level,
                 }
             )
 
@@ -209,8 +236,11 @@ class SavingsGoalViewSet(viewsets.ModelViewSet):
         # perform_create were ever retried for the same instance.
         create_notification(
             user=self.request.user,
+            title="Goal Created",
+            priority=Notification.Priority.LOW,
             message=f'Your savings goal "{goal.goal_name}" has been created.',
             notification_type=Notification.NotificationType.SAVINGS_GOAL,
+            action_url="/savings-goals",
             dedup_key=f"savings_goal:{goal.id}:created",
         )
 
@@ -261,11 +291,14 @@ class SavingsGoalViewSet(viewsets.ModelViewSet):
 
         create_notification(
             user=request.user,
+            title="Purchase Completed",
+            priority=Notification.Priority.MEDIUM,
             message=(
                 f'You marked "{goal.goal_name}" as purchased. '
                 f"Find it in your Achievements."
             ),
             notification_type=Notification.NotificationType.SAVINGS_GOAL,
+            action_url="/achievements",
             dedup_key=f"savings_goal:{goal.id}:purchased",
         )
 

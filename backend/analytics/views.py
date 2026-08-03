@@ -126,7 +126,65 @@ class DashboardSummaryView(APIView):
             total_income - total_expenses
         )
 
-        
+        # =====================================================
+        # Lifetime totals (Part 2: "Overall Financial Position")
+        # =====================================================
+        # Everything above this block (total_income, total_expenses,
+        # current_balance, net_savings, savings_rate) is filtered to
+        # the selected month/year - correct for a "Monthly Summary",
+        # but current_balance was being computed with the exact same
+        # month-scoped formula as net_savings (they were duplicates of
+        # each other), which is why picking an empty month made the
+        # user's balance appear to be literally zero. A real finance
+        # app's "Current Balance" is a running lifetime total that
+        # doesn't reset each month.
+        #
+        # This block deliberately does NOT touch total_income,
+        # total_expenses, current_balance, or savings_rate above -
+        # Expenses.jsx's checkResultingBalance() genuinely needs the
+        # month-scoped current_balance (it warns "this expense makes
+        # this month go negative", not "you're broke for life"), and
+        # the Reports page's SummaryCards/PDF export are correctly
+        # scoped to whatever date range the user picked there. Adding
+        # a separate "lifetime" object keeps both meanings intact
+        # rather than overloading one field with two different
+        # meanings depending on which page reads it.
+        lifetime_total_income = (
+            Income.objects.filter(
+                user=request.user
+            ).aggregate(
+                total=Sum("amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        lifetime_total_expenses = (
+            Expense.objects.filter(
+                user=request.user
+            ).aggregate(
+                total=Sum("amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        lifetime_current_balance = (
+            lifetime_total_income - lifetime_total_expenses
+        )
+
+        if lifetime_total_income > 0:
+            lifetime_savings_rate = round(
+                float(
+                    (
+                        (lifetime_total_income - lifetime_total_expenses)
+                        / lifetime_total_income
+                    )
+                    * 100
+                ),
+                1,
+            )
+        else:
+            lifetime_savings_rate = 0.0
+
         # =====================================================
         # Savings Goals
         # =====================================================
@@ -176,8 +234,16 @@ class DashboardSummaryView(APIView):
             .first()
         )
         
+        # Bug fix: this counted ALL budgets the user has ever created,
+        # ignoring month/year entirely - the only field in this whole
+        # view that didn't respect the selected period, even though
+        # the dashboard is already month/year filtered everywhere
+        # else. Filtering by month/year here matches how every other
+        # figure in this response (income, expenses, etc.) is scoped.
         budgets_created = Budget.objects.filter(
-            user=request.user
+            user=request.user,
+            month=month,
+            year=year,
         ).count()
 
         # =====================================================
@@ -282,6 +348,17 @@ class DashboardSummaryView(APIView):
                 "remaining_cash": _money(remaining_cash),
 
                 "savings_rate": savings_rate,
+
+                # "Overall Financial Position" (Part 2/3) - unlike
+                # everything else in this payload, these never reset
+                # when the selected month/year changes.
+                "lifetime": {
+                    "current_balance": _money(lifetime_current_balance),
+                    "total_income": _money(lifetime_total_income),
+                    "total_expenses": _money(lifetime_total_expenses),
+                    "total_savings": _money(total_savings),
+                    "savings_rate": lifetime_savings_rate,
+                },
 
                 "total_budget": _money(total_budget),
 

@@ -36,6 +36,18 @@ export default function BudgetProgress({ summary, loading, hasBudgetData, overal
                 }}
               />
             </div>
+
+            {/* Issue 5: only the currency amounts and a bare progress
+                bar were shown before - the actual percentage (the
+                number the bar's fill width represents) wasn't spelled
+                out anywhere, which is the whole point of a progress
+                indicator. */}
+            <div
+              className="small text-end mt-1"
+              style={{ color: getBudgetStatusColor(b.percent_used) }}
+            >
+              {Math.round(b.percent_used)}%
+            </div>
           </div>
         ))}
       </div>

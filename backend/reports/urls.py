@@ -1,12 +1,7 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
-from .views import NotificationViewSet, ReportSummaryView
-
-router = DefaultRouter()
-router.register("notifications", NotificationViewSet, basename="notification")
+from .views import ReportSummaryView
 
 urlpatterns = [
     path("summary/", ReportSummaryView.as_view(), name="report-summary"),
-    path("", include(router.urls)),
 ]

@@ -218,6 +218,15 @@ textarea:focus {
   transform: scale(.99);
 }
 
+/* Keyboard focus ring for clickable notification rows - reuses the
+   same --color-primary token as everything else, just a visible
+   outline rather than a new color, so tabbing to a notification is
+   as clear as clicking/hovering one already is. */
+.notification-row:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* ===========================
    Sidebar
 =========================== */
@@ -367,6 +376,33 @@ img {
 .hero-chip.good { color: #7FE0AE; }
 .hero-chip.warn { color: #F0C77E; }
 .hero-chip.bad { color: #F0897E; }
+
+/* Issue 3: a small, visually-secondary "This Month" snapshot inside
+   the existing Overall Financial Position card - not a second hero,
+   not a new card, just a compact line beneath the lifetime balance.
+   Reuses the same good/bad colors as .hero-chip.good/.bad above
+   rather than introducing new ones. */
+.finance-hero-monthly {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.finance-hero-monthly-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 600;
+}
+
+.finance-hero-monthly-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.1rem;
+}
 
 .health-ring-label {
   font-family: var(--font-display);
@@ -682,9 +718,40 @@ html, body, #root {
 
 .goals-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 460px));
+  /* Bug fix: the previous minmax(340px, 460px) capped every card's
+     max width well below typical desktop content widths, and
+     justify-content: center then centered that now-narrower-than-
+     container grid block - together producing large, symmetric dead
+     margins on either side ("wastes horizontal space... too centered
+     with excessive blank margins"). Raising the cap to 520px lets
+     cards use more of the available width while still staying a
+     sensible, non-stretched size, and left-aligning (matching every
+     other list/grid in the app, e.g. Expenses/Income tables) instead
+     of centering removes the boxed-in feel. The 340px minimum is
+     unchanged, so mobile/tablet stacking behavior is untouched. */
+  grid-template-columns: repeat(auto-fit, minmax(340px, 520px));
   gap: 1.5rem;
-  justify-content: center;
+}
+
+/* Savings Goals page - the 4 summary cards above the goal cards
+   (Active Goals / Saved Amount / Target Amount / Ready to Purchase).
+   These previously used Bootstrap's row + col-lg-3/col-md-6, which
+   only reflows at fixed 992px/768px breakpoints - in the space
+   between those breakpoints (or against a narrower sidebar-adjusted
+   content width) the row can look uneven compared to .goals-grid
+   right below it, which reflows continuously. Unlike .goals-grid,
+   there's no reason to cap these cards' max width - with exactly 4
+   of them, using 1fr tracks lets them always fill the full row width
+   edge-to-edge (equal widths, by construction, since fr-unit columns
+   split remaining space evenly) with zero leftover gap, and they
+   still drop to fewer per row (never below the 240px minimum, so
+   they're never squeezed narrower than before) as the viewport
+   narrows, all without a hard breakpoint jump. Card content itself
+   (SummaryCard's JSX/padding) is unchanged - only this wrapper. */
+.savings-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
 }
 
 /* =====================================================================

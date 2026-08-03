@@ -17,6 +17,12 @@ export default function HeroSection({ summary, periodLabel, loading }) {
   const netSavings = Number(summary.net_savings) || 0;
   const isPositive = netSavings >= 0;
 
+  // Part 2 fix: this used to read summary.current_balance, which is
+  // month-scoped (identical formula to net_savings) - picking an
+  // empty month made a user's balance look like literally zero.
+  // summary.lifetime.current_balance never resets month to month.
+  const lifetimeBalance = Number(summary.lifetime?.current_balance) || 0;
+
   const hasBudgets = Number(summary.total_budget) > 0;
   const overspent = summary.budget_status?.overspent_categories || 0;
   const warning = summary.budget_status?.warning_categories || 0;
@@ -70,14 +76,27 @@ export default function HeroSection({ summary, periodLabel, loading }) {
 
       <div className="row align-items-center g-4 position-relative">
         <div className="col-lg-7">
-          <div className="finance-hero-eyebrow">{periodLabel} &middot; net position</div>
+          <div className="finance-hero-eyebrow">Overall financial position</div>
           <div className="finance-hero-balance font-currency">
-            {formatCurrency(summary.current_balance)}
+            {formatCurrency(lifetimeBalance)}
           </div>
-          <div className="finance-hero-sub">
-            {isPositive
-              ? `You're saving ${formatCurrency(Math.abs(netSavings))} this period.`
-              : `You're spending ${formatCurrency(Math.abs(netSavings))} more than you've earned this period.`}
+
+          {/* Issue 3: was a prose sentence ("You're saving X this
+              period...") duplicating what the "Cash flow
+              positive/negative" chip below already signals. This
+              compact block keeps monthly performance visible right
+              under the primary (lifetime) balance without a second
+              hero or a full card - exactly the requested layout. */}
+          <div className="finance-hero-monthly">
+            <div className="finance-hero-monthly-label">
+              This Month &middot; Net Savings ({periodLabel})
+            </div>
+            <div
+              className="finance-hero-monthly-value"
+              style={{ color: isPositive ? "#7FE0AE" : "#F0897E" }}
+            >
+              {formatCurrency(netSavings)}
+            </div>
           </div>
 
           <div className="d-flex flex-wrap gap-2 mt-3">

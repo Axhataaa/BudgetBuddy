@@ -96,10 +96,50 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <HeroSection summary={summary} periodLabel={periodLabel} loading={loading} />
+
+      <StatCards
+        summary={summary}
+        loading={loading}
+        hasBudgetData={hasBudgetData}
+        budgetRemaining={budgetRemaining}
+        overallBudgetPercent={overallBudgetPercent}
+        navigate={navigate}
+      />
+
+      <BudgetProgress
+        summary={summary}
+        loading={loading}
+        hasBudgetData={hasBudgetData}
+        overallBudgetPercent={overallBudgetPercent}
+      />
+
+      <div className="row g-3 mb-3">
+        <div className="col-lg-6">
+          <SavingsGoals goals={goals} loading={loading} />
+        </div>
+        <div className="col-lg-6">
+          <SmartInsights summary={summary} loading={loading} />
+        </div>
+      </div>
+
+      <LatestAchievement summary={summary} />
+
+      {/*
+        Part 2 fix: this used to be `isEmptyPeriod ? <EmptyState/> :
+        (...entire rest of the dashboard...)`, which hid the whole
+        page - including the balance and every card above - the
+        moment a selected month had no transactions. Everything above
+        this point either uses lifetime data (HeroSection) or is
+        meaningful independent of the selected month (budgets, goals,
+        achievements), so it stays visible unconditionally now. Only
+        the charts/recent-activity row genuinely has nothing to show
+        for an empty month, so only that row gets the empty state.
+      */}
       {isEmptyPeriod ? (
         <EmptyState
           icon={LuInbox}
-          message={`No transactions for ${periodLabel}. Add an expense or income to see this period come to life.`}
+          message={`This month has no transactions yet. Add an expense or income for ${periodLabel} to see it here.`}
           action={
             <div className="d-flex gap-2">
               <Link to="/expenses" className="btn btn-outline-primary">Add Expense</Link>
@@ -108,50 +148,19 @@ export default function Dashboard() {
           }
         />
       ) : (
-        <>
-          <HeroSection summary={summary} periodLabel={periodLabel} loading={loading} />
-
-          <StatCards
-            summary={summary}
-            loading={loading}
-            hasBudgetData={hasBudgetData}
-            budgetRemaining={budgetRemaining}
-            overallBudgetPercent={overallBudgetPercent}
-            navigate={navigate}
-          />
-
-          <BudgetProgress
-            summary={summary}
-            loading={loading}
-            hasBudgetData={hasBudgetData}
-            overallBudgetPercent={overallBudgetPercent}
-          />
-
-          <div className="row g-3 mb-3">
-            <div className="col-lg-6">
-              <SavingsGoals goals={goals} loading={loading} />
-            </div>
-            <div className="col-lg-6">
-              <SmartInsights summary={summary} loading={loading} />
-            </div>
+        <div className="row g-3">
+          <div className="col-md-5">
+            <SpendingTrends
+              summary={summary}
+              loading={loading}
+              periodLabel={periodLabel}
+              highestCategory={highestCategory}
+            />
           </div>
-
-          <LatestAchievement summary={summary} />
-
-          <div className="row g-3">
-            <div className="col-md-5">
-              <SpendingTrends
-                summary={summary}
-                loading={loading}
-                periodLabel={periodLabel}
-                highestCategory={highestCategory}
-              />
-            </div>
-            <div className="col-md-7">
-              <RecentActivity recent={recent} loading={loading} periodLabel={periodLabel} />
-            </div>
+          <div className="col-md-7">
+            <RecentActivity recent={recent} loading={loading} periodLabel={periodLabel} />
           </div>
-        </>
+        </div>
       )}
     </div>
   );
