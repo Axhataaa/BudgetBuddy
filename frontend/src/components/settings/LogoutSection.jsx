@@ -38,7 +38,7 @@ export default function LogoutSection() {
       <ConfirmDialog
         open={confirmOpen}
         title="Log out of BudgetBuddy?"
-        message="You'll be returned to the sign-in screen."
+        message="You'll be returned to the home page."
         confirmLabel="Log Out"
         variant="danger"
         loading={loggingOut}

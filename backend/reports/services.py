@@ -9,6 +9,14 @@ needs arbitrary date_from/date_to ranges (not just calendar months),
 so this module follows the SAME aggregation patterns as that view
 (Sum(), Decimal handling, category grouping, savings-rate formula)
 rather than reusing a function that doesn't do what's needed here.
+
+Report period consistency fix: get_report_data() now also returns a
+"transactions" list (one row per Expense/Income in range, with
+Date/Type/Category/Description/Amount) built from the exact same
+expense_qs/income_qs already used for every other section below - so
+CSV/Excel/PDF exports (utils/exportReport.js on the frontend) have a
+real line-item source to export, filtered by the identical date range
+as everything else on the Reports page, with no separate query.
 """
 
 from decimal import Decimal
@@ -178,6 +186,36 @@ def get_report_data(user, date_from, date_to):
             "granularity": "month" if monthly_buckets else "day",
         }
 
+    # ---------------- Transaction rows (Date/Type/Category/
+    # Description/Amount) ----------------
+    # Built from the exact same expense_qs/income_qs used for every
+    # aggregate above - not a second query with its own date filter -
+    # so the line-item rows exported to CSV/Excel/PDF can never drift
+    # from what the charts/summary above were computed from. This is
+    # also why the transactions are computed here in the shared
+    # service rather than in the export endpoint/frontend: one
+    # (date_from, date_to) filter, reused for everything.
+    transactions = [
+        {
+            "date": row["date"].isoformat(),
+            "type": "Expense",
+            "category": row["category"],
+            "description": row["title"],
+            "amount": _money(row["amount"]),
+        }
+        for row in expense_qs.values("date", "category", "title", "amount")
+    ] + [
+        {
+            "date": row["date"].isoformat(),
+            "type": "Income",
+            "category": row["source"],
+            "description": row["description"] or row["source"],
+            "amount": _money(row["amount"]),
+        }
+        for row in income_qs.values("date", "source", "description", "amount")
+    ]
+    transactions.sort(key=lambda t: t["date"], reverse=True)
+
     return {
         "date_from": date_from.isoformat(),
         "date_to": date_to.isoformat(),
@@ -193,6 +231,7 @@ def get_report_data(user, date_from, date_to):
         "expense_by_category": expense_by_category,
         "income_by_source": income_by_source,
         "budget_performance": budget_performance,
+        "transactions": transactions,
         "insights": {
             "highest_spending_category": highest_category,
             "largest_expense": largest_expense,

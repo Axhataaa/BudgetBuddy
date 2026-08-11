@@ -1,4 +1,4 @@
-import { getDateRangeForPeriod } from "../../utils/dateRanges";
+import { getReportDateRangeForPeriod } from "../../utils/dateRanges";
 
 // Same presets Expenses/Income already use, minus "All Time" - Reports
 // always needs a concrete date_from/date_to (the backend's
@@ -16,19 +16,19 @@ export default function DateRangeFilter({ period, onPeriodChange, customFrom, cu
   const handlePreset = (value) => {
     onPeriodChange(value);
     if (value !== "custom") {
-      const range = getDateRangeForPeriod(value);
+      const range = getReportDateRangeForPeriod(value);
       onCustomChange(range.date_from, range.date_to);
     }
   };
 
   return (
     <div className="d-flex flex-wrap align-items-center gap-2">
-      <div className="btn-group" role="group" aria-label="Report period">
+      <div className="d-flex flex-wrap gap-2" role="group" aria-label="Report period">
         {REPORT_PERIODS.map((opt) => (
           <button
             key={opt.value}
             type="button"
-            className={`btn btn-sm ${period === opt.value ? "btn-primary" : "btn-outline-primary"}`}
+            className={`chip-toggle ${period === opt.value ? "active" : ""}`}
             onClick={() => handlePreset(opt.value)}
           >
             {opt.label}

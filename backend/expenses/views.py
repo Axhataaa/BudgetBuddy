@@ -51,7 +51,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
                 f"Expense of ₹{format_inr(expense.amount)} added for "
                 f"{expense.category}."
             ),
-            notification_type=Notification.NotificationType.GENERAL,
+            notification_type=Notification.NotificationType.EXPENSE,
             action_url="/expenses",
             dedup_key=f"expense:{expense.id}:added",
         )

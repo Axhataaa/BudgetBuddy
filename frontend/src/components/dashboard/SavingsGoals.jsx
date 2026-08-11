@@ -78,7 +78,7 @@ export default function SavingsGoals({ goals, loading }) {
               <Link
                 key={goal.id}
                 to="/savings-goals"
-                className="d-flex align-items-center gap-3 py-2 transaction-item px-2"
+                className="d-flex align-items-center gap-3 py-2 transaction-item list-row-hover px-2"
               >
                 <GoalRing percent={percent} />
                 <div className="flex-grow-1 min-w-0">

@@ -3,8 +3,10 @@ import {
   LuCircleCheckBig,
   LuIndianRupee,
   LuTrash2,
+  LuTrophy,
 } from "react-icons/lu";
 import { formatCurrency } from "../../utils/formatCurrency";
+import Button from "../../components/ui/Button";
 
 function AchievementCard({
   goal,
@@ -16,25 +18,28 @@ function AchievementCard({
 
       {/* Header */}
 
-      <div className="d-flex justify-content-between align-items-start mb-3">
+      <div className="d-flex justify-content-between align-items-start mb-3 gap-2">
 
-        <div>
+        <div className="d-flex align-items-start gap-3 min-w-0">
+          <span className="category-icon bg-warning-subtle text-warning flex-shrink-0">
+            <LuTrophy size={16} />
+          </span>
+          <div className="min-w-0">
+            <h5 className="fw-semibold mb-1">
+              {goal.goal_name}
+            </h5>
 
-          <h4 className="fw-bold mb-1">
-            {goal.goal_name}
-          </h4>
-
-          {goal.description && (
-            <p className="text-muted-ink mb-0">
-              {goal.description}
-            </p>
-          )}
-
+            {goal.description && (
+              <p className="text-muted-ink small mb-0">
+                {goal.description}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="d-flex align-items-center gap-2">
-          <span className="badge bg-success">
-            Purchased ✓
+        <div className="d-flex align-items-center gap-2 flex-shrink-0">
+          <span className="badge rounded-pill bg-success-subtle text-success">
+            Purchased
           </span>
 
           <button
@@ -55,31 +60,31 @@ function AchievementCard({
 
       {/* Purchase Value */}
 
-      <div className="d-flex justify-content-between mb-3">
+      <div className="d-flex justify-content-between align-items-center mb-3">
 
-        <span>
-          <LuIndianRupee className="me-2" />
+        <span className="text-muted-ink d-flex align-items-center gap-2">
+          <LuIndianRupee size={14} />
           Purchase Value
         </span>
 
-        <strong>
+        <span className="fw-semibold font-currency">
           {formatCurrency(goal.target_amount)}
-        </strong>
+        </span>
 
       </div>
 
       {/* Purchase Date */}
 
-      <div className="d-flex justify-content-between mb-3">
+      <div className="d-flex justify-content-between align-items-center mb-3">
 
-        <span>
-          <LuCalendarDays className="me-2" />
+        <span className="text-muted-ink d-flex align-items-center gap-2">
+          <LuCalendarDays size={14} />
           Purchased On
         </span>
 
-        <strong>
+        <span className="fw-medium">
           {new Date(goal.purchase_date).toLocaleDateString()}
-        </strong>
+        </span>
 
       </div>
 
@@ -87,11 +92,11 @@ function AchievementCard({
 
       <div className="mt-3">
 
-        <div className="fw-semibold mb-2">
-          📝 Purchase Note
+        <div className="text-muted-ink small fw-semibold text-uppercase mb-2" style={{ letterSpacing: "0.04em" }}>
+          Purchase Note
         </div>
 
-        <div className="bg-surface-sunken border rounded p-3">
+        <div className="bg-surface-sunken rounded p-3 small">
 
           {goal.purchase_note ? (
 
@@ -99,7 +104,7 @@ function AchievementCard({
 
           ) : (
 
-            <span className="text-muted fst-italic">
+            <span className="text-muted-ink fst-italic">
               No purchase note added.
             </span>
 
@@ -111,20 +116,28 @@ function AchievementCard({
 
       <div className="mt-auto pt-4">
 
-        <div className="alert alert-success d-flex align-items-center">
+        {/* Was Bootstrap's .alert-success, whose background/text
+            colors (--bs-success-bg-subtle/--bs-success-text-emphasis)
+            are Bootstrap's own hardcoded light-mode-only defaults,
+            never remapped for this app's dark theme - a light mint
+            box regardless of page theme. .token-callout-success
+            (index.css) uses this app's own tokens instead, and is
+            more compact ("polished but not oversized" per the
+            redesign brief) than the original alert's padding. */}
+        <div className="token-callout-success d-flex align-items-center gap-2 p-3">
 
           <LuCircleCheckBig
-            className="me-2"
             size={20}
+            className="flex-shrink-0"
           />
 
           <div>
 
-            <strong>
+            <div className="fw-semibold">
               Achievement Unlocked!
-            </strong>
+            </div>
 
-            <div className="small">
+            <div className="small text-muted-ink">
               Congratulations on reaching your goal. 🎉
             </div>
 
@@ -132,12 +145,13 @@ function AchievementCard({
 
         </div>
 
-        <button
-          className="btn btn-outline-primary w-100 mt-3"
+        <Button
+          variant="secondary"
+          className="w-100 mt-3"
           onClick={() => onViewJourney(goal)}
         >
           View Journey →
-        </button>
+        </Button>
 
       </div>
 

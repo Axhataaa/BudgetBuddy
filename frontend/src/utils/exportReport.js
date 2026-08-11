@@ -2,6 +2,53 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { formatCurrency, convertFromInr, getActiveCurrency } from "./formatCurrency";
+import { NOTO_SANS_REGULAR_BASE64 } from "../assets/fonts/notoSansPdfFont";
+import { NOTO_SANS_BOLD_BASE64 } from "../assets/fonts/notoSansPdfFontBold";
+
+const PDF_FONT_NAME = "NotoSansPdf";
+const PDF_FONT_FILE = "NotoSans-Regular.ttf";
+const PDF_FONT_FILE_BOLD = "NotoSans-Bold.ttf";
+
+/**
+ * Registers both weights of the embedded Noto Sans subset (see
+ * assets/fonts/notoSansPdfFont.js and notoSansPdfFontBold.js for the
+ * full "why" and provenance) on a fresh jsPDF document, and switches
+ * to the regular weight as the default font, so every doc.text()/
+ * autoTable() call in exportReportPdf() below renders through a font
+ * that actually contains a ₹ glyph - the real fix, not the earlier
+ * "Rs." text-substitution fallback.
+ *
+ * Registering the bold weight matters even though header labels
+ * ("Value", "Total", "Amount", ...) never contain a ₹ themselves:
+ * jspdf-autotable's default table theme requests fontStyle "bold" for
+ * header rows, and without a "bold" style registered under this same
+ * font name, jsPDF can't resolve PDF_FONT_NAME+"bold" and silently
+ * falls back to a different font for every header cell - inconsistent
+ * rendering and a console warning, even if not a currency-glyph bug
+ * per se. Registering it here means every autoTable call below can
+ * safely set both `styles.font` and `headStyles.font` to PDF_FONT_NAME
+ * and have both weights actually resolve.
+ */
+function registerPdfFont(doc) {
+  doc.addFileToVFS(PDF_FONT_FILE, NOTO_SANS_REGULAR_BASE64);
+  doc.addFont(PDF_FONT_FILE, PDF_FONT_NAME, "normal");
+  doc.addFileToVFS(PDF_FONT_FILE_BOLD, NOTO_SANS_BOLD_BASE64);
+  doc.addFont(PDF_FONT_FILE_BOLD, PDF_FONT_NAME, "bold");
+  doc.setFont(PDF_FONT_NAME, "normal");
+}
+
+/**
+ * PDF currency formatter - now renders the real ₹ symbol via the
+ * embedded font above, with the same Indian digit grouping
+ * (1,52,000.00) formatCurrency() already produces everywhere else in
+ * the app. Kept as its own function (rather than inlining
+ * formatCurrency() calls) since PDF cells need a plain string built
+ * the same way every other export format already builds one, and to
+ * keep a single place documenting why this needed a fix at all.
+ */
+function formatCurrencyForPdf(amountInInr) {
+  return formatCurrency(amountInInr);
+}
 
 function downloadBlob(filename, content, mimeType) {
   const blob = new Blob([content], { type: mimeType });
@@ -44,7 +91,7 @@ function money(amountInInr) {
  * silently in a different currency than what the page shows.
  */
 export function exportReportCsv(report, periodLabel) {
-  const { summary, trend, expense_by_category, income_by_source, budget_performance } = report;
+  const { summary, trend, expense_by_category, income_by_source, budget_performance, transactions } = report;
   const currency = getActiveCurrency();
 
   let csv = `BudgetBuddy Report - ${periodLabel}\n`;
@@ -57,6 +104,17 @@ export function exportReportCsv(report, periodLabel) {
     { Metric: "Current Balance", [`Value (${currency})`]: money(summary.current_balance) },
     { Metric: "Savings Rate (%)", [`Value (${currency})`]: summary.savings_rate },
   ]);
+
+  csv += csvSection(
+    "Transactions",
+    (transactions || []).map((t) => ({
+      Date: t.date,
+      Type: t.type,
+      Category: t.category,
+      Description: t.description,
+      [`Amount (${currency})`]: money(t.amount),
+    }))
+  );
 
   csv += csvSection(
     "Income vs Expense Trend",
@@ -100,7 +158,7 @@ export function exportReportCsv(report, periodLabel) {
  * there, rather than a second, divergent data-formatting path.
  */
 export function exportReportExcel(report, periodLabel) {
-  const { summary, trend, expense_by_category, income_by_source, budget_performance } = report;
+  const { summary, trend, expense_by_category, income_by_source, budget_performance, transactions } = report;
   const currency = getActiveCurrency();
 
   const workbook = XLSX.utils.book_new();
@@ -114,6 +172,19 @@ export function exportReportExcel(report, periodLabel) {
     { Metric: "Savings Rate (%)", [`Value (${currency})`]: summary.savings_rate },
   ]);
   XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+
+  if (transactions && transactions.length) {
+    const transactionsSheet = XLSX.utils.json_to_sheet(
+      transactions.map((t) => ({
+        Date: t.date,
+        Type: t.type,
+        Category: t.category,
+        Description: t.description,
+        [`Amount (${currency})`]: money(t.amount),
+      }))
+    );
+    XLSX.utils.book_append_sheet(workbook, transactionsSheet, "Transactions");
+  }
 
   if (trend.length) {
     const trendSheet = XLSX.utils.json_to_sheet(
@@ -156,63 +227,118 @@ export function exportReportExcel(report, periodLabel) {
 }
 
 export function exportReportPdf(report, periodLabel) {
-  const { summary, expense_by_category, income_by_source, budget_performance } = report;
+  const { summary, trend, expense_by_category, income_by_source, budget_performance, transactions } = report;
   const doc = new jsPDF();
+  const currency = getActiveCurrency();
+  registerPdfFont(doc);
 
-  doc.setFontSize(16);
-  doc.text("BudgetBuddy Report", 14, 18);
+  // Header: "BUDGETBUDDY" wordmark + "Personal Financial Report"
+  // subtitle, then the reporting period called out on its own line -
+  // matches the doc's requested header exactly, replacing the
+  // previous single-line "BudgetBuddy Report | <period> | ..." combo.
+  // The "BUDGETBUDDY" wordmark stays on jsPDF's default bold font
+  // (only the embedded Noto Sans subset above has a bold weight
+  // missing, and this line never contains a ₹ symbol, so there's
+  // nothing here that needs the custom font); everything from
+  // "Personal Financial Report" onward switches to it, since amounts
+  // do appear from that point on.
+  doc.setFontSize(18);
+  doc.setTextColor(48, 59, 142);
+  doc.setFont(undefined, "bold");
+  doc.text("BUDGETBUDDY", 14, 18);
+  doc.setFontSize(11);
+  doc.setTextColor(20);
+  doc.setFont(PDF_FONT_NAME, "normal");
+  doc.text("Personal Financial Report", 14, 25);
+
   doc.setFontSize(10);
   doc.setTextColor(100);
+  doc.text(`Reporting Period: ${periodLabel}`, 14, 33);
   doc.text(
-    `${periodLabel}  |  Generated ${new Date().toLocaleString("en-IN")}  |  Currency: ${getActiveCurrency()}`,
+    `Generated ${new Date().toLocaleString("en-IN")}  |  Currency: ${currency}`,
     14,
-    25
+    39
   );
 
   autoTable(doc, {
-    startY: 32,
+    startY: 46,
     head: [["Metric", "Value"]],
     body: [
-      ["Total Income", formatCurrency(summary.total_income)],
-      ["Total Expenses", formatCurrency(summary.total_expenses)],
-      ["Current Balance", formatCurrency(summary.current_balance)],
+      ["Total Income", formatCurrencyForPdf(summary.total_income)],
+      ["Total Expenses", formatCurrencyForPdf(summary.total_expenses)],
+      ["Current Balance", formatCurrencyForPdf(summary.current_balance)],
       ["Savings Rate", `${Number(summary.savings_rate).toFixed(1)}%`],
     ],
     theme: "striped",
-    headStyles: { fillColor: [48, 59, 142] },
+    headStyles: { fillColor: [48, 59, 142], font: PDF_FONT_NAME },
+    styles: { font: PDF_FONT_NAME },
   });
 
   let nextY = doc.lastAutoTable.finalY + 10;
 
-  if (expense_by_category.length) {
+  // A fresh page-break check before each optional section - autoTable
+  // already paginates its own rows, but the section heading drawn with
+  // doc.text() just above each table does not, so without this a
+  // heading can be stranded alone at the bottom of a page with its
+  // table pushed onto the next one.
+  const ensureSpace = (neededHeight) => {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    if (nextY + neededHeight > pageHeight - 20) {
+      doc.addPage();
+      nextY = 20;
+    }
+  };
+
+  if (trend.length) {
+    ensureSpace(20);
     doc.setFontSize(12);
     doc.setTextColor(20);
-    doc.text("Expense by Category", 14, nextY);
+    doc.text("Income vs Expense Trend", 14, nextY);
+    autoTable(doc, {
+      startY: nextY + 4,
+      head: [["Period", "Income", "Expenses"]],
+      body: trend.map((t) => [t.period, formatCurrencyForPdf(t.income), formatCurrencyForPdf(t.expenses)]),
+      theme: "striped",
+      headStyles: { fillColor: [48, 59, 142], font: PDF_FONT_NAME },
+      styles: { font: PDF_FONT_NAME },
+    });
+    nextY = doc.lastAutoTable.finalY + 10;
+  }
+
+  if (expense_by_category.length) {
+    ensureSpace(20);
+    doc.setFontSize(12);
+    doc.setTextColor(20);
+    doc.text("Expense Category Breakdown", 14, nextY);
     autoTable(doc, {
       startY: nextY + 4,
       head: [["Category", "Total"]],
-      body: expense_by_category.map((c) => [c.category, formatCurrency(c.total)]),
+      body: expense_by_category.map((c) => [c.category, formatCurrencyForPdf(c.total)]),
       theme: "striped",
-      headStyles: { fillColor: [48, 59, 142] },
+      headStyles: { fillColor: [48, 59, 142], font: PDF_FONT_NAME },
+      styles: { font: PDF_FONT_NAME },
     });
     nextY = doc.lastAutoTable.finalY + 10;
   }
 
   if (income_by_source.length) {
+    ensureSpace(20);
     doc.setFontSize(12);
     doc.setTextColor(20);
-    doc.text("Income by Source", 14, nextY);
+    doc.text("Income Source Analysis", 14, nextY);
     autoTable(doc, {
       startY: nextY + 4,
       head: [["Source", "Total"]],
-      body: income_by_source.map((s) => [s.source, formatCurrency(s.total)]),
+      body: income_by_source.map((s) => [s.source, formatCurrencyForPdf(s.total)]),
       theme: "striped",
-      headStyles: { fillColor: [48, 59, 142] },
+      headStyles: { fillColor: [48, 59, 142], font: PDF_FONT_NAME },
+      styles: { font: PDF_FONT_NAME },
     });
     nextY = doc.lastAutoTable.finalY + 10;
   }
 
   if (budget_performance.length) {
+    ensureSpace(20);
     doc.setFontSize(12);
     doc.setTextColor(20);
     doc.text("Budget Performance", 14, nextY);
@@ -221,19 +347,42 @@ export function exportReportPdf(report, periodLabel) {
       head: [["Category", "Limit", "Spent", "% Used"]],
       body: budget_performance.map((b) => [
         b.category,
-        formatCurrency(b.limit),
-        formatCurrency(b.spent),
+        formatCurrencyForPdf(b.limit),
+        formatCurrencyForPdf(b.spent),
         `${b.percent_used.toFixed(0)}%`,
       ]),
       theme: "striped",
-      headStyles: { fillColor: [48, 59, 142] },
+      headStyles: { fillColor: [48, 59, 142], font: PDF_FONT_NAME },
+      styles: { font: PDF_FONT_NAME },
+    });
+    nextY = doc.lastAutoTable.finalY + 10;
+  }
+
+  if (transactions && transactions.length) {
+    ensureSpace(20);
+    doc.setFontSize(12);
+    doc.setTextColor(20);
+    doc.text("Transactions", 14, nextY);
+    autoTable(doc, {
+      startY: nextY + 4,
+      head: [["Date", "Type", "Category", "Description", "Amount"]],
+      body: transactions.map((t) => [
+        t.date,
+        t.type,
+        t.category,
+        t.description,
+        formatCurrencyForPdf(t.amount),
+      ]),
+      theme: "striped",
+      headStyles: { fillColor: [48, 59, 142], font: PDF_FONT_NAME },
+      styles: { fontSize: 8, font: PDF_FONT_NAME },
     });
   }
 
-  // Task: stamp a professional "Page X of Y" footer on every page,
-  // rather than leaving raw page-count numbers unlabeled - added last,
-  // after all sections/tables are drawn, since only at this point does
-  // jsPDF know the final total page count for the whole document.
+  // Footer on every page: "Generated by BudgetBuddy" on the left,
+  // "Page X of Y" on the right - added last, after every section/table
+  // above is drawn, since only at this point does jsPDF know the final
+  // total page count for the whole document.
   const pageCount = doc.internal.getNumberOfPages();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -242,6 +391,7 @@ export function exportReportPdf(report, periodLabel) {
     doc.setPage(i);
     doc.setFontSize(9);
     doc.setTextColor(120);
+    doc.text("Generated by BudgetBuddy", 14, pageHeight - 8);
     doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, pageHeight - 8, {
       align: "right",
     });

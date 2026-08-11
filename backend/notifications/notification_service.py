@@ -1,4 +1,9 @@
+import logging
+
 from .models import Notification
+from .email_service import dispatch_notification_email
+
+logger = logging.getLogger(__name__)
 
 
 def create_notification(
@@ -19,6 +24,20 @@ def create_notification(
 
     Returns:
         Notification instance
+
+    Batch C addition: after the in-app Notification row exists, this
+    also asks email_service.dispatch_notification_email() whether an
+    email should go out - but only when a NEW row was actually
+    created. With a dedup_key, get_or_create() may return an existing
+    row instead of creating one (that's the whole point of dedup_key);
+    without this `created` check, re-running something like the
+    send_savings_reminders management command against an
+    already-notified goal would silently re-send the email every time
+    even though the in-app notification correctly stayed deduplicated.
+    Wrapped in try/except as defense in depth on top of
+    dispatch_notification_email()'s own internal handling - nothing in
+    the email pipeline may ever cause notification creation itself to
+    fail for any of this function's 12+ call sites across the app.
     """
 
     defaults = {
@@ -30,14 +49,22 @@ def create_notification(
     }
 
     if dedup_key:
-        notification, _ = Notification.objects.get_or_create(
+        notification, created = Notification.objects.get_or_create(
             user=user,
             dedup_key=dedup_key,
             defaults=defaults,
         )
-        return notification
+    else:
+        notification = Notification.objects.create(user=user, **defaults)
+        created = True
 
-    return Notification.objects.create(
-        user=user,
-        **defaults,
-    )
+    if created:
+        try:
+            dispatch_notification_email(notification.id)
+        except Exception:
+            logger.exception(
+                "Unexpected error dispatching notification email for notification_id=%s",
+                notification.id,
+            )
+
+    return notification

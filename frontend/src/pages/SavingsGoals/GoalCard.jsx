@@ -8,6 +8,8 @@ import {
   LuTrash2,
   LuTarget,
   LuPiggyBank,
+  LuWallet,
+  LuCircleCheckBig,
 } from "react-icons/lu";
 
 function GoalCard({
@@ -36,18 +38,23 @@ function GoalCard({
       (1000 * 60 * 60 * 24)
   );
 
+  // Same status thresholds as before - only the badge treatment
+  // changed (rounded-pill + a "-subtle" tone for every state, not
+  // just "On Track") so the indicator reads as a small, consistent
+  // status pill rather than a solid block of color, matching how
+  // priority/category badges look everywhere else in the app.
   let status = "On Track";
   let badge = "bg-success-subtle text-success";
 
   if (goal.is_completed) {
     status = "Ready to Purchase";
-    badge = "bg-success text-white";
+    badge = "bg-success-subtle text-success";
   } else if (daysLeft < 0) {
     status = "Overdue";
-    badge = "bg-danger text-white";
+    badge = "bg-danger-subtle text-danger";
   } else if (daysLeft <= 14) {
     status = "Near Deadline";
-    badge = "bg-warning text-dark";
+    badge = "bg-warning-subtle text-warning";
   }
 
   return (
@@ -55,27 +62,24 @@ function GoalCard({
 
       {/* ================= Header ================= */}
 
-      <div className="d-flex justify-content-between align-items-start">
+      <div className="d-flex justify-content-between align-items-start gap-2">
 
-          <div>
+          <div className="d-flex align-items-start gap-3 min-w-0">
+            <span className="category-icon bg-primary-subtle text-primary flex-shrink-0">
+              <LuTarget size={16} />
+            </span>
+            <div className="min-w-0">
+              <h5 className="fw-semibold mb-1 text-truncate">
+                {goal.goal_name}
+              </h5>
 
-            <h5 className="fw-bold mb-1 d-flex align-items-center">
-
-              <LuTarget className="me-2 text-primary" />
-
-              {goal.goal_name}
-
-            </h5>
-
-            <p className="text-muted-ink mb-0">
-
-              {goal.description || "No description"}
-
-            </p>
-
+              <p className="text-muted-ink small mb-0">
+                {goal.description || "No description"}
+              </p>
+            </div>
           </div>
 
-          <span className={`badge ${badge}`}>
+          <span className={`badge rounded-pill ${badge} flex-shrink-0`}>
             {status}
           </span>
 
@@ -85,13 +89,13 @@ function GoalCard({
 
         <div className="mt-3">
 
-          <div className="d-flex justify-content-between mb-2">
+          <div className="d-flex justify-content-between align-items-center mb-2">
 
-            <strong>
+            <span className="fw-semibold">
               {progress.toFixed(0)}%
-            </strong>
+            </span>
 
-            <small className="text-muted">
+            <small className="text-muted-ink font-currency">
 
               {formatCurrency(goal.current_amount)}
               {" / "}
@@ -102,9 +106,9 @@ function GoalCard({
           </div>
 
           <div
-            className="progress"
+            className="progress progress-track"
             style={{
-              height: 10,
+              height: 6,
             }}
           >
             <div
@@ -112,6 +116,7 @@ function GoalCard({
               role="progressbar"
               style={{
                 width: `${progress}%`,
+                backgroundColor: "var(--color-income)",
               }}
             />
           </div>
@@ -120,7 +125,7 @@ function GoalCard({
 
         {/* ================= Goal Info ================= */}
 
-        <div className="mt-3">
+        <div className="mt-3 small">
 
           <div className="d-flex justify-content-between mb-2">
 
@@ -128,45 +133,45 @@ function GoalCard({
               Remaining
             </span>
 
-            <strong>
+            <span className="fw-semibold font-currency">
               {formatCurrency(remaining)}
-            </strong>
+            </span>
 
           </div>
 
           <div className="d-flex justify-content-between mb-2">
 
-            <span>
+            <span className="text-muted-ink d-flex align-items-center gap-2">
 
-              <LuCalendarDays className="me-2" />
+              <LuCalendarDays size={14} />
 
               Target
 
             </span>
 
-            <strong>
+            <span className="fw-medium">
               {targetDate.toLocaleDateString()}
-            </strong>
+            </span>
 
           </div>
 
           <div className="d-flex justify-content-between">
 
-            <span>
+            <span className="text-muted-ink d-flex align-items-center gap-2">
 
-              <LuClock3 className="me-2" />
+              <LuClock3 size={14} />
 
               Days Left
 
             </span>
 
-            <strong>
+            <span className="fw-medium">
 
               {goal.is_completed
                 ? "-"
                 : Math.max(daysLeft, 0)}
 
-            </strong>
+            </span>
 
           </div>
 
@@ -181,44 +186,48 @@ function GoalCard({
           />
 
           {!goal.is_completed && (
-            <>
-              <button
-                className="btn btn-success w-100 mt-3 mb-2"
+            <div className="d-flex gap-2 mt-3">
+              <Button
+                variant="primary"
+                icon={LuPiggyBank}
+                className="flex-grow-1"
                 onClick={() => onAddSavings(goal)}
               >
-                <LuPiggyBank className="me-2" />
                 Add Savings
-              </button>
+              </Button>
 
-              <button
-                className="btn btn-outline-warning w-100 mb-3"
+              <Button
+                variant="secondary"
+                icon={LuWallet}
+                className="flex-grow-1"
                 onClick={() => onWithdraw(goal)}
               >
                 Withdraw
-              </button>
-            </>
-          )}
-
-          {goal.is_completed && !goal.is_purchased && (
-            <button
-              className="btn btn-warning w-100 mt-3 mb-3"
-              onClick={() => onPurchase(goal)}
-            >
-              🎉 Purchase Completed
-            </button>
-          )}
-
-          {goal.is_purchased && (
-            <div className="alert alert-success mt-3 mb-3">
-              <strong>✓ Purchased</strong>
-
-              <br />
-
-              {goal.purchase_date}
+              </Button>
             </div>
           )}
 
-          <div className="d-flex gap-2 mt-3">
+          {goal.is_completed && !goal.is_purchased && (
+            <Button
+              variant="primary"
+              className="w-100 mt-3"
+              onClick={() => onPurchase(goal)}
+            >
+              🎉 Purchase Completed
+            </Button>
+          )}
+
+          {goal.is_purchased && (
+            <div className="token-callout-success d-flex align-items-center gap-2 p-2 mt-3">
+              <LuCircleCheckBig size={18} className="flex-shrink-0" />
+              <div className="small">
+                <span className="fw-semibold">Purchased</span>
+                <span className="text-muted-ink"> &middot; {goal.purchase_date}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="d-flex gap-2 mt-2">
 
             <Button
               variant="secondary"

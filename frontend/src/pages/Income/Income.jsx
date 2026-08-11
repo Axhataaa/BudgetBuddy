@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LuPlus, LuPencil, LuTrash2, LuSearch, LuPiggyBank, LuFilterX } from "react-icons/lu";
+import { LuPlus, LuPencil, LuTrash2, LuSearch, LuPiggyBank, LuFilterX, LuArrowUpRight } from "react-icons/lu";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
@@ -9,7 +9,7 @@ import Pagination from "../../components/ui/Pagination";
 import FilterChips from "../../components/ui/FilterChips";
 import { useToast } from "../../components/ui/Toast";
 import IncomeForm from "./IncomeForm";
-import { INCOME_SOURCES } from "./incomeConstants";
+import { INCOME_SOURCES, getIncomeSourceMeta } from "./incomeConstants";
 import { formatCurrency } from "../../utils/formatCurrency";
 import { TIME_PERIOD_OPTIONS, getDateRangeForPeriod } from "../../utils/dateRanges";
 import { AMOUNT_DATE_SORT_OPTIONS } from "../../utils/sortOptions";
@@ -160,79 +160,92 @@ export default function Income() {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="font-display fs-3 fw-semibold mb-0">Income</h1>
+      {/* Header - same structure as Expenses/Notifications, tinted
+          with .icon-income instead. */}
+      <div className="bg-surface rounded shadow-token-sm p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div className="d-flex align-items-center gap-3">
+          <span className="page-header-icon icon-income">
+            <LuArrowUpRight size={22} />
+          </span>
+          <div>
+            <h1 className="font-display fs-3 fw-semibold mb-1">Income</h1>
+            <p className="text-muted-ink mb-0">Track and manage all your income.</p>
+          </div>
+        </div>
+
         <Button icon={LuPlus} onClick={openAddModal}>
           Add Income
         </Button>
       </div>
 
-      <div className="row g-2 mb-2">
-        <div className="col-md-4">
-          <div className="position-relative">
-            <LuSearch
-              size={16}
-              className="position-absolute text-muted-ink"
-              style={{ top: 12, left: 12 }}
-            />
-            <input
-              className="form-control ps-5"
-              placeholder="Search by description..."
-              value={search}
-              onChange={(e) => setFilter("search")(e.target.value)}
-            />
+      <div className="bg-surface rounded shadow-token-sm p-3 mb-3">
+        <div className="row g-2">
+          <div className="col-md-4">
+            <div className="position-relative">
+              <LuSearch
+                size={16}
+                className="position-absolute text-muted-ink"
+                style={{ top: 12, left: 12 }}
+              />
+              <input
+                className="form-control ps-5"
+                placeholder="Search by description..."
+                value={search}
+                onChange={(e) => setFilter("search")(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="col-6 col-md-3">
+            <select className="form-select" value={source} onChange={(e) => setFilter("source")(e.target.value)}>
+              <option value="">All sources</option>
+              {INCOME_SOURCES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div className="col-6 col-md-2">
+            <select
+              className="form-select"
+              value={timePeriod}
+              onChange={(e) => setFilter("timePeriod")(e.target.value)}
+            >
+              {TIME_PERIOD_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="col-6 col-md-3">
+            <select className="form-select" value={ordering} onChange={(e) => setOrdering(e.target.value)}>
+              {AMOUNT_DATE_SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
           </div>
         </div>
-        <div className="col-6 col-md-3">
-          <select className="form-select" value={source} onChange={(e) => setFilter("source")(e.target.value)}>
-            <option value="">All sources</option>
-            {INCOME_SOURCES.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-        <div className="col-6 col-md-2">
-          <select
-            className="form-select"
-            value={timePeriod}
-            onChange={(e) => setFilter("timePeriod")(e.target.value)}
-          >
-            {TIME_PERIOD_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="col-6 col-md-3">
-          <select className="form-select" value={ordering} onChange={(e) => setOrdering(e.target.value)}>
-            {AMOUNT_DATE_SORT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
 
-      {timePeriod === "custom" && (
-        <div className="row g-2 mb-2">
-          <div className="col-6 col-md-2">
-            <input
-              type="date"
-              className="form-control"
-              value={customFrom}
-              onChange={(e) => setFilter("customFrom")(e.target.value)}
-              aria-label="From date"
-            />
+        {timePeriod === "custom" && (
+          <div className="row g-2 mt-1">
+            <div className="col-6 col-md-2">
+              <input
+                type="date"
+                className="form-control"
+                value={customFrom}
+                onChange={(e) => setFilter("customFrom")(e.target.value)}
+                aria-label="From date"
+              />
+            </div>
+            <div className="col-6 col-md-2">
+              <input
+                type="date"
+                className="form-control"
+                value={customTo}
+                onChange={(e) => setFilter("customTo")(e.target.value)}
+                aria-label="To date"
+              />
+            </div>
           </div>
-          <div className="col-6 col-md-2">
-            <input
-              type="date"
-              className="form-control"
-              value={customTo}
-              onChange={(e) => setFilter("customTo")(e.target.value)}
-              aria-label="To date"
-            />
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="d-flex align-items-center justify-content-between">
         <FilterChips chips={chips} />
@@ -243,9 +256,9 @@ export default function Income() {
         )}
       </div>
 
-      <div className="bg-surface rounded shadow-token-sm hover-card">
+      <div className="bg-surface rounded shadow-token-sm">
         <div className="table-responsive" style={{ maxHeight: 640, overflowY: "auto" }}>
-          <table className="table mb-0 align-middle">
+          <table className="table mb-0 align-middle transaction-table">
             <thead className="sticky-top bg-surface">
               <tr className="text-muted-ink small text-uppercase">
                 <th className="py-3">Source</th>
@@ -258,36 +271,47 @@ export default function Income() {
               {loading ? (
                 <SkeletonRows rows={6} columns={4} />
               ) : (
-                incomes.map((income) => (
-                  <tr key={income.id}>
-                    <td className="py-3">
-                      <span className="badge bg-surface-sunken text-ink">{income.source}</span>
-                      {income.description && (
-                        <div className="small text-muted-ink mt-1">{income.description}</div>
-                      )}
-                    </td>
-                    <td className="py-3 text-muted-ink">{income.date}</td>
-                    <td className="py-3 text-end font-currency text-income fw-medium">
-                      +{formatCurrency(income.amount)}
-                    </td>
-                    <td className="py-3 text-end">
-                      <button
-                        className="btn btn-sm btn-link text-muted-ink"
-                        onClick={() => openEditModal(income)}
-                        aria-label="Edit"
-                      >
-                        <LuPencil size={16} />
-                      </button>
-                      <button
-                        className="btn btn-sm btn-link text-danger"
-                        onClick={() => setDeleteTarget(income)}
-                        aria-label="Delete"
-                      >
-                        <LuTrash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                incomes.map((income) => {
+                  const meta = getIncomeSourceMeta(income.source);
+                  const SourceIcon = meta.icon;
+                  return (
+                    <tr key={income.id}>
+                      <td className="py-3">
+                        <div className="d-flex align-items-center gap-3">
+                          <span className={`category-icon ${meta.badge}`}>
+                            <SourceIcon size={16} />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="fw-medium text-ink">{income.source}</div>
+                            {income.description && (
+                              <div className="small text-muted-ink">{income.description}</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 text-muted-ink">{income.date}</td>
+                      <td className="py-3 text-end font-currency text-income fw-medium">
+                        +{formatCurrency(income.amount)}
+                      </td>
+                      <td className="py-3 text-end">
+                        <button
+                          className="btn btn-sm btn-link text-muted-ink row-action-btn"
+                          onClick={() => openEditModal(income)}
+                          aria-label="Edit"
+                        >
+                          <LuPencil size={16} />
+                        </button>
+                        <button
+                          className="btn btn-sm btn-link text-danger row-action-btn"
+                          onClick={() => setDeleteTarget(income)}
+                          aria-label="Delete"
+                        >
+                          <LuTrash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

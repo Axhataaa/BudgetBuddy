@@ -432,15 +432,18 @@ function AchievementJourneyModal({
 
               </div>
 
-              {/* Congratulations */}
+              {/* Congratulations - was Bootstrap's .alert-success,
+                  same unthemed-in-dark-mode issue fixed in
+                  AchievementCard.jsx (see index.css's
+                  .token-callout-success for why). */}
 
-              <div className="alert alert-success mt-5 mb-0">
+              <div className="token-callout-success mt-5 mb-0 p-3">
 
-                <h5 className="fw-bold mb-2">
+                <h5 className="fw-semibold mb-2">
                   🎉 Congratulations!
                 </h5>
 
-                <p className="mb-0">
+                <p className="mb-0 text-ink">
 
                   You successfully purchased
                     <strong> {goal.goal_name}</strong>.

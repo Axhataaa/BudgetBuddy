@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { LuFileDown, LuFileSpreadsheet, LuFileText, LuChartColumn } from "react-icons/lu";
-import Button from "../../components/ui/Button";
+import { LuChartColumn } from "react-icons/lu";
 import EmptyState from "../../components/ui/EmptyState";
 import { useToast } from "../../components/ui/Toast";
 import { getReportSummary } from "../../services/reportService";
-import { getDateRangeForPeriod } from "../../utils/dateRanges";
+import { getReportDateRangeForPeriod } from "../../utils/dateRanges";
 import { exportReportCsv, exportReportExcel, exportReportPdf } from "../../utils/exportReport";
 
 import DateRangeFilter from "../../components/reports/DateRangeFilter";
+import ExportMenu from "../../components/reports/ExportMenu";
 import SummaryCards from "../../components/reports/SummaryCards";
 import TrendChart from "../../components/reports/TrendChart";
 import ExpensePieChart from "../../components/dashboard/ExpensePieChart";
@@ -27,7 +27,7 @@ function periodLabelFor(period, from, to) {
 export default function Reports() {
   const { showToast } = useToast();
 
-  const initialRange = getDateRangeForPeriod(DEFAULT_PERIOD);
+  const initialRange = getReportDateRangeForPeriod(DEFAULT_PERIOD);
   const [period, setPeriod] = useState(DEFAULT_PERIOD);
   const [customFrom, setCustomFrom] = useState(initialRange.date_from);
   const [customTo, setCustomTo] = useState(initialRange.date_to);
@@ -87,25 +87,32 @@ export default function Reports() {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
-        <div>
-          <h1 className="font-display fs-3 fw-semibold mb-0">Reports</h1>
-          <p className="text-muted-ink small mb-0">{label}</p>
+      {/* Header - same bg-surface card + tinted icon container
+          structure as Expenses/Income/Notifications/Budgets. Title
+          text and the dynamic period label (still the page's own
+          subtitle) are unchanged in substance from before this pass. */}
+      <div className="bg-surface rounded shadow-token-sm p-4 mb-3 d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div className="d-flex align-items-center gap-3">
+          <span className="page-header-icon icon-report">
+            <LuChartColumn size={22} />
+          </span>
+          <div>
+            <h1 className="font-display fs-3 fw-semibold mb-1">Reports &amp; Financial Insights</h1>
+            <span className="badge rounded-pill bg-surface-sunken text-ink">{label}</span>
+          </div>
         </div>
-        <div className="d-flex gap-2">
-          <Button variant="secondary" icon={LuFileText} onClick={handleExportCsv} disabled={!report || loading}>
-            Export CSV
-          </Button>
-          <Button variant="secondary" icon={LuFileSpreadsheet} onClick={handleExportExcel} disabled={!report || loading}>
-            Export Excel
-          </Button>
-          <Button variant="primary" icon={LuFileDown} onClick={handleExportPdf} disabled={!report || loading}>
-            Export PDF
-          </Button>
+        <div className="d-flex gap-2 flex-wrap">
+          <ExportMenu
+            onExportCsv={handleExportCsv}
+            onExportExcel={handleExportExcel}
+            onExportPdf={handleExportPdf}
+            disabled={!report || loading || !hasAnyActivity}
+            disabledTitle={!loading && report && !hasAnyActivity ? "No data to export for this period" : undefined}
+          />
         </div>
       </div>
 
-      <div className="mb-3">
+      <div className="bg-surface rounded shadow-token-sm p-3 mb-3">
         <DateRangeFilter
           period={period}
           onPeriodChange={setPeriod}

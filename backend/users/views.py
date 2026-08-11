@@ -14,6 +14,13 @@ from .serializers import (
     UserListSerializer,
 )
 from .permissions import IsAdmin
+from .email_verification_service import (
+    VerificationError,
+    can_resend,
+    generate_verification_token,
+    send_verification_email,
+    verify_token,
+)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -100,3 +107,82 @@ class UserListView(generics.ListAPIView):
 
     def get_queryset(self):
         return User.objects.select_related("profile").all()
+
+
+class VerifyEmailView(APIView):
+    """
+    POST /api/v1/users/verify-email/  body: {"token": "<raw token>"}
+
+    AllowAny (not IsAuthenticated) - a freshly registered user clicking
+    the link in their inbox may not have an active session in whatever
+    browser/device they're checking email from, and there's no reason
+    to require one: the token itself, not the request's auth state, is
+    what proves the request is legitimate (see
+    email_verification_service.verify_token()'s own docstring for the
+    validation chain - hash lookup, single-use, expiry, and the
+    still-matches-current-email check).
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = request.data.get("token", "")
+        if not token:
+            return Response(
+                {"error": {"code": "missing_token", "message": "A verification token is required."}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            verify_token(token)
+        except VerificationError as exc:
+            return Response(
+                {"error": {"code": exc.code, "message": exc.message}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {"message": "Email verified successfully."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ResendVerificationEmailView(APIView):
+    """
+    POST /api/v1/users/resend-verification/
+
+    IsAuthenticated, and deliberately takes NO email address in the
+    request body - it always uses request.user.email, the caller's own
+    current registered address, so there is no way to make this
+    endpoint send a verification email to anyone else's inbox.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        profile = request.user.profile
+        if profile.email_verified:
+            return Response(
+                {"message": "Your email is already verified."},
+                status=status.HTTP_200_OK,
+            )
+
+        allowed, seconds_remaining = can_resend(request.user)
+        if not allowed:
+            return Response(
+                {
+                    "error": {
+                        "code": "cooldown",
+                        "message": f"Please wait {seconds_remaining}s before requesting another verification email.",
+                    }
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        raw_token = generate_verification_token(request.user)
+        send_verification_email(request.user, raw_token)
+
+        return Response(
+            {"message": "Verification email sent."},
+            status=status.HTTP_200_OK,
+        )

@@ -9,6 +9,7 @@ import { useToast } from "../../components/ui/Toast";
 import BudgetForm from "./BudgetForm";
 import { formatCurrency } from "../../utils/formatCurrency";
 import { getBudgetStatusColor } from "../../utils/budgetStatus";
+import { getExpenseCategoryMeta } from "../Expenses/expenseConstants";
 import { listBudgets, createBudget, updateBudget, deleteBudget } from "../../services/budgetService";
 // Reusing the already-tested Dashboard aggregation instead of
 // re-implementing "spend per category" here - the summary endpoint's
@@ -43,40 +44,60 @@ function BudgetCard({ budget, onEdit, onDelete }) {
   const limit = Number(budget.monthly_limit);
   const remaining = limit - spent;
   const barColor = getBudgetStatusColor(percent);
+  // Budgets share the exact same category list as Expenses (see
+  // BudgetForm.jsx, which already imports EXPENSE_CATEGORIES directly)
+  // - so the same icon/tint metadata applies unchanged, giving a
+  // budget for "Food" the identical badge a Food expense already gets
+  // on the Expenses page, rather than a second, different mapping.
+  const meta = getExpenseCategoryMeta(budget.category);
+  const CategoryIcon = meta.icon;
 
   return (
     <div className="col-6 col-md-4">
-      <div className="bg-surface rounded shadow-token-sm hover-card  p-3 h-100">
-        <div className="d-flex justify-content-between align-items-start mb-2">
-          <span className="badge bg-surface-sunken text-ink">{budget.category}</span>
+      <div className="bg-surface rounded shadow-token-sm hover-card p-3 h-100">
+        <div className="d-flex justify-content-between align-items-start mb-3">
+          <div className="d-flex align-items-center gap-2">
+            <span className={`category-icon ${meta.badge}`}>
+              <CategoryIcon size={16} />
+            </span>
+            <span className={`badge rounded-pill ${meta.badge}`}>{budget.category}</span>
+          </div>
           <div>
-            <button className="btn btn-sm btn-link text-muted-ink p-1" onClick={() => onEdit(budget)} aria-label="Edit">
+            <button
+              className="btn btn-sm btn-link text-muted-ink p-1 icon-action-btn"
+              onClick={() => onEdit(budget)}
+              aria-label="Edit"
+            >
               <LuPencil size={14} />
             </button>
-            <button className="btn btn-sm btn-link text-danger p-1" onClick={() => onDelete(budget)} aria-label="Delete">
+            <button
+              className="btn btn-sm btn-link text-danger p-1 icon-action-btn"
+              onClick={() => onDelete(budget)}
+              aria-label="Delete"
+            >
               <LuTrash2 size={14} />
             </button>
           </div>
         </div>
 
-        <div className="font-currency small mb-1">
-          <span className="text-expense">{formatCurrency(spent)}</span>
-          <span className="text-muted-ink"> of {formatCurrency(limit)}</span>
+        <div className="font-currency mb-1">
+          <span className="text-expense fs-5 fw-medium">{formatCurrency(spent)}</span>
+          <span className="text-muted-ink small"> of {formatCurrency(limit)}</span>
         </div>
 
-        <div className="progress" style={{ height: 6 }}>
+        <div className="progress progress-track" style={{ height: 5 }}>
           <div
             className="progress-bar"
             style={{ width: `${Math.min(percent, 100)}%`, backgroundColor: barColor }}
           />
         </div>
 
-        <div className="d-flex justify-content-between small text-muted-ink mt-1">
+        <div className="d-flex justify-content-between small text-muted-ink mt-2">
           <span style={{ color: remaining < 0 ? "var(--color-danger)" : undefined }}>
             {remaining < 0 ? "Over by " : "Remaining: "}
             {formatCurrency(Math.abs(remaining))}
           </span>
-          <span>{percent.toFixed(1)}% used</span>
+          <span className="fw-medium" style={{ color: barColor }}>{percent.toFixed(1)}% used</span>
         </div>
       </div>
     </div>
@@ -181,14 +202,25 @@ export default function Budgets() {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="font-display fs-3 fw-semibold mb-0">Budgets</h1>
+      {/* Header - same bg-surface card + tinted icon container
+          structure as Expenses/Income/Notifications. */}
+      <div className="bg-surface rounded shadow-token-sm p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div className="d-flex align-items-center gap-3">
+          <span className="page-header-icon icon-budget">
+            <LuTarget size={22} />
+          </span>
+          <div>
+            <h1 className="font-display fs-3 fw-semibold mb-1">Budgets</h1>
+            <p className="text-muted-ink mb-0">Set monthly limits and track spending by category.</p>
+          </div>
+        </div>
+
         <Button icon={LuPlus} onClick={openAddModal}>
           Add Budget
         </Button>
       </div>
 
-      <div className="mb-3">
+      <div className="bg-surface rounded shadow-token-sm p-3 mb-3 d-inline-flex">
         <PeriodSelector month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y); }} />
       </div>
 

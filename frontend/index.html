@@ -4,6 +4,33 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Sets data-theme before the stylesheet/React ever paint anything,
+         so a returning visitor with a stored dark preference doesn't
+         see a flash of the light theme first. Mirrors
+         PreferencesContext.jsx's own storage key + light/dark/system
+         resolution exactly (same "budgetbuddy-theme" key, same
+         matchMedia fallback for "system") - this isn't a second theme
+         system, just that same logic run a few milliseconds earlier,
+         before the module script (main.jsx) has even been fetched.
+         PreferencesContext still re-applies/reconciles it normally
+         once React mounts, this script just avoids the visible gap
+         before that happens. -->
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem("budgetbuddy-theme") || "system";
+          var resolved =
+            theme === "system"
+              ? window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light"
+              : theme;
+          document.documentElement.setAttribute("data-theme", resolved);
+        } catch (e) {
+          /* localStorage unavailable (e.g. private mode) - default light applies, same as before this script existed. */
+        }
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

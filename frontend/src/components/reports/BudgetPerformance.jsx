@@ -1,6 +1,7 @@
 import { LuFolderOpen } from "react-icons/lu";
 import { formatCurrency } from "../../utils/formatCurrency";
 import { getBudgetStatusColor } from "../../utils/budgetStatus";
+import { getExpenseCategoryMeta } from "../../pages/Expenses/expenseConstants";
 import EmptyState from "../ui/EmptyState";
 
 export default function BudgetPerformance({ budgetPerformance, loading }) {
@@ -32,26 +33,37 @@ export default function BudgetPerformance({ budgetPerformance, loading }) {
 
   return (
     <div className="row g-3">
-      {budgetPerformance.map((b) => (
-        <div key={b.category} className="col-6 col-md-4">
-          <div className="d-flex justify-content-between small mb-1">
-            <span className="fw-medium">{b.category}</span>
-            <span className="font-currency text-muted-ink">
-              {formatCurrency(b.spent)} / {formatCurrency(b.limit)}
-            </span>
+      {budgetPerformance.map((b) => {
+        // Same EXPENSE_CATEGORY_META Budgets' own cards already use -
+        // one category, one icon/tint, everywhere it shows up.
+        const meta = getExpenseCategoryMeta(b.category);
+        const CategoryIcon = meta.icon;
+        return (
+          <div key={b.category} className="col-6 col-md-4">
+            <div className="d-flex align-items-center justify-content-between small mb-2">
+              <span className="d-flex align-items-center gap-2">
+                <span className={`category-icon ${meta.badge}`} style={{ width: 28, height: 28 }}>
+                  <CategoryIcon size={14} />
+                </span>
+                <span className="fw-medium text-ink">{b.category}</span>
+              </span>
+              <span className="font-currency text-muted-ink">
+                {formatCurrency(b.spent)} / {formatCurrency(b.limit)}
+              </span>
+            </div>
+            <div className="progress progress-track" style={{ height: 6 }}>
+              <div
+                className="progress-bar"
+                style={{
+                  width: `${Math.min(b.percent_used, 100)}%`,
+                  backgroundColor: getBudgetStatusColor(b.percent_used),
+                }}
+              />
+            </div>
+            <div className="text-muted-ink small mt-1">{b.percent_used.toFixed(0)}% used</div>
           </div>
-          <div className="progress" style={{ height: 6 }}>
-            <div
-              className="progress-bar"
-              style={{
-                width: `${Math.min(b.percent_used, 100)}%`,
-                backgroundColor: getBudgetStatusColor(b.percent_used),
-              }}
-            />
-          </div>
-          <div className="text-muted-ink small mt-1">{b.percent_used.toFixed(0)}% used</div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { LuUser, LuCamera, LuImage, LuTrash2, LuChevronDown } from "react-icons/lu";
+import { LuUser, LuCamera, LuImage, LuTrash2, LuChevronDown, LuCircleCheck, LuTriangleAlert } from "react-icons/lu";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { useToast } from "../ui/Toast";
-import { getProfile, updateProfile } from "../../services/profileService";
+import { getProfile, updateProfile, resendVerificationEmail } from "../../services/profileService";
 
 // Mirrors backend Profile.Role exactly - kept in sync with the same
 // choices Register.jsx uses (Premium/Admin are not user role values).
@@ -38,11 +38,12 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ username: "", full_name: "", email: "", phone_number: "", bio: "" });
   const [formErrors, setFormErrors] = useState({});
-  const [pendingPicture, setPendingPicture] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [saving, setSaving] = useState(false);
   const [removingPhoto, setRemovingPhoto] = useState(false);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
   const [photoMenuOpen, setPhotoMenuOpen] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
 
   const loadProfile = async () => {
     setLoading(true);
@@ -86,12 +87,39 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
-  const handlePictureSelect = (e) => {
+  const handlePictureSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPendingPicture(file);
-    setPreviewUrl(URL.createObjectURL(file));
     e.target.value = ""; // allow re-selecting the same file later
+
+    // Root-cause fix: this used to only stash the file + a local blob
+    // preview (setPendingPicture/setPreviewUrl) and wait for the
+    // separate "Save Changes" button below to actually upload it - so
+    // selecting a photo looked instant but wasn't persisted at all
+    // unless the user also happened to submit the unrelated Account
+    // Details form afterward. Now it uploads immediately, the same
+    // way handleRemovePhoto already does, so "select a photo" is one
+    // complete, persisted action on its own.
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl); // instant feedback while the request is in flight
+    setUploadingPicture(true);
+    try {
+      const updated = await updateProfile({ profile_picture: file });
+      setProfile(updated);
+      onProfileUpdated?.(updated);
+      showToast("Profile picture updated.", "success");
+    } catch {
+      showToast("Couldn't update profile picture.", "error");
+    } finally {
+      setUploadingPicture(false);
+      // profile.profile_picture (the real, persisted URL from the
+      // server) is what renders from here on, whether the upload
+      // succeeded or not - on failure this correctly reverts the
+      // avatar back to whatever it was before, since `profile` was
+      // never touched.
+      setPreviewUrl(null);
+      URL.revokeObjectURL(objectUrl);
+    }
   };
 
   const handleRemovePhoto = async () => {
@@ -100,7 +128,6 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
     try {
       const updated = await updateProfile({ profile_picture: null });
       setProfile(updated);
-      setPendingPicture(null);
       setPreviewUrl(null);
       onProfileUpdated?.(updated);
       showToast("Profile picture removed.", "success");
@@ -117,12 +144,9 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
     setSaving(true);
     try {
       const payload = { ...form };
-      if (pendingPicture) payload.profile_picture = pendingPicture;
       const updated = await updateProfile(payload);
       setProfile(updated);
       setForm((prev) => ({ ...prev, username: updated.username }));
-      setPendingPicture(null);
-      setPreviewUrl(null);
       onProfileUpdated?.(updated);
       showToast("Profile updated.", "success");
     } catch (err) {
@@ -137,6 +161,19 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
       showToast(message, "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendingVerification(true);
+    try {
+      await resendVerificationEmail();
+      showToast("Verification email sent. Check your inbox.", "success");
+    } catch (err) {
+      const message = err.response?.data?.error?.message || "Couldn't send verification email.";
+      showToast(message, "error");
+    } finally {
+      setResendingVerification(false);
     }
   };
 
@@ -187,7 +224,7 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
             <Button
               variant="ghost"
               icon={LuCamera}
-              loading={removingPhoto}
+              loading={removingPhoto || uploadingPicture}
               onClick={() => setPhotoMenuOpen((open) => !open)}
             >
               Change Photo <LuChevronDown size={14} />
@@ -277,6 +314,28 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
                   onChange={handleChange("email")}
                   error={formErrors.email}
                 />
+                {profile?.email_verified ? (
+                  <div className="d-flex align-items-center gap-1 text-income small mt-1">
+                    <LuCircleCheck size={14} />
+                    <span>Verified</span>
+                  </div>
+                ) : (
+                  <div className="d-flex align-items-center flex-wrap gap-2 mt-1">
+                    <span className="d-flex align-items-center gap-1 text-warning small">
+                      <LuTriangleAlert size={14} />
+                      Email not verified
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      loading={resendingVerification}
+                      onClick={handleResendVerification}
+                    >
+                      Verify Email
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
 

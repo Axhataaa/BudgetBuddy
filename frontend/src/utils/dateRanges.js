@@ -56,3 +56,40 @@ export function getMonthDateRange(month, year) {
   const to = new Date(year, month, 0);
   return { date_from: toISODate(from), date_to: toISODate(to) };
 }
+
+/**
+ * Reports-page-specific version of getDateRangeForPeriod(), used only
+ * by components/reports/DateRangeFilter.jsx (Reports.jsx's date
+ * filter). getDateRangeForPeriod() above is shared with Expenses.jsx/
+ * Income.jsx and deliberately left untouched by this fix - this is a
+ * separate function, not a change to that one, specifically to avoid
+ * touching those two unrelated pages at all.
+ *
+ * The bug this fixes: getDateRangeForPeriod()'s "this_month"/
+ * "this_year" cases resolve date_to to TODAY, which is the right
+ * behavior for a transaction list ("show me this month's spending so
+ * far") but wrong for a Reports period, which the spec defines as the
+ * FULL calendar month/year regardless of today's date (e.g. selecting
+ * "Month" in early August should report on the whole of August, 01-31,
+ * not just 01-06). "today" and "last7" (Week - a rolling 7-day window,
+ * matching the same convention Expenses/Income already use for their
+ * own "Week" preset) are correct as-is and delegate straight through.
+ */
+export function getReportDateRangeForPeriod(period) {
+  const today = new Date();
+
+  switch (period) {
+    case "this_month": {
+      const from = new Date(today.getFullYear(), today.getMonth(), 1);
+      const to = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return { date_from: toISODate(from), date_to: toISODate(to) };
+    }
+    case "this_year": {
+      const from = new Date(today.getFullYear(), 0, 1);
+      const to = new Date(today.getFullYear(), 11, 31);
+      return { date_from: toISODate(from), date_to: toISODate(to) };
+    }
+    default:
+      return getDateRangeForPeriod(period);
+  }
+}

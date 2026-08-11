@@ -87,6 +87,15 @@ a {
 .text-muted-ink {
   color: var(--color-ink-muted) !important;
 }
+/* Was missing project-wide - Home.jsx's dashboard preview used this
+   class assuming it existed (sibling to .text-muted-ink below), but
+   without a real rule it silently inherited whatever color was on an
+   ancestor. Inside .finance-hero (color: #fff) that meant genuinely
+   invisible white-on-white text on the preview's white cards -  this
+   is the fix for that bug, not just a new convenience class. */
+.text-ink {
+  color: var(--color-ink) !important;
+}
 .bg-surface {
   background-color: var(--color-surface) !important;
 }
@@ -242,6 +251,275 @@ textarea:focus {
 .sidebar a:hover,
 .sidebar button:hover {
   transform: translateX(3px);
+}
+
+/* ---------- Sidebar utility area (theme + logout) ----------
+   Same track/raised-segment language as Notifications' priority
+   filter (.notification-priority-track/-segment) - duplicated in a
+   sidebar-scoped name rather than shared, so Sidebar.jsx and
+   Notifications.jsx don't reference each other's classes. */
+.sidebar-theme-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.sidebar-theme-option {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  border-radius: calc(var(--radius-md) - 3px);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  transition: background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.sidebar-theme-option:hover {
+  color: var(--color-ink);
+}
+
+.sidebar-theme-option.active {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ===========================
+   Page headers (Expenses/Income - Aug 2026)
+   Generic version of Notifications' own .notification-header-icon
+   (same 48px/radius-md shape) - kept as its own class rather than
+   reusing that one directly, so Expenses/Income don't depend on a
+   Notifications-page-specific class name. Color is set per-page via
+   .icon-expense/.icon-income below, same hardcoded-rgba-of-the-token
+   technique .badge.bg-surface-sunken above already uses for its own
+   primary-tinted background (--color-expense/--color-income don't
+   change between themes, so this needs no dark-mode override).
+=========================== */
+
+.page-header-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.page-header-icon.icon-expense {
+  background: rgba(214, 69, 69, 0.12);
+  color: var(--color-expense);
+}
+
+.page-header-icon.icon-income {
+  background: rgba(31, 157, 108, 0.12);
+  color: var(--color-income);
+}
+
+/* ---------- Category/source icon (transaction rows) ---------- */
+
+.category-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* A new subtle-badge pair for Expenses' "Entertainment" category,
+   built from the existing --color-accent token (gold) the same way
+   .badge.bg-surface-sunken already hardcodes --color-primary's rgb -
+   not a new arbitrary color, this app just doesn't have a Bootstrap
+   "accent" variant compiled in already. */
+.badge-accent-subtle {
+  background-color: rgba(200, 155, 60, 0.16) !important;
+  color: var(--color-accent) !important;
+}
+
+/* ---------- Transaction table hover (Expenses/Income) ----------
+   Scoped to .transaction-table specifically rather than editing the
+   global ".table tbody tr:hover" rule (index.css line ~200), which
+   hardcodes a Bootstrap-blue tint with no dark-theme override and is
+   shared by every other table in the app (Reports, Admin, etc.) -
+   changing it here only affects the two tables actually in scope for
+   this batch. */
+.transaction-table tbody tr {
+  transition: background-color var(--transition-fast);
+}
+
+.transaction-table tbody tr:hover {
+  background: var(--color-surface-sunken);
+}
+
+/* Dark-theme text-contrast fix (Aug 2026 - reported after visual
+   review). Root cause: Bootstrap's own ".table > :not(caption) > * > *"
+   rule sets each cell's `color` directly from its --bs-table-color
+   variable, which traces back to --bs-emphasis-color - a Bootstrap
+   root variable this project's :root/[data-theme="dark"] never
+   remaps (only --bs-body-color is remapped). Bootstrap's own dark
+   override for --bs-emphasis-color only activates under
+   [data-bs-theme="dark"], which this project doesn't use (it has its
+   own [data-theme="dark"] instead) - so every table cell was silently
+   getting Bootstrap's plain-light-mode #000 regardless of this app's
+   actual theme. That's an explicit per-element declaration, so it was
+   winning over inherited color even where an ancestor had a
+   theme-aware class (e.g. text-muted-ink on <tr>, not on the <th>
+   itself) - which is why the header row was quietly affected too,
+   not just the title/source text. Scoped to .transaction-table only,
+   not Bootstrap's own ".table" rule, so no other table in the app
+   (Reports, Admin, etc.) is touched by this fix. */
+.transaction-table thead th {
+  color: var(--color-ink-muted);
+}
+
+/* Edit/delete icon buttons on Expenses/Income rows - same hover
+   treatment (rounded hit-area) as Notifications' own delete-button
+   hover, duplicated under its own name per this file's established
+   per-module class-scoping rather than reusing Notifications' class
+   from a different page. Only the danger (delete) button intensifies
+   to expense-red on hover - Edit isn't destructive, so it only gets
+   the background tint, not a color change implying it is one. */
+.row-action-btn {
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.row-action-btn:hover {
+  background: var(--color-surface-sunken);
+}
+
+.row-action-btn.text-danger:hover {
+  color: var(--color-expense) !important;
+}
+
+/* ===========================
+   Budgets + Reports (Aug 2026)
+   Same design language as Expenses/Income/Notifications - building on
+   the same generic classes those already introduced
+   (.page-header-icon, .category-icon) rather than duplicating them,
+   plus a few genuinely new, still-generic ones below. Nothing here
+   touches Dashboard/Savings Goals/Landing Page even though some of
+   them share an underlying Bootstrap class (.progress) with Budgets -
+   see .progress-track's own note.
+=========================== */
+
+/* Two more .page-header-icon color variants, same rgba-of-the-token
+   technique as .icon-expense/.icon-income use (--color-primary and
+   --color-accent don't change between themes, so no dark-mode
+   override is needed here either). */
+.page-header-icon.icon-budget {
+  background: rgba(48, 59, 142, 0.12);
+  color: var(--color-primary);
+}
+
+.page-header-icon.icon-report {
+  background: rgba(200, 155, 60, 0.16);
+  color: var(--color-accent);
+}
+
+/* ---------- Progress bar track ----------
+   Bootstrap's .progress track color comes from --bs-progress-bg ->
+   --bs-secondary-bg, a Bootstrap root variable this project never
+   remaps (same class of bug as the .table text-color one found in
+   the Expenses/Income batch) - it stays a fixed light gray in both
+   themes, which reads fine on a light card but looks like a stray
+   bright bar on a dark one. .progress itself is also used by
+   Dashboard's BudgetProgress widget, the Landing Page, and Savings
+   Goals' GoalCard - all explicitly out of scope this batch - so this
+   is added as an extra class alongside "progress" (progress-track),
+   applied only where this batch actually touches: Budgets' own cards
+   and Reports' Budget Performance section. Nothing about the existing
+   global ".progress" class or its other three usages is touched. */
+.progress-track {
+  background-color: var(--color-surface-sunken);
+}
+
+/* ---------- Report period chips (Reports' own DateRangeFilter) ----------
+   Same rounded-pill treatment as Notifications' .notification-chip,
+   generalized under a page-agnostic name this time since Reports is
+   the third page to need this exact pattern - not shared with/does
+   not modify .notification-chip itself. */
+.chip-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.chip-toggle:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.chip-toggle.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.icon-action-btn {
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.icon-action-btn:hover {
+  background: var(--color-surface-sunken);
+}
+
+.icon-action-btn.text-danger:hover {
+  color: var(--color-expense) !important;
+}
+
+
+.page-header-icon.icon-dashboard {
+  background: rgba(48, 59, 142, 0.12);
+  color: var(--color-primary);
+}
+
+.page-header-icon.icon-settings {
+  background: rgba(48, 59, 142, 0.12);
+  color: var(--color-primary);
+}
+
+.list-row-hover:hover {
+  background: var(--color-surface-sunken) !important;
+}
+
+
+
+.page-header-icon.icon-savings {
+  background: rgba(31, 157, 108, 0.12);
+  color: var(--color-income);
+}
+
+.page-header-icon.icon-achievements {
+  background: rgba(200, 155, 60, 0.16);
+  color: var(--color-accent);
+}
+
+.token-callout-success {
+  background: var(--color-surface-sunken);
+  color: var(--color-income);
+  border-radius: var(--radius-md);
 }
 
 /* ===========================
@@ -468,29 +746,7 @@ img {
   margin-top: 0;
 }
 
-/* =====================================================================
-   Dark theme — Settings > Appearance (July 2026)
 
-   CORRECTED: this block previously used token names (--ink, --canvas,
-   --surface, --surface-alt, --surface-sunken, --border) that do not
-   exist anywhere in this file - the real tokens are --color-ink,
-   --color-bg, --color-surface, --color-surface-sunken, --color-border
-   (see :root at the top of this file). Because CSS silently accepts
-   undefined custom properties, that mismatch didn't throw an error -
-   it just meant almost nothing was actually themed, except one
-   coincidental rule that gave form-control a real (but wrong,
-   unreadable) dark navy background. This version uses the real names
-   throughout and was verified against the current file's :root block.
-
-   Overriding the base --color-* tokens here is enough for most of the
-   app automatically: --bs-body-bg, --bs-body-color, --bs-border-color,
-   .bg-surface, .text-muted-ink, .bg-surface-sunken etc. are already
-   written as var(--color-bg) / var(--color-ink) / etc. at :root, so
-   they re-resolve to the dark values the moment data-theme="dark" is
-   set on <html> (PreferencesContext). Forms, placeholders and a few
-   Bootstrap components that hardcode their own colors still need
-   explicit rules below, since they don't route through these tokens.
-===================================================================== */
 
 [data-theme="dark"] {
   --color-bg: #0F1120;
@@ -505,10 +761,7 @@ img {
   --shadow-lg: 0 24px 48px -12px rgba(0, 0, 0, 0.65);
 }
 
-/* Form fields: a level lighter than the page but distinct from cards,
-   with an explicit border, text color and placeholder color - none of
-   these route through the base tokens automatically, since Bootstrap's
-   compiled CSS sets its own literal color/border values by default. */
+
 [data-theme="dark"] .form-control,
 [data-theme="dark"] .form-select,
 [data-theme="dark"] textarea.form-control {
@@ -535,9 +788,7 @@ img {
   color: var(--color-ink);
 }
 
-/* Bootstrap's disabled-field color and select-arrow are hardcoded to
-   light-mode values in the compiled CSS; both need an explicit
-   dark-mode override or they render invisible against a dark field. */
+
 [data-theme="dark"] .form-control:disabled,
 [data-theme="dark"] .form-select:disabled {
   background-color: var(--color-surface);
@@ -624,13 +875,6 @@ img {
   }
 }
 
-/* =====================================================================
-   Sidebar — mobile off-canvas (July 2026)
-   Desktop/tablet (≥992px): sidebar renders normally, inline, always
-   visible - nothing here changes that.
-   Mobile (<992px): sidebar is fixed off-screen by default and slides
-   in when open; a backdrop closes it on tap-outside.
-===================================================================== */
 
 .topbar-menu-btn {
   display: none;
@@ -676,21 +920,6 @@ img {
   }
 }
 
-/* =====================================================================
-   Flex layout safeguard (July 2026)
-   The app shell is a flex row (sidebar + main content). Flex items
-   default to min-width: auto, which means wide content (a table, a
-   long unbreakable string) refuses to shrink and instead forces the
-   whole row to overflow - visually compressing or overlapping the
-   fixed-width sidebar next to it. This is what caused the "Title" /
-   "Source" field appearing to overlap the sidebar on the Expenses and
-   Income pages. min-width: 0 lets the content area shrink properly
-   and scroll internally (each table already has its own
-   .table-responsive wrapper) instead of blowing out the layout;
-   flex-shrink: 0 on the sidebar makes sure it never gets compressed
-   by an overflowing sibling in the first place, as a second line of
-   defense.
-===================================================================== */
 
 .app-content {
   min-width: 0;
@@ -704,64 +933,18 @@ html, body, #root {
   overflow-x: hidden;
 }
 
-/* =====================================================================
-   Savings Goals grid (Task 8, this pass)
-   Previously a Bootstrap row with col-xl-4/col-lg-6 children - that
-   always reserves a fixed fraction of the row per card regardless of
-   how many cards exist, so 1-2 goals left an obviously empty gap next
-   to them. A CSS grid with auto-fit + a capped minmax() sizes each
-   card naturally (never stretches to an awkward full-row width, never
-   leaves a big empty column) and wraps into more rows as more goals
-   are added - no goal-count-based logic needed, it's just how grid
-   track sizing works.
-===================================================================== */
-
 .goals-grid {
   display: grid;
-  /* Bug fix: the previous minmax(340px, 460px) capped every card's
-     max width well below typical desktop content widths, and
-     justify-content: center then centered that now-narrower-than-
-     container grid block - together producing large, symmetric dead
-     margins on either side ("wastes horizontal space... too centered
-     with excessive blank margins"). Raising the cap to 520px lets
-     cards use more of the available width while still staying a
-     sensible, non-stretched size, and left-aligning (matching every
-     other list/grid in the app, e.g. Expenses/Income tables) instead
-     of centering removes the boxed-in feel. The 340px minimum is
-     unchanged, so mobile/tablet stacking behavior is untouched. */
+
   grid-template-columns: repeat(auto-fit, minmax(340px, 520px));
   gap: 1.5rem;
 }
 
-/* Savings Goals page - the 4 summary cards above the goal cards
-   (Active Goals / Saved Amount / Target Amount / Ready to Purchase).
-   These previously used Bootstrap's row + col-lg-3/col-md-6, which
-   only reflows at fixed 992px/768px breakpoints - in the space
-   between those breakpoints (or against a narrower sidebar-adjusted
-   content width) the row can look uneven compared to .goals-grid
-   right below it, which reflows continuously. Unlike .goals-grid,
-   there's no reason to cap these cards' max width - with exactly 4
-   of them, using 1fr tracks lets them always fill the full row width
-   edge-to-edge (equal widths, by construction, since fr-unit columns
-   split remaining space evenly) with zero leftover gap, and they
-   still drop to fewer per row (never below the 240px minimum, so
-   they're never squeezed narrower than before) as the viewport
-   narrows, all without a hard breakpoint jump. Card content itself
-   (SummaryCard's JSX/padding) is unchanged - only this wrapper. */
 .savings-summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem;
 }
-
-/* =====================================================================
-   Savings Goal card - Recent Activity expand/collapse (this pass)
-   grid-template-rows: 0fr -> 1fr animates to the section's real
-   content height regardless of how many extra transactions there are,
-   which a max-height transition (needs a fixed guessed value) can't
-   do smoothly. The inner overflow:hidden wrapper is what actually
-   clips content while the row is sized at 0fr.
-===================================================================== */
 
 .activity-collapse {
   display: grid;
@@ -775,4 +958,875 @@ html, body, #root {
 
 .activity-collapse-inner {
   overflow: hidden;
+}
+
+
+.landing-page {
+  overflow-x: hidden;
+}
+
+.landing-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  backdrop-filter: blur(8px);
+  background-color: rgba(255, 255, 255, 0.92);
+}
+[data-theme="dark"] .landing-navbar {
+  background-color: rgba(26, 29, 51, 0.92);
+}
+
+.landing-nav-link {
+  color: var(--color-ink-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+.landing-nav-link:hover {
+  color: var(--color-primary);
+}
+
+/* Soft blurred accent circles behind the hero - decorative only,
+   built from the same --color-primary/--color-accent tokens as
+   everything else, not a new palette. */
+.landing-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(48px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Floating hero dashboard preview card */
+.landing-float {
+  animation: landing-float 6s ease-in-out infinite;
+}
+@keyframes landing-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-float {
+    animation: none;
+  }
+}
+
+/* Simple fade-in-up entrance, staggered via inline --delay */
+.landing-fade-up {
+  animation: landing-fade-up 0.6s ease both;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes landing-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-fade-up {
+    animation: none;
+  }
+}
+
+/* Feature / benefit card icon - scales gently on card hover, riding
+   on the existing .hover-card lift rather than adding a second
+   competing motion. */
+.landing-feature-card .landing-feature-icon {
+  transition: transform var(--transition-normal), background-color var(--transition-normal);
+}
+.landing-feature-card:hover .landing-feature-icon {
+  transform: scale(1.08) rotate(-4deg);
+  background-color: var(--color-primary);
+  color: #fff !important;
+}
+
+/* Trust indicator row under the hero CTAs */
+.landing-trust-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Premium capability/trust badges under the hero CTAs - translucent
+   pills that sit correctly on the navy hero background in both
+   themes (the hero itself is always the same navy gradient regardless
+   of site theme, same as Dashboard's own HeroSection.jsx, so these
+   don't need theme-conditional colors). */
+.landing-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.78rem;
+  font-weight: 500;
+  backdrop-filter: blur(6px);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+.landing-hero-badge:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+.landing-hero-badge svg {
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+/* Mini "screenshot" dashboard preview shell inside the hero - border
+   reads the real --color-border token (not a hardcoded white) so it
+   stays visible on both light and dark surfaces automatically.
+   Shadow is intentionally richer than the base --shadow-lg token:
+   the light theme's token shadows are quite soft by design (see
+   :root), which made this card feel flat next to dark mode's dramatic
+   shadows - the extra primary-tinted ambient glow below is scoped to
+   just this component to compensate, without touching the shared
+   --shadow-* tokens used across the whole app. */
+.landing-preview-shell {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg), 0 40px 70px -30px rgba(48, 59, 142, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  color: var(--color-ink);
+}
+[data-theme="dark"] .landing-preview-shell {
+  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Small floating stat badge that overlaps the preview's corner - a
+   common premium-SaaS composition trick so the hero's right side
+   reads as a layered scene rather than one flat screenshot. Purely
+   decorative/illustrative, not wired to data. */
+.landing-preview-floater {
+  position: absolute;
+  z-index: 2;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg), 0 24px 40px -18px rgba(200, 155, 60, 0.35);
+  padding: 0.65rem 0.9rem;
+  animation: landing-float 6s ease-in-out infinite;
+  animation-delay: -3s;
+}
+[data-theme="dark"] .landing-preview-floater {
+  box-shadow: var(--shadow-lg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-preview-floater {
+    animation: none;
+  }
+}
+
+.landing-preview-topbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-sunken);
+}
+.landing-preview-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-border);
+  display: inline-block;
+}
+
+/* Final CTA gradient banner - same gradient family as .finance-hero,
+   reused rather than a second new gradient. */
+.landing-cta-banner {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-deep) 100%);
+  box-shadow: var(--shadow-lg);
+  color: #fff;
+}
+
+.landing-cta-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.landing-footer-link {
+  color: var(--color-ink-muted);
+  text-decoration: none;
+  font-size: 0.88rem;
+  transition: color var(--transition-fast);
+}
+.landing-footer-link:hover {
+  color: var(--color-primary);
+}
+
+.landing-social-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-muted);
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+.landing-social-icon:hover {
+  background: var(--color-primary);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+/* =====================================================================
+   Landing page - premium finance-identity pass (2nd round)
+   Still additive-only, still scoped under .landing-page, still built
+   purely from the existing color, radius, shadow and transition
+   tokens already defined at the top of this file - no new palette,
+   no new font, no framework.
+===================================================================== */
+
+/* ---------- Hero: gradient accent headline ---------- */
+.landing-hero-accent {
+  background: linear-gradient(90deg, var(--color-accent) 0%, #F0D48A 55%, var(--color-accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--color-accent);
+}
+
+/* ---------- Navbar theme toggle ---------- */
+.landing-theme-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-muted);
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+.landing-theme-toggle:hover {
+  color: var(--color-primary);
+  transform: rotate(15deg);
+}
+
+/* ---------- Hero CTA button pop (wraps Button, doesn't touch it) --- */
+.landing-btn-pop {
+  display: inline-flex;
+  transition: transform var(--transition-fast);
+}
+.landing-btn-pop:hover {
+  transform: scale(1.035);
+}
+
+/* ---------- Decorative finance motifs (piggy bank, coins, rupee,
+   chart) - large, very low opacity, purely CSS/SVG, never intercept
+   clicks. Color always reads var(--color-primary)/var(--color-accent)
+   so they fade correctly in dark mode instead of clashing. ---------- */
+.landing-motif {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  color: var(--color-primary);
+  opacity: 0.06;
+}
+[data-theme="dark"] .landing-motif {
+  opacity: 0.08;
+}
+
+.landing-motif-float {
+  animation: landing-motif-float 9s ease-in-out infinite;
+}
+.landing-motif-float-slow {
+  animation: landing-motif-float 13s ease-in-out infinite;
+}
+@keyframes landing-motif-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-16px) rotate(4deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-motif-float,
+  .landing-motif-float-slow {
+    animation: none;
+  }
+}
+
+/* ---------- Section shells: alternate background + separators ----- */
+.landing-section-tinted {
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-border) 50%, transparent);
+  border: none;
+}
+
+/* ---------- Feature cards: premium glow + richer icon ---------- */
+.landing-feature-card {
+  position: relative;
+  border: 1px solid transparent;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
+}
+[data-theme="dark"] .landing-feature-card {
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.landing-feature-card:hover {
+  border-color: rgba(48, 59, 142, 0.18);
+  box-shadow: var(--shadow-md), 0 26px 44px -24px rgba(48, 59, 142, 0.32);
+}
+[data-theme="dark"] .landing-feature-card:hover {
+  box-shadow: var(--shadow-md);
+}
+.landing-feature-card .landing-feature-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  transition: transform var(--transition-normal), background-color var(--transition-normal), box-shadow var(--transition-normal);
+}
+.landing-feature-card:hover .landing-feature-icon {
+  transform: scale(1.08) rotate(-4deg);
+  background-color: var(--color-primary);
+  color: #fff !important;
+  box-shadow: 0 0 0 8px rgba(48, 59, 142, 0.10);
+}
+[data-theme="dark"] .landing-feature-card:hover .landing-feature-icon {
+  box-shadow: 0 0 0 8px rgba(48, 59, 142, 0.28);
+}
+
+/* ---------- Why-choose benefit cards ---------- */
+.landing-benefit-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+.landing-benefit-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ---------- Product highlight badges (checkmark pills) ---------- */
+.landing-highlight-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-ink);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.landing-highlight-badge:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+}
+.landing-highlight-badge svg {
+  color: var(--color-income);
+  flex-shrink: 0;
+}
+
+/* ---------- CTA banner: subtle glow + trust chips ---------- */
+.landing-cta-banner {
+  box-shadow: var(--shadow-lg), 0 0 60px rgba(200, 155, 60, 0.18);
+}
+
+.landing-cta-trust {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ---------- Smooth theme-switch transition on the main surfaces --- */
+.landing-page,
+.landing-page .bg-surface,
+.landing-page .bg-surface-sunken,
+.landing-navbar,
+.landing-preview-shell,
+.landing-preview-topbar {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ---------- Footer credit line ---------- */
+.landing-footer-credit {
+  font-size: 0.82rem;
+  color: var(--color-ink-muted);
+}
+
+/* =====================================================================
+   Landing page - premium fintech depth pass (3rd round)
+   Still additive-only, still scoped under `.landing-page` (plus the
+   new /contact + /feedback pages which reuse the same scope), still
+   built purely from the existing color, radius and shadow
+   tokens - no new palette, no new font, no framework. This pass is
+   specifically about making the LIGHT theme feel as considered as
+   dark (tinted/gradient section surfaces, glass cards, layered
+   background pattern, gradient dividers, accent borders) and about
+   using more of the viewport width.
+===================================================================== */
+
+/* ---------- Wider working width -----------------------------------
+   Bootstrap's .container-xxl caps at 1320px even on very large
+   screens - intentionally overridden a bit wider here (still fully
+   fluid/responsive below that) so Hero/Features/Highlights/CTA read
+   as a premium wide layout instead of a narrow centered column with
+   dead space on both sides. */
+.landing-page .container-xxl,
+.landing-contact .container-xxl {
+  max-width: 1440px;
+}
+
+/* ---------- Very low-opacity layered background pattern -----------
+   A faint dot-grid using currentColor via var(--color-ink), so it's
+   automatically the right faint shade in both themes without a new
+   color. Intentionally scoped to `.landing-textured` (a wrapper that
+   starts right AFTER the hero band, not the whole `.landing-page`) so
+   the Hero can own a clean, uninterrupted gradient background of its
+   own instead of the dot pattern showing in the gap above/around it -
+   the dotted texture now begins once the hero ends, as requested. */
+.landing-textured {
+  position: relative;
+  background-image: radial-gradient(var(--color-ink) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-position: 0 0;
+}
+[data-theme="dark"] .landing-textured {
+  background-image: radial-gradient(var(--color-ink) 0.6px, transparent 0.6px);
+}
+.landing-textured::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: inherit;
+  opacity: 0.025;
+  z-index: -1;
+}
+[data-theme="dark"] .landing-textured::before {
+  opacity: 0.05;
+}
+
+/* ---------- Hero band: full-bleed, immersive, owns its own
+   background instead of floating as a rounded card on plain white.
+   Scoped combinator (not a bare .finance-hero override) so Dashboard's
+   own HeroSection.jsx - which also uses .finance-hero - is completely
+   unaffected. */
+.landing-page .finance-hero.landing-hero-band {
+  border-radius: 0;
+  box-shadow: none;
+  background:
+    radial-gradient(ellipse 70% 60% at 15% 10%, rgba(200, 155, 60, 0.16), transparent 55%),
+    radial-gradient(ellipse 60% 55% at 90% 85%, rgba(255, 255, 255, 0.08), transparent 55%),
+    linear-gradient(200deg, var(--color-primary) 0%, var(--color-primary-deep) 85%);
+}
+
+/* ---------- Section surface treatments (light gets as much care as
+   dark - each uses a soft radial gradient built from the existing
+   primary/accent tokens at very low opacity, not a new color). All
+   three panel variants (soft / soft-cool / soft-alt) get a faint
+   ambient shadow + top highlight so they read as gently raised
+   surfaces rather than flat tinted rectangles - this is the main fix
+   for the light theme feeling "too flat" next to dark mode. ------ */
+.landing-section-soft,
+.landing-section-soft-cool,
+.landing-section-soft-alt {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, var(--shadow-sm);
+}
+[data-theme="dark"] .landing-section-soft,
+[data-theme="dark"] .landing-section-soft-cool,
+[data-theme="dark"] .landing-section-soft-alt {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, var(--shadow-sm);
+}
+
+.landing-section-soft {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(48, 59, 142, 0.07), transparent 60%),
+    radial-gradient(ellipse 50% 50% at 0% 100%, rgba(200, 155, 60, 0.06), transparent 60%),
+    var(--color-bg);
+}
+[data-theme="dark"] .landing-section-soft {
+  background:
+    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(120, 140, 255, 0.10), transparent 60%),
+    radial-gradient(ellipse 50% 50% at 0% 100%, rgba(200, 155, 60, 0.09), transparent 60%),
+    var(--color-bg);
+}
+
+/* Third panel treatment, used for the "Why Choose" section so the
+   Features -> Why -> Highlights run has three visually distinct
+   surfaces instead of two repeating ones. Gradient direction and
+   token mix differ from both .landing-section-soft and
+   .landing-section-soft-alt. */
+.landing-section-soft-cool {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(ellipse 55% 60% at 0% 0%, rgba(200, 155, 60, 0.07), transparent 55%),
+    radial-gradient(ellipse 55% 60% at 100% 100%, rgba(48, 59, 142, 0.06), transparent 55%),
+    var(--color-surface-sunken);
+}
+[data-theme="dark"] .landing-section-soft-cool {
+  background:
+    radial-gradient(ellipse 55% 60% at 0% 0%, rgba(200, 155, 60, 0.10), transparent 55%),
+    radial-gradient(ellipse 55% 60% at 100% 100%, rgba(120, 140, 255, 0.10), transparent 55%),
+    var(--color-surface-sunken);
+}
+
+.landing-section-soft-alt {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(135deg, rgba(48, 59, 142, 0.06), rgba(200, 155, 60, 0.05) 60%, transparent 100%),
+    var(--color-surface-sunken);
+}
+[data-theme="dark"] .landing-section-soft-alt {
+  background:
+    linear-gradient(135deg, rgba(120, 140, 255, 0.10), rgba(200, 155, 60, 0.08) 60%, transparent 100%),
+    var(--color-surface-sunken);
+}
+
+/* ---------- Glass card treatment for benefit/contact cards ---------
+   Frosted, translucent surface that reads correctly in both themes
+   because it's mixed from var(--color-surface) itself rather than a
+   fixed white/black. Falls back to a plain solid card (still fully
+   readable, just not frosted) on browsers without color-mix. A resting
+   shadow (not just an on-hover one) keeps it from blending into the
+   soft panel behind it in light mode. */
+.landing-glass-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
+}
+@supports (backdrop-filter: blur(1px)) {
+  .landing-glass-card {
+    background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+}
+.landing-glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md), 0 24px 40px -22px rgba(48, 59, 142, 0.3);
+  border-color: rgba(48, 59, 142, 0.25);
+}
+[data-theme="dark"] .landing-glass-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Small colored accent bar on benefit/why-choose cards - cycles
+   through EXISTING semantic tokens only (primary/income/accent/
+   warning/expense), not a new palette. */
+.landing-accent-bar {
+  height: 4px;
+  width: 40px;
+  border-radius: 999px;
+  margin-bottom: 0.85rem;
+  transition: width var(--transition-normal);
+}
+.landing-glass-card:hover .landing-accent-bar {
+  width: 56px;
+}
+.landing-accent-bar.c0 { background: var(--color-primary); }
+.landing-accent-bar.c1 { background: var(--color-income); }
+.landing-accent-bar.c2 { background: var(--color-accent); }
+.landing-accent-bar.c3 { background: var(--color-warning); }
+.landing-accent-bar.c4 { background: var(--color-expense); }
+.landing-accent-bar.c5 { background: var(--color-primary); }
+
+/* ---------- Gradient-border product highlight badges on hover ------
+   Classic border-gradient-via-mask trick: an ::before layer paints a
+   primary->accent gradient "ring" that's invisible until hover, using
+   only the two existing brand tokens. */
+.landing-highlight-badge {
+  position: relative;
+  isolation: isolate;
+}
+.landing-highlight-badge::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 999px;
+  padding: 1px;
+  background: linear-gradient(120deg, var(--color-primary), var(--color-accent));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  z-index: -1;
+}
+.landing-highlight-badge:hover::before {
+  opacity: 1;
+}
+.landing-highlight-badge:hover {
+  border-color: transparent;
+}
+.landing-highlight-badge .landing-highlight-icon {
+  transition: transform var(--transition-fast);
+}
+.landing-highlight-badge:hover .landing-highlight-icon {
+  transform: rotate(-10deg) scale(1.1);
+}
+
+/* ---------- Hero finance illustration (behind the dashboard preview) */
+.landing-hero-illustration {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.16;
+  filter: blur(0.5px);
+}
+
+/* ---------- Elevated footer -----------------------------------------
+   A distinct panel rather than a plain continuation of the page's
+   white background - reuses --color-surface-sunken (already used for
+   this exact "one level down" purpose elsewhere) plus a soft top
+   shadow so it reads as its own layer. */
+.landing-footer-elevated {
+  background: var(--color-surface-sunken);
+  box-shadow: 0 -12px 32px -20px rgba(20, 24, 31, 0.18);
+  position: relative;
+}
+[data-theme="dark"] .landing-footer-elevated {
+  box-shadow: 0 -12px 32px -20px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Meet-the-developer avatar placeholder ------------------- */
+.landing-avatar-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-deep) 100%);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 2.2rem;
+  box-shadow: var(--shadow-lg);
+  border: 3px solid var(--color-surface);
+}
+
+/* ---------- Contact page cards -------------------------------------- */
+.landing-contact-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+.landing-contact-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md), 0 22px 38px -20px rgba(48, 59, 142, 0.28);
+}
+[data-theme="dark"] .landing-contact-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* ---------- FAQ trigger row (pairs with the existing
+   .activity-collapse / .activity-collapse-inner grid-row trick
+   already used by SavingsGoals' TransactionHistory - reused as-is,
+   not reimplemented) ---------------------------------------------- */
+.landing-faq-trigger {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.landing-faq-chevron {
+  transition: transform var(--transition-fast);
+}
+.landing-faq-trigger[aria-expanded="true"] .landing-faq-chevron {
+  transform: rotate(180deg);
+}
+
+/* ---------- "Why contact me" topic chips ----------------------------*/
+.landing-topic-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-ink);
+  transition: transform var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+}
+.landing-topic-chip:hover {
+  transform: translateY(-2px);
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* =====================================================================
+   Notifications page redesign (visual only - Aug 2026)
+   Scoped entirely to .notification-* classes; nothing above this line
+   was changed. Every value here reuses the existing color, radius,
+   shadow and transition custom properties already defined at :root
+   and re-themed under [data-theme="dark"] earlier in this file, so
+   none of these rules need a dark-mode override of their own - the
+   tokens they reference already flip automatically.
+===================================================================== */
+
+/* ---------- Header icon container ----------
+   Same 32px/radius-9px pattern as .stat-card-icon/.insight-icon above,
+   just sized up slightly (48px) for a page-header context. */
+.notification-header-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--color-surface-sunken);
+  color: var(--color-primary);
+}
+
+/* ---------- Category filter chips ----------
+   Mirrors .landing-topic-chip's existing pill convention (rounded
+   999px, surface-sunken default, primary-filled on hover/active)
+   rather than inventing a new chip style. */
+.notification-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.notification-chip:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.notification-chip.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Priority segmented control ----------
+   A soft "track" (surface-sunken) with a raised active segment
+   (surface + shadow-sm) - the same raised-vs-sunken relationship
+   .insight-row/.stat-card already use, applied as a segmented
+   control instead of a button group. */
+.notification-priority-track {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.notification-priority-segment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 1 1 auto;
+  min-width: fit-content;
+  padding: 8px 16px;
+  border-radius: calc(var(--radius-md) - 3px);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  background: transparent;
+  border: none;
+  transition: background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.notification-priority-segment:hover {
+  color: var(--color-ink);
+}
+
+.notification-priority-segment.active {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.notification-priority-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ---------- Notification list rows ----------
+   Replaces reliance on .transaction-item's hover (hardcoded #f8fbff,
+   no dark-theme override) with a themed hover of its own, so the
+   redesigned list stays correct in dark mode. */
+.notification-row-card {
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast);
+}
+
+.notification-row-card:hover {
+  background: var(--color-surface-sunken);
+}
+
+.notification-row-card:active {
+  transform: scale(0.995);
+}
+
+.notification-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notification-delete-btn {
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.notification-delete-btn:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-expense) !important;
 }

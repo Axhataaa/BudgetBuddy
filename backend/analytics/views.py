@@ -1,7 +1,9 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
-from django.db.models import Sum
+from django.contrib.auth.models import User
+from django.db.models import Count, Sum
+from django.utils import timezone
 
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -14,6 +16,9 @@ from budgets.models import (
 )
 from expenses.models import Expense
 from incomes.models import Income
+from notifications.models import Notification
+from users.models import Profile
+from users.permissions import IsAdmin
 
 from .serializers import (
     DashboardSummaryQuerySerializer,
@@ -595,3 +600,102 @@ class RecentActivityView(APIView):
         )
 
         return Response(serializer.data)
+
+
+class AdminStatsView(APIView):
+    """
+    GET /api/v1/dashboard/admin-stats/
+
+    Read-only monitoring/analytics for the BudgetBuddy Admin Dashboard
+    (mentor spec: "This dashboard should mainly be monitoring and
+    analytics... Do not build unnecessary CRUD"). Deliberately exposes
+    no write actions and no per-user financial detail - only aggregate
+    counts across the four owning apps (expenses, incomes, budgets,
+    savings goals) plus notifications and user/occupation figures,
+    reusing each app's existing model rather than introducing a new
+    "admin" app or duplicating query logic that already lives in
+    DashboardSummaryView/RecentActivityView above.
+
+    IsAdmin (users/permissions.py) is the same permission class that
+    already guards UserListView - "Admin" here means Django
+    is_superuser/is_staff, never the Profile.role occupation field
+    (see RegisterSerializer's and RoleAwareTokenObtainPairSerializer's
+    own comments on that distinction).
+    """
+
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        total_users = User.objects.count()
+
+        # Occupation distribution (Student / Working Professional /
+        # Freelancer / Business Owner / Other) - deliberately excludes
+        # the Admin role choice, since that's an authorization label
+        # auto-assigned to superusers (users/signals.py), not an
+        # occupation a person selected at registration.
+        occupation_counts = dict(
+            Profile.objects.exclude(role=Profile.Role.ADMIN)
+            .values_list("role")
+            .annotate(count=Count("id"))
+        )
+        users_by_occupation = [
+            {
+                "occupation": label,
+                "value": occupation_counts.get(key, 0),
+            }
+            for key, label in Profile.Role.choices
+            if key != Profile.Role.ADMIN
+        ]
+
+        # Monthly registrations for the last 6 months (including the
+        # current one), oldest first - enough to plot a small trend
+        # without pulling every User row into Python.
+        today = date.today()
+        monthly_registrations = []
+        for i in range(5, -1, -1):
+            month_index = today.month - 1 - i
+            year = today.year + (month_index // 12)
+            month = (month_index % 12) + 1
+            count = User.objects.filter(
+                date_joined__year=year,
+                date_joined__month=month,
+            ).count()
+            monthly_registrations.append(
+                {
+                    "month": month,
+                    "year": year,
+                    "count": count,
+                }
+            )
+
+        role_labels = dict(Profile.Role.choices)
+        recent_users = [
+            {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "occupation": role_labels.get(
+                    getattr(user.profile, "role", None), "—"
+                ),
+                "date_joined": user.date_joined,
+            }
+            for user in User.objects.select_related("profile").order_by(
+                "-date_joined"
+            )[:10]
+        ]
+
+        return Response(
+            {
+                "total_users": total_users,
+                "users_by_occupation": users_by_occupation,
+                "monthly_registrations": monthly_registrations,
+                "totals": {
+                    "expenses": Expense.objects.count(),
+                    "incomes": Income.objects.count(),
+                    "budgets": Budget.objects.count(),
+                    "savings_goals": SavingsGoal.objects.count(),
+                    "notifications": Notification.objects.count(),
+                },
+                "recent_users": recent_users,
+            }
+        )

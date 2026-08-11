@@ -5,6 +5,7 @@ import {
 } from "../../services/savingsGoalService";
 import { formatCurrency } from "../../utils/formatCurrency";
 import Button from "../../components/ui/Button";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import GoalCard from "./GoalCard";
 import GoalFormModal from "./GoalFormModal";
 import {
@@ -48,11 +49,8 @@ function SummaryCard({
         </div>
 
         <div
-          className="rounded-circle bg-surface-sunken d-flex align-items-center justify-content-center flex-shrink-0"
-          style={{
-            width: 46,
-            height: 46,
-          }}
+          className={`category-icon ${colorClass === "text-income" ? "bg-success-subtle text-success" : "bg-primary-subtle text-primary"}`}
+          style={{ width: 46, height: 46 }}
         >
           <Icon size={22} />
         </div>
@@ -83,6 +81,9 @@ function SavingsGoals() {
 
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedPurchaseGoal, setSelectedPurchaseGoal] = useState(null);
+
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   // -----------------------------
   // Effects
@@ -141,23 +142,30 @@ function SavingsGoals() {
     setShowPurchaseModal(true);
   }
 
-  async function handleDeleteGoal(goal) {
-    const confirmed = window.confirm(
-      `Delete "${goal.goal_name}"?`
-    );
+  // Was window.confirm() - functionally fine, but every other
+  // destructive action in the app (Notifications' Clear All, Settings
+  // Logout/Danger Zone, Achievements' own delete right below) goes
+  // through the app's own ConfirmDialog, not the browser's native
+  // dialog, so this was the one page that looked jarringly different
+  // at the exact moment a person is deciding whether to delete
+  // something. Same deleteTarget/deleting state shape Achievements.jsx
+  // already uses for its own delete confirmation.
+  function handleDeleteGoal(goal) {
+    setDeleteTarget(goal);
+  }
 
-    if (!confirmed) {
-      return;
-    }
-
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteSavingsGoal(goal.id);
-
+      await deleteSavingsGoal(deleteTarget.id);
       await loadGoals();
+      setDeleteTarget(null);
     } catch (error) {
       console.error(error);
-
       showToast("Failed to delete goal.", "error");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -194,16 +202,21 @@ function SavingsGoals() {
 
       {/* ================= Header ================= */}
 
-      <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+      <div className="bg-surface rounded shadow-token-sm p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
 
-        <div>
-          <h1 className="font-display fs-3 fw-semibold mb-1">
-            Savings Goals
-          </h1>
+        <div className="d-flex align-items-center gap-3">
+          <span className="page-header-icon icon-savings">
+            <LuTarget size={22} />
+          </span>
+          <div>
+            <h1 className="font-display fs-3 fw-semibold mb-1">
+              Savings Goals
+            </h1>
 
-          <p className="text-muted-ink mb-0">
-            Plan, track and achieve your financial goals.
-          </p>
+            <p className="text-muted-ink mb-0">
+              Plan, track and achieve your financial goals.
+            </p>
+          </div>
         </div>
 
         <Button icon={LuPlus} onClick={handleAddGoal}>
@@ -378,6 +391,17 @@ function SavingsGoals() {
               setSelectedPurchaseGoal(null);
               loadGoals();
           }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete this goal?"
+        message={deleteTarget ? `Delete "${deleteTarget.goal_name}"? This can't be undone.` : ""}
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
       />
 
     </div>

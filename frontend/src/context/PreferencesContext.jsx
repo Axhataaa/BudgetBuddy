@@ -1,5 +1,5 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import { getProfile } from "../services/profileService";
+import { getProfile, updateProfile } from "../services/profileService";
 import { setActiveCurrency } from "../utils/formatCurrency";
 import { getExchangeRates, getCachedRatesSync } from "../utils/exchangeRates";
 import { useAuth } from "../hooks/useAuth";
@@ -42,11 +42,14 @@ function applyThemeToDocument(theme) {
  * changes, so already-rendered amounts refresh immediately instead of
  * only on next navigation.
  *
- * Settings remains the only place these are edited - this context
- * just applies whatever is current and caches it in localStorage so
- * there's no flash of the wrong theme/currency on load, then
- * reconciles against the real backend value (source of truth) once
- * the user is authenticated.
+ * Settings was previously the only place theme/currency were edited;
+ * the sidebar's quick theme toggle (Aug 2026) is a second entry point
+ * that goes through this exact same setTheme, so there is still only
+ * one place that actually applies and persists a change - this
+ * context just applies whatever is current and caches it in
+ * localStorage so there's no flash of the wrong theme/currency on
+ * load, then reconciles against the real backend value (source of
+ * truth) once the user is authenticated.
  */
 export function PreferencesProvider({ children }) {
   const { isAuthenticated } = useAuth();
@@ -94,15 +97,37 @@ export function PreferencesProvider({ children }) {
   }, [currency, rates]);
 
   // Reconcile against the real backend value after login - the
-  // backend is the source of truth; localStorage is only a pre-fetch
-  // cache to avoid a flash of the wrong theme/currency.
+  // backend is the source of truth *for a preference it has actually
+  // recorded*. But setTheme only started persisting to the backend
+  // once the user is authenticated (see setTheme below) - a theme
+  // picked on the unauthenticated Landing Page never reaches the
+  // backend at all, it only ever lands in localStorage. For a
+  // first-time login, the backend still holds nothing but its own
+  // default (Profile.theme defaults to "system" - see
+  // users/models.py), so blindly pulling data.theme down here would
+  // silently discard exactly the pre-login choice this flow is
+  // supposed to preserve ("if Landing Page was Dark, Dashboard should
+  // open in Dark"). So: if this browser already has its own stored
+  // theme (localStorage, not React state - read fresh here rather
+  // than closing over `theme` to avoid any staleness), that choice
+  // wins and gets pushed to the backend instead; only fall back to
+  // the backend's value when this browser has never stored one at
+  // all (a real "nothing local to prefer" case, e.g. a brand-new
+  // browser/device).
   useEffect(() => {
     if (!isAuthenticated) return undefined;
     let cancelled = false;
     getProfile()
       .then((data) => {
         if (cancelled) return;
-        if (data.theme) setThemeState(data.theme);
+        if (data.theme) {
+          const localTheme = localStorage.getItem(THEME_STORAGE_KEY);
+          if (localTheme !== null && localTheme !== data.theme) {
+            updateProfile({ theme: localTheme }).catch(() => {});
+          } else if (localTheme === null) {
+            setThemeState(data.theme);
+          }
+        }
         if (data.currency) setCurrencyState(data.currency);
       })
       .catch(() => {
@@ -114,7 +139,31 @@ export function PreferencesProvider({ children }) {
     };
   }, [isAuthenticated]);
 
-  const setTheme = useCallback((next) => setThemeState(next), []);
+  const setTheme = useCallback(
+    (next) => {
+      setThemeState(next);
+      // Sidebar redesign (Aug 2026): theme used to only persist to the
+      // backend when changed via Settings > Appearance, which called
+      // updateProfile itself and passed the result back up. Now that
+      // theme can also be changed from the sidebar's quick toggle
+      // (present on every authenticated page, not just Settings),
+      // persistence moved here instead - so there's exactly one place
+      // that both applies AND saves a theme change, and the sidebar
+      // toggle and Settings (if it ever adds its own control back)
+      // can't drift into two different persistence paths. Unauthenticated
+      // callers (the Landing Page's own toggle) simply have nothing to
+      // persist to yet - localStorage (below) still keeps the choice
+      // for when they do log in. Best-effort/silent: a failed PATCH
+      // here shouldn't surface an error for what is, from the user's
+      // perspective, an instant, low-stakes UI preference - the local
+      // theme still applies immediately either way, exactly like
+      // before this change for any unauthenticated caller.
+      if (isAuthenticated) {
+        updateProfile({ theme: next }).catch(() => {});
+      }
+    },
+    [isAuthenticated]
+  );
   const setCurrency = useCallback((next) => setCurrencyState(next), []);
 
   const value = useMemo(

@@ -64,8 +64,18 @@ export default function TrendChart({ trend, granularity }) {
           tickFormatter={(v) => formatCurrency(v).replace(/\.00$/, "")}
           width={70}
         />
-        <Tooltip formatter={(value) => formatCurrency(value)} />
-        <Legend />
+        <Tooltip
+          formatter={(value) => formatCurrency(value)}
+          contentStyle={{
+            backgroundColor: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "var(--shadow-md)",
+          }}
+          labelStyle={{ color: "var(--color-ink)" }}
+          itemStyle={{ color: "var(--color-ink)" }}
+        />
+        <Legend wrapperStyle={{ color: "var(--color-ink-muted)" }} />
         <Area type="monotone" dataKey="income" name="Income" stroke={colors.income} fill="url(#incomeGradient)" strokeWidth={2} />
         <Area type="monotone" dataKey="expenses" name="Expenses" stroke={colors.expense} fill="url(#expenseGradient)" strokeWidth={2} />
       </AreaChart>

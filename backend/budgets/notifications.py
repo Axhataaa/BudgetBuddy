@@ -72,7 +72,7 @@ def check_and_notify_budget_alerts(user, category, month, year):
                 f"you've spent {percent_used:.0f}% of your "
                 f"₹{format_inr(budget.monthly_limit)} limit."
             ),
-            notification_type=Notification.NotificationType.BUDGET_ALERT,
+            notification_type=Notification.NotificationType.BUDGET_EXCEEDED,
             action_url="/budgets",
             dedup_key=f"budget_alert:{budget.id}:{EXCEEDED_THRESHOLD}",
         )
@@ -85,7 +85,7 @@ def check_and_notify_budget_alerts(user, category, month, year):
                 f"You've used {percent_used:.0f}% of your {category_label} "
                 f"budget for this period - it's almost exhausted."
             ),
-            notification_type=Notification.NotificationType.BUDGET_ALERT,
+            notification_type=Notification.NotificationType.BUDGET_WARNING,
             action_url="/budgets",
             dedup_key=f"budget_alert:{budget.id}:{HIGH_WARNING_THRESHOLD}",
         )
@@ -98,7 +98,7 @@ def check_and_notify_budget_alerts(user, category, month, year):
                 f"You've used {percent_used:.0f}% of your {category_label} "
                 f"budget for this period."
             ),
-            notification_type=Notification.NotificationType.BUDGET_ALERT,
+            notification_type=Notification.NotificationType.BUDGET_WARNING,
             action_url="/budgets",
             dedup_key=f"budget_alert:{budget.id}:{WARNING_THRESHOLD}",
         )

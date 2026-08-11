@@ -20,23 +20,25 @@ function SummaryCard({
   icon: Icon,
 }) {
   return (
-    <div className="bg-surface rounded shadow-token-sm p-3 h-100">
+    <div className="bg-surface rounded shadow-token-sm hover-card p-3 h-100">
 
-      <div className="d-flex justify-content-between">
+      <div className="d-flex justify-content-between align-items-center gap-3">
 
-        <div>
+        <div className="min-w-0">
 
           <small className="text-muted-ink">
             {title}
           </small>
 
-          <h3 className="fw-bold mt-2">
+          <h3 className="fw-bold mt-1 mb-0 text-truncate">
             {value}
           </h3>
 
         </div>
 
-        <Icon size={24} />
+        <span className="category-icon bg-warning-subtle text-warning" style={{ width: 46, height: 46 }}>
+          <Icon size={22} />
+        </span>
 
       </div>
 
@@ -124,16 +126,19 @@ function Achievements() {
 
       {/* Header */}
 
-      <div className="mb-4">
+      <div className="bg-surface rounded shadow-token-sm p-4 mb-4 d-flex align-items-center gap-3">
+        <span className="page-header-icon icon-achievements">
+          <LuAward size={22} />
+        </span>
+        <div>
+          <h1 className="font-display fs-3 fw-semibold mb-1">
+            Achievements
+          </h1>
 
-        <h1 className="font-display fs-3 fw-semibold mb-1">
-          🏆 Achievements
-        </h1>
-
-        <p className="text-muted-ink mb-0">
-          Celebrate your completed financial goals.
-        </p>
-
+          <p className="text-muted-ink mb-0">
+            Celebrate your completed financial goals.
+          </p>
+        </div>
       </div>
 
       {loading ? (
@@ -220,12 +225,7 @@ function Achievements() {
 
           ) : (
 
-            // Reuses the same .goals-grid CSS (index.css) built for
-            // the Savings Goals page: a Bootstrap row with fixed-
-            // fraction columns leaves an obviously empty gap when
-            // there are only 1-2 achievements, the same issue fixed
-            // there - this is the identical layout pattern, so it
-            // gets the identical fix rather than a new one.
+
             <div className="goals-grid">
 
               {goals.map((goal) => (

@@ -76,13 +76,16 @@ Use `.env.example` as the reference.
 
 Typical configuration includes:
 
+- Django Secret Key
+- Debug Mode
+- Allowed Hosts
 - PostgreSQL Database Name
 - Database Username
 - Database Password
 - Database Host
 - Database Port
-- Django Secret Key
-- Debug Mode
+
+See the [Environment Variables](README.md#-environment-variables) table in the README for the exact variable names and an example value for each.
 
 ---
 
@@ -189,8 +192,20 @@ After both servers are running:
 - Login
 - Create Income
 - Create Expense
-- Create Budget
+- Create Budget (then add an Expense in that category to see budget alerts at 80%/90%/100%)
 - Open Dashboard
-- Verify profile management
+- Create a Savings Goal and log a deposit
+- Open Reports, switch between Today / Week / Month / Year / Custom Range, and try each export (CSV/Excel/PDF)
+- Check the Notification Center for the events above
+- Verify profile management and the Light/Dark theme toggle
 
 If all of the above work correctly, the project has been configured successfully.
+
+## Additional backend checks
+
+```bash
+python manage.py check
+python manage.py makemigrations --check --dry-run
+```
+
+Both should complete with no errors and no un-generated migrations. Neither of these is a substitute for a real test suite — see [Known Limitations](README.md#-known-limitations) in the README.

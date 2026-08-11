@@ -5,6 +5,7 @@ import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../components/ui/Toast";
+import { decodeToken } from "../../context/AuthContext";
 
 function Login() {
   const navigate = useNavigate();
@@ -28,8 +29,17 @@ function Login() {
       // architecture review: Login previously wrote tokens straight to
       // localStorage with no shared state, so the rest of the app had
       // no way to know a user had logged in.
-      await login(formData);
-      navigate("/dashboard");
+      const data = await login(formData);
+
+      // Role-based routing: decode the access token directly here
+      // (same decodeToken AuthContext itself uses) rather than reading
+      // `user` from useAuth() - that context value is only guaranteed
+      // fresh on the *next* render after login()'s setAccess() call,
+      // so reading it synchronously in this same function could still
+      // see the pre-login (null) value. Decoding the just-received
+      // token directly avoids that timing gap entirely.
+      const claims = decodeToken(data.access);
+      navigate(claims?.is_staff || claims?.is_superuser ? "/admin" : "/dashboard");
     } catch {
       showToast("Invalid username or password.", "error");
     } finally {

@@ -1,11 +1,11 @@
 import { useState } from "react";
+import { LuSettings } from "react-icons/lu";
 import { updateProfile } from "../../services/profileService";
 import { useToast } from "../../components/ui/Toast";
 
 import ProfileSection from "../../components/settings/ProfileSection";
 import ChangePasswordSection from "../../components/settings/ChangePasswordSection";
 import SettingsNav from "../../components/settings/SettingsNav";
-import AppearanceSection from "../../components/settings/AppearanceSection";
 import CurrencySection from "../../components/settings/CurrencySection";
 import NotificationsSection from "../../components/settings/NotificationsSection";
 import FinancialPreferencesSection from "../../components/settings/FinancialPreferencesSection";
@@ -54,8 +54,15 @@ export default function Settings() {
 
   return (
     <div>
-      <h1 className="font-display fs-3 fw-semibold mb-1">Settings</h1>
-      <p className="text-muted-ink small mb-4">Manage your account, preferences and data.</p>
+      <div className="bg-surface rounded shadow-token-sm p-4 mb-4 d-flex align-items-center gap-3">
+        <span className="page-header-icon icon-settings">
+          <LuSettings size={22} />
+        </span>
+        <div>
+          <h1 className="font-display fs-3 fw-semibold mb-1">Settings</h1>
+          <p className="text-muted-ink mb-0">Manage your account, preferences and data.</p>
+        </div>
+      </div>
 
       <div className="row g-4">
         <div className="col-lg-3">
@@ -72,13 +79,25 @@ export default function Settings() {
             <ChangePasswordSection />
           </div>
 
-          <AppearanceSection onSave={savePreferences} />
+          {/* Appearance/theme is now a sidebar-level quick toggle
+              (present on every authenticated page, see Sidebar.jsx),
+              persisted through the same PreferencesContext.setTheme
+              this section used to call via onSave - removed here to
+              avoid two separate theme controls in the app. The one
+              thing that control offered that the compact sidebar
+              toggle doesn't is a "System" (match OS) option; that
+              value still works fine if ever set (setTheme("system")
+              is unchanged), there's just no UI left that sets it. */}
 
           <CurrencySection onSave={savePreferences} />
 
           <NotificationsSection
             email={profile?.email_notifications ?? true}
             budgetAlerts={profile?.budget_alert_notifications ?? true}
+            savingsGoalUpdates={profile?.email_savings_goal_notifications ?? true}
+            monthlyReports={profile?.email_monthly_report_notifications ?? true}
+            importantNotifications={profile?.email_important_notifications ?? true}
+            achievements={profile?.email_achievement_notifications ?? false}
             onSave={savePreferences}
             loading={profileLoading}
           />

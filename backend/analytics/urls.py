@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    AdminStatsView,
     DashboardSummaryView,
     RecentActivityView,
 )
@@ -15,5 +16,10 @@ urlpatterns = [
         "recent-activity/",
         RecentActivityView.as_view(),
         name="recent-activity",
+    ),
+    path(
+        "admin-stats/",
+        AdminStatsView.as_view(),
+        name="admin-stats",
     ),
 ]

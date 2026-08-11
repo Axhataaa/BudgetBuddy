@@ -7,7 +7,7 @@ const AuthContext = createContext(null);
 // full verification (the backend is the source of truth for validity);
 // this only lets the UI know who's "probably" logged in before the
 // first API call confirms it.
-function decodeToken(token) {
+export function decodeToken(token) {
   try {
     const payload = token.split(".")[1];
     return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
@@ -49,16 +49,18 @@ export function AuthProvider({ children }) {
   }, []);
 
   const user = useMemo(() => (access ? decodeToken(access) : null), [access]);
+  const isAdmin = Boolean(user?.is_staff || user?.is_superuser);
 
   const value = useMemo(
     () => ({
       isAuthenticated: Boolean(access),
+      isAdmin,
       user,
       loading,
       login,
       logout,
     }),
-    [access, user, loading, login, logout]
+    [access, isAdmin, user, loading, login, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

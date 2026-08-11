@@ -1,58 +1,88 @@
-# 🚧 Milestone 3 Completion Report
+# ✅ Milestone 3 Completion Report
 
 ## Milestone Title
 
-Advanced Financial Features
+Savings Goals, Reports, Notifications & Landing Page
 
 ---
 
-## Planned Modules
+## Objective
 
-- Savings Goals
-- Reports
-- Notifications
-- Charts & Analytics
-
----
-
-## Current Status
-
-The application foundation and all core finance modules have been completed successfully.
-
-This milestone is reserved for advanced financial features that extend the application beyond standard CRUD functionality.
+| Task                                 | Status  | Notes                                                                                                                  |
+| ------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Savings Goals with progress tracking | ✅ Done | `SavingsGoal` + `SavingsTransaction` models; deposit/withdrawal history, completed goals become Achievements           |
+| Reports (date-range, category-wise)  | ✅ Done | `reports.services.get_report_data()`, single endpoint driving both charts and exports                                  |
+| CSV export                           | ✅ Done | Client-side (`utils/exportReport.js`); Summary, Trend, Expense by Category, Income by Source, Budget Performance       |
+| Excel export                         | ✅ Done | Multi-sheet workbook (SheetJS), same sections as CSV                                                                   |
+| PDF export                           | ✅ Done | jsPDF + autotable; Summary, Category, Source, Budget Performance, paginated footer (Trend section not included in PDF) |
+| Notifications                        | ✅ Done | `Notification` model, 3 types, priority levels, deduplication                                                          |
+| Charts & Analytics                   | ✅ Done | Trend chart, category/source pie charts, budget performance bars (Recharts)                                            |
 
 ---
 
-## Planned Features
+# Savings Goals
 
-### Savings Goals
+- Target amount, deposits/withdrawals recorded as `SavingsTransaction` rows
+- Completing a goal (`is_purchased=True`, `is_archived=True`) is what surfaces it under **Achievements** — there is no separate Achievement model or table
+- Achievement deletion removes the underlying `SavingsGoal` row (and its transaction history cascades); Income/Expense records are untouched
 
-- Create savings goals
-- Progress tracking
-- Remaining amount
-- Deadline tracking
+---
 
-### Reports
+# Reports
 
-- Monthly reports
-- Income vs Expense reports
-- Category-wise reports
-- CSV export
+- Single backend endpoint: `GET /api/v1/reports/summary/?date_from=&date_to=`
+- Supports Today / Week / Month / Year presets (resolved client-side, see [README.md § Reports & Analytics](README.md#-reports--analytics) for the exact rolling-window behavior) and a validated Custom Range
+- Returns: financial summary, income-vs-expense trend (daily or monthly buckets depending on range length), expense-by-category, income-by-source, budget performance for the range, and derived insights (highest-spending category, largest expense, average daily spend, best saving period)
+- Charts and the three export formats are built from the exact same API response, so they cannot drift out of sync with each other
 
-### Notifications
+---
 
-- Budget exceeded
-- Budget nearing limit
-- Savings goal reminders
+# Data Export
 
-### Analytics
+All three formats are generated **client-side** from the Reports page's current data — there is no backend export endpoint.
 
-- Charts
-- Graphs
-- Financial insights
+- **CSV**: plain-text, sectioned (Summary / Trend / Expense by Category / Income by Source / Budget Performance)
+- **Excel**: genuine multi-sheet `.xlsx` workbook (one sheet per section with data)
+- **PDF**: BudgetBuddy-branded header, period + generation timestamp + currency, summary table, category/source/budget tables, "Page X of Y" footer
+
+Exported amounts are converted to the user's active display currency, matching what's shown on screen.
+
+---
+
+# Notifications
+
+- `Notification` model with `notification_type` (`budget_alert` / `savings_goal` / `general`), `priority` (`low` / `medium` / `high`), `action_url`, `is_read`, and a deduplicating `dedup_key`
+- `NotificationViewSet`: list/retrieve/delete, mark-read, mark-all-read, clear-all, server-side filtering
+- Notifications fire from expense/income creation, budget threshold crossings (80/90/100%), and savings-goal lifecycle events, all through one shared `create_notification()` helper
+- Two management commands add periodic notifications: `generate_monthly_report_notifications` and `send_savings_reminders --days N` — both manually run (no Celery/scheduler wired in yet)
+- **Email notifications are not implemented** — in-app only. See [README.md § Email Notifications](README.md#-email-notifications)
+
+---
+
+# Landing Page, Contact Page & Theme
+
+- Public Landing Page with a light/dark theme toggle in the navbar (reusing the same `PreferencesContext` the authenticated app uses)
+- Contact page: developer info, contact cards (Email/GitHub/LinkedIn/Location), and a message form with a "What's this about?" reason field (General Question / Feedback / Feature Request / Bug Report / Collaboration / Other) — feedback was deliberately merged into this form rather than kept as a separate Feedback page/route
+- Logout (and any unauthenticated access to a protected route) now redirects to `/` (the Landing Page) instead of `/login`, across both `ProtectedRoute` and `AdminProtectedRoute`
+
+---
+
+# Technologies Used
+
+- Django REST Framework
+- React, Recharts
+- jsPDF, jspdf-autotable, SheetJS (xlsx)
+- Bootstrap
+- PostgreSQL
+
+---
+
+# Deliverables
+
+A complete Savings Goals + Reports + Notifications feature set, plus a public-facing Landing/Contact experience and a corrected post-logout redirect — all verified against the live source code for this documentation pass.
 
 ---
 
 ## Status
 
-🚧 Pending
+✅ Completed

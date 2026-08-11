@@ -70,7 +70,7 @@ export default function RecentActivity({ recent, loading, periodLabel }) {
                 return (
                   <div
                     key={`${item.type}-${item.id}`}
-                    className="transaction-item d-flex align-items-center gap-3 py-2 px-2"
+                    className="transaction-item list-row-hover d-flex align-items-center gap-3 py-2 px-2"
                   >
                     <Icon size={20} className={`${color} flex-shrink-0`} />
 

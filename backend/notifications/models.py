@@ -4,9 +4,43 @@ from django.contrib.auth.models import User
 
 class Notification(models.Model):
     class NotificationType(models.TextChoices):
+        # --- Original 3 types (kept for backward compatibility with
+        # existing rows and dedup_keys) ---------------------------------
+        # No longer used by new create_notification() calls as of
+        # Batch B - budget threshold alerts now use BUDGET_WARNING/
+        # BUDGET_EXCEEDED below, which is more specific. Kept in the
+        # enum (not removed) so any pre-existing row with this value
+        # still validates and displays correctly.
         BUDGET_ALERT = "budget_alert", "Budget Alert"
         SAVINGS_GOAL = "savings_goal", "Savings Goal"
         GENERAL = "general", "General"
+
+        # --- Batch B: granular categories, replacing GENERAL/
+        # BUDGET_ALERT for new notifications going forward -------------
+        EXPENSE = "expense", "Expense"
+        INCOME = "income", "Income"
+        # Budget lifecycle events (created/updated) - distinct from the
+        # WARNING/EXCEEDED threshold alerts below, mirroring how
+        # SAVINGS_GOAL already covers a goal's own lifecycle (created,
+        # deposit, withdrawal, completed) separately from ACHIEVEMENT
+        # (the goal's terminal "purchased" event).
+        BUDGET = "budget", "Budget"
+        BUDGET_WARNING = "budget_warning", "Budget Warning"
+        BUDGET_EXCEEDED = "budget_exceeded", "Budget Exceeded"
+        # A savings goal reaching its target and being marked purchased
+        # (budgets/views.py's "Purchase Completed", action_url=
+        # "/achievements") - the one savings-goal event that graduates
+        # out of the SavingsGoal itself onto the Achievements page.
+        ACHIEVEMENT = "achievement", "Achievement"
+        MONTHLY_REPORT = "monthly_report", "Monthly Report"
+        # Proactive nudges the user didn't directly cause (e.g. "Savings
+        # Reminder" for an idle goal) - distinct from SAVINGS_GOAL,
+        # which covers events the user's own actions caused.
+        REMINDER = "reminder", "Reminder"
+        # Not produced by any call site yet - reserved for future
+        # admin/system-originated notifications, added now so the
+        # choice already exists when that need arises.
+        ADMIN = "admin", "Admin"
 
     class Priority(models.TextChoices):
         LOW = "low", "Low"

@@ -60,7 +60,7 @@ class BudgetViewSet(viewsets.ModelViewSet):
                 f"₹{format_inr(budget.monthly_limit)} for "
                 f"{budget.month}/{budget.year} has been created."
             ),
-            notification_type=Notification.NotificationType.GENERAL,
+            notification_type=Notification.NotificationType.BUDGET,
             action_url="/budgets",
             dedup_key=f"budget:{budget.id}:created",
         )
@@ -85,7 +85,7 @@ class BudgetViewSet(viewsets.ModelViewSet):
                 f"{budget.month}/{budget.year} has been updated to "
                 f"₹{format_inr(budget.monthly_limit)}."
             ),
-            notification_type=Notification.NotificationType.GENERAL,
+            notification_type=Notification.NotificationType.BUDGET,
             action_url="/budgets",
             dedup_key=f"budget:{budget.id}:updated:{timezone.now().isoformat()}",
         )
@@ -297,7 +297,7 @@ class SavingsGoalViewSet(viewsets.ModelViewSet):
                 f'You marked "{goal.goal_name}" as purchased. '
                 f"Find it in your Achievements."
             ),
-            notification_type=Notification.NotificationType.SAVINGS_GOAL,
+            notification_type=Notification.NotificationType.ACHIEVEMENT,
             action_url="/achievements",
             dedup_key=f"savings_goal:{goal.id}:purchased",
         )

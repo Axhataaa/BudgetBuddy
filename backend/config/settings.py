@@ -189,3 +189,33 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ==========================================================================
+# Email (notification system - Batch C: email delivery for important
+# notifications only, see notifications/email_service.py)
+# ==========================================================================
+# Provider-agnostic: any SMTP-compatible provider (Brevo, Resend, SendGrid,
+# a plain mailbox, ...) works by setting these env vars - nothing in the
+# app code names a specific provider, so switching providers later is a
+# .env change, not a code change. Defaults to Django's own console backend
+# (prints the email to stdout instead of sending it) so local development
+# and this project's own test runs never depend on real credentials or
+# risk sending a real email by accident.
+EMAIL_BACKEND = config(
+    "EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = config("EMAIL_HOST", default="")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+DEFAULT_FROM_EMAIL = config(
+    "DEFAULT_FROM_EMAIL", default="BudgetBuddy <no-reply@budgetbuddy.app>"
+)
+
+# Absolute base URL of the deployed frontend (matches
+# CORS_ALLOWED_ORIGINS' dev value by default). Every notification's
+# action_url is a relative SPA route (e.g. "/budgets") - fine inside the
+# app, meaningless inside an email - so email_service.py joins it onto
+# this to build a real clickable link.
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")

@@ -1,209 +1,135 @@
 # 📋 Project Overview
 
-# Project Title
+## Project Title
 
 **BudgetBuddy – Personal Budget Planning & Expense Management Platform**
 
 ---
 
-# About the Project
+## About the Project
 
 BudgetBuddy is a full-stack personal finance management application developed as part of the **Infosys Springboard 7.0 Internship Program**.
 
-The application enables users to efficiently manage their personal finances through a secure, responsive, and intuitive web interface.
+The application enables users to manage their personal finances through a secure, responsive, web interface. Users can:
 
-Users can:
+- Track income and expenses
+- Manage category-wise monthly budgets, with automatic threshold alerts
+- Set and fund savings goals, and review completed goals as achievements
+- View a month/year-navigable dashboard summary
+- Generate date-range reports with trend charts, category/source breakdowns, and budget performance, and export them as CSV, Excel, or PDF
+- Receive in-app notifications for budget alerts and savings-goal events
+- Manage their profile, theme (light/dark), display currency, and export a personal data backup
 
-- Track income
-- Track expenses
-- Manage monthly budgets
-- Monitor spending
-- View financial summaries
-- Manage their profile securely
+The application follows a RESTful architecture: **Django REST Framework** for the backend, **React (Vite)** for the frontend, communicating exclusively over JSON APIs secured with JWT.
 
-The application follows a RESTful architecture using **Django REST Framework** for the backend and **React** for the frontend.
-
----
-
-# Project Objectives
-
-The primary objectives of BudgetBuddy are:
-
-- Build a secure finance management application.
-- Simplify day-to-day financial tracking.
-- Provide meaningful financial insights.
-- Implement secure JWT authentication.
-- Develop scalable REST APIs.
-- Build a responsive frontend.
-- Apply clean architecture and reusable components.
-- Follow modern full-stack development practices.
+For a full accuracy-checked feature list and technical detail, see **[README.md](README.md)**.
 
 ---
 
-# Target Users
+## Project Objectives
 
-BudgetBuddy is designed for individuals who want to organize and monitor their personal finances efficiently.
-
----
-
-# Core Modules
-
-## Authentication
-
-- Registration
-- Login
-- JWT Authentication
-- Password Management
+- Build a secure, working personal-finance management application
+- Simplify day-to-day financial tracking (income, expenses, budgets, savings)
+- Provide meaningful, date-range-scoped financial reporting rather than raw transaction dumps
+- Implement JWT authentication with server-side token blacklisting
+- Develop scalable, ownership-scoped REST APIs
+- Build a responsive, theme-aware frontend
+- Apply reusable components and shared services for maintainability
+- Follow milestone-based, incremental full-stack development practices
 
 ---
 
-## User Profile
+## Target Users
 
-- Profile Management
-- Profile Picture
-- Username Management
-- Password Change
+Individuals who want to track and organize their personal finances — students, freelancers, and working professionals — without needing bank account integration.
 
 ---
 
-## Expense Management
+## Core Modules
 
-- CRUD Operations
-- Search
-- Filtering
-- Sorting
-- Time Period Filtering
-- Pagination
+### Authentication
 
----
+Registration, login, JWT access/refresh, server-side logout (token blacklisting), password change. See [README.md § Authentication & Security](README.md#-authentication--security).
 
-## Income Management
+### User Profile & Settings
 
-- CRUD Operations
-- Search
-- Pagination
+Profile picture, username/email/full name/phone/bio, password change, appearance (light/dark theme), display currency, and a personal data export.
 
----
+### Expense Management
 
-## Budget Management
+Full CRUD, 8 categories, 4 payment methods, search, category/payment-method/time-period filtering, custom date range, sorting, pagination.
 
-- Monthly Budgets
-- Budget Utilization
-- Budget Progress Tracking
+### Income Management
 
----
+Full CRUD, 6 sources, search, sorting, pagination.
 
-## Dashboard
+### Budget Management
 
-Provides a financial overview including:
+One budget per user/category/month/year, with utilization tracking and automatic alerts at 80% / 90% / 100% usage.
 
-- Total Income
-- Total Expenses
-- Net Savings
-- Budget Progress
-- Spending by Category
-- Recent Transactions
-- Month & Year Navigation
+### Savings Goals & Achievements
 
----
+Deposit/withdrawal transactions against a target amount; a completed, archived goal is what surfaces under Achievements — there is no separate Achievement model.
 
-## Planned Modules
+### Dashboard
 
-- Savings Goals
-- Reports
-- Notifications
-- Charts & Analytics
+Month/year-navigable financial overview: total income, total expenses, net savings, budget progress, category spending, recent transactions.
+
+### Reports & Analytics
+
+Date-range-driven (Today/Week/Month/Year/Custom Range) summary, income vs. expense trend, category/source breakdowns, budget performance, and derived insights — all from one backend endpoint, exported client-side as CSV, Excel, or PDF from that same data.
+
+### Notifications
+
+In-app notification center covering three types (`budget_alert`, `savings_goal`, `general`), priority levels, and deduplication. Two management commands generate periodic notifications (monthly report ready, savings reminders) — run manually or via an external scheduler; **no email delivery is implemented**.
+
+### Admin Dashboard
+
+A separate, role-gated (`Profile.role == "admin"`) view with platform-wide usage statistics, distinct from the regular user Dashboard.
+
+### Landing Page & Contact Page
+
+A public marketing landing page and a contact page with an integrated message form (general question / feedback / feature request / bug report / collaboration / other) — feedback was deliberately merged into Contact rather than kept as a separate page.
 
 ---
 
-# Technology Stack
+## Technology Stack
 
-## Backend
+See **[README.md § Tech Stack](README.md#-tech-stack)** for the full, version-accurate table. Summary:
 
-- Python
-- Django
-- Django REST Framework
-- Simple JWT
-- PostgreSQL
+**Backend:** Python, Django, Django REST Framework, Simple JWT, PostgreSQL, Pillow
+**Frontend:** React, Vite, Bootstrap, Axios, React Router, Recharts, jsPDF, SheetJS (xlsx)
+**Tools:** Git, GitHub, VS Code, Postman, pgAdmin 4
 
 ---
 
-## Frontend
+## Project Architecture
 
-- React
-- Vite
-- JavaScript
-- Bootstrap
-- Axios
-
----
-
-## Development Tools
-
-- Git
-- GitHub
-- VS Code
-- Postman
-- pgAdmin 4
-
----
-
-# Project Architecture
-
-The application follows a modular architecture.
-
-Each major feature is implemented as an independent Django application.
+Each major feature is implemented as an independent Django app on the backend, mirrored by a dedicated page/service pair on the frontend:
 
 ```
-Users
-│
-├── Authentication
-├── Profile
-
-Finance
-│
-├── Expenses
-├── Income
-├── Budgets
-├── Dashboard
-
-Future
-│
-├── Savings Goals
-├── Reports
-└── Notifications
+users            → Authentication, Profile (role/theme/currency)
+expenses         → Expense CRUD
+incomes          → Income CRUD
+budgets          → Budget, SavingsGoal, SavingsTransaction + alert logic
+analytics        → Dashboard summary, recent activity, admin stats
+reports          → Date-range report aggregation
+notifications    → Notification model, service, management commands
+common           → Shared formatting helpers (e.g. INR formatting)
+dashboard        → Registered but currently unused (no models/views/urls)
 ```
 
-The frontend communicates with the backend exclusively through REST APIs secured using JWT authentication.
-
-Reusable components, shared services, and utility modules are used throughout the application to improve maintainability and consistency.
+The frontend communicates with the backend exclusively through REST APIs under `/api/v1/`, secured using JWT. Reusable components (`components/ui`), shared services (`services/*Service.js`), and utility modules (`utils/`) are used throughout to keep the frontend consistent — e.g. every export format shares the same currency-conversion helper, and every list page shares the same date-range utility.
 
 ---
 
-# Development Methodology
+## Development Methodology
 
-The project is being developed incrementally using milestone-based development.
+The project was developed incrementally using milestone-based development. See **[DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)** for the detailed timeline and the individual `MILESTONE_*_COMPLETION.md` files for per-milestone deliverables.
 
-### Milestone 1
-
-Project setup, authentication, and backend foundation.
-
-✅ Completed
-
-### Milestone 2
-
-Core finance management modules.
-
-✅ Completed
-
-### Milestone 3
-
-Advanced finance features.
-
-🚧 In Progress
-
-### Milestone 4
-
-Deployment, testing, optimization, and final documentation.
-
-⏳ Pending
+| Milestone | Scope                                                                           | Status                                                                 |
+| --------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 1         | Project setup, authentication foundation                                        | ✅ Completed                                                           |
+| 2         | Core finance management modules (Expenses, Income, Budgets, Dashboard, Profile) | ✅ Completed                                                           |
+| 3         | Savings Goals, Reports, Notifications, Landing Page & Contact Page              | ✅ Completed                                                           |
+| 4         | Deployment, automated testing, final optimization                               | 🚧 In Progress — see [Known Limitations](README.md#-known-limitations) |

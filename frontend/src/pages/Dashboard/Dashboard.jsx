@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LuPlus, LuInbox } from "react-icons/lu";
+import { LuPlus, LuInbox, LuLayoutDashboard } from "react-icons/lu";
 
 import EmptyState from "../../components/ui/EmptyState";
 import PeriodSelector, { MONTH_NAMES } from "../../components/ui/PeriodSelector";
@@ -76,10 +76,15 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-        <div>
-          <h1 className="font-display fs-3 fw-semibold mb-0">Dashboard</h1>
-          <p className="text-muted-ink small mb-0">{periodLabel}</p>
+      <div className="bg-surface rounded shadow-token-sm p-4 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div className="d-flex align-items-center gap-3">
+          <span className="page-header-icon icon-dashboard">
+            <LuLayoutDashboard size={22} />
+          </span>
+          <div>
+            <h1 className="font-display fs-3 fw-semibold mb-1">Dashboard</h1>
+            <p className="text-muted-ink mb-0">{periodLabel}</p>
+          </div>
         </div>
         <div className="d-flex align-items-center gap-3 flex-wrap">
           <PeriodSelector month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y); }} />

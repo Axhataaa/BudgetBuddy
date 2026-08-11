@@ -19,23 +19,23 @@ function TransactionRow({ transaction }) {
 
         {deposit ? (
           <LuPiggyBank
-            className="text-success me-2"
+            className="text-income me-2"
             size={20}
           />
         ) : (
           <LuWallet
-            className="text-danger me-2"
+            className="text-expense me-2"
             size={20}
           />
         )}
 
         <div>
 
-          <div className="fw-semibold">
+          <div className="fw-medium">
             {transaction.note || "No note"}
           </div>
 
-          <small className="text-muted">
+          <small className="text-muted-ink">
             {new Date(
               transaction.created_at
             ).toLocaleDateString()}
@@ -45,16 +45,16 @@ function TransactionRow({ transaction }) {
 
       </div>
 
-      <strong
-        className={
+      <span
+        className={`fw-semibold font-currency ${
           deposit
-            ? "text-success"
-            : "text-danger"
-        }
+            ? "text-income"
+            : "text-expense"
+        }`}
       >
         {deposit ? "+" : "-"}
         {formatCurrency(transaction.transaction_amount)}
-      </strong>
+      </span>
 
     </div>
   );
@@ -77,7 +77,7 @@ function TransactionHistory({
 
   if (transactions.length === 0) {
     return (
-      <div className="text-muted small mt-3">
+      <div className="text-muted-ink small mt-3">
         No transactions yet.
       </div>
     );
@@ -90,9 +90,14 @@ function TransactionHistory({
   return (
     <div className="mt-3">
 
-      <h6 className="fw-bold mb-3">
+      {/* Small uppercase label (same convention Notifications' day
+          groups and Settings' "Email categories" use for a section
+          label that belongs to the card it's in, rather than an h6
+          that reads as its own separate block) - "integrated instead
+          of a separate block" per the redesign brief. */}
+      <div className="text-muted-ink small fw-semibold text-uppercase mb-2" style={{ letterSpacing: "0.04em" }}>
         Recent Activity
-      </h6>
+      </div>
 
       <div className="d-flex flex-column gap-3">
         {visible.map((transaction) => (

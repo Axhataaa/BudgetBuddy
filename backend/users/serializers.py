@@ -1,8 +1,12 @@
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
+import logging
 
 from .models import Profile
+from .email_verification_service import generate_verification_token, send_verification_email
+
+logger = logging.getLogger(__name__)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -66,6 +70,22 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.profile.role = profile_data.get("role", Profile.Role.STUDENT)
         user.profile.phone_number = profile_data.get("phone_number", "")
         user.profile.save(update_fields=["role", "phone_number"])
+
+        # email_verified defaults to False (models.py) - send the
+        # first verification email now so the user has a link waiting
+        # as soon as they check their inbox. Wrapped in try/except as
+        # defense in depth on top of send_verification_email()'s own
+        # internal handling - registration succeeding must never
+        # depend on the verification email actually going out.
+        try:
+            raw_token = generate_verification_token(user)
+            send_verification_email(user, raw_token)
+        except Exception:
+            logger.exception(
+                "Failed to issue/send verification email at registration (user_id=%s)",
+                user.id,
+            )
+
         return user
 
 
@@ -99,8 +119,13 @@ class ProfileSerializer(serializers.ModelSerializer):
             "budget_warning_threshold",
             "email_notifications",
             "budget_alert_notifications",
+            "email_savings_goal_notifications",
+            "email_monthly_report_notifications",
+            "email_important_notifications",
+            "email_achievement_notifications",
+            "email_verified",
         ]
-        read_only_fields = ["role"]
+        read_only_fields = ["role", "email_verified"]
 
     def validate_budget_warning_threshold(self, value):
         if not (1 <= value <= 100):
@@ -142,12 +167,36 @@ class ProfileSerializer(serializers.ModelSerializer):
         user_data = validated_data.pop("user", None)
         if user_data:
             update_fields = []
+            email_changed = False
             for field in ("username", "email"):
                 if field in user_data:
+                    if field == "email" and user_data["email"] != instance.user.email:
+                        email_changed = True
                     setattr(instance.user, field, user_data[field])
                     update_fields.append(field)
             if update_fields:
                 instance.user.save(update_fields=update_fields)
+
+            # A changed email is unverified until proven otherwise -
+            # the person typing a new address into this form hasn't
+            # demonstrated they can receive mail there yet. Reset the
+            # flag and send a fresh verification link to the NEW
+            # address immediately, same as at registration. Wrapped in
+            # try/except for the same reason as RegisterSerializer:
+            # saving the profile update must never depend on the
+            # verification email actually going out.
+            if email_changed:
+                instance.email_verified = False
+                instance.save(update_fields=["email_verified"])
+                try:
+                    raw_token = generate_verification_token(instance.user)
+                    send_verification_email(instance.user, raw_token)
+                except Exception:
+                    logger.exception(
+                        "Failed to issue/send verification email after email change (user_id=%s)",
+                        instance.user.id,
+                    )
+
         return super().update(instance, validated_data)
     
     

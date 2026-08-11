@@ -59,8 +59,7 @@ export default function FinancialHealth({ summary }) {
       <div className="text-lg-end">
         <div className="health-ring-label text-white">{label}</div>
         <div className="health-ring-caption">
-          Financial health score, based on your savings rate, budget
-          discipline and goal progress this period.
+          Financial health score based on your overall savings, budget discipline, and goal progress.
         </div>
       </div>
     </div>

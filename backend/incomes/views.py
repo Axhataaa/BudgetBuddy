@@ -45,7 +45,7 @@ class IncomeViewSet(viewsets.ModelViewSet):
                 f"Income of ₹{format_inr(income.amount)} received "
                 f"from {income.source}."
             ),
-            notification_type=Notification.NotificationType.GENERAL,
+            notification_type=Notification.NotificationType.INCOME,
             action_url="/income",
             dedup_key=f"income:{income.id}:added",
         )

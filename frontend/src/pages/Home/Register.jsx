@@ -54,7 +54,7 @@ function Register() {
     try {
       await registerUser(formData);
       showToast("Registration successful — please log in.", "success");
-      navigate("/");
+      navigate("/login");
     } catch (error) {
       const details = error.response?.data?.error?.details || error.response?.data;
       if (details && typeof details === "object") {
@@ -127,7 +127,7 @@ function Register() {
           </div>
 
           <Input
-            label="You are a?"
+            label="Occupation"
             as="select"
             name="role"
             value={formData.role}
@@ -148,7 +148,7 @@ function Register() {
         </form>
 
         <p className="text-center small text-muted-ink mt-3 mb-0">
-          Already have an account? <Link to="/" className="text-primary">Log in</Link>
+          Already have an account? <Link to="/login" className="text-primary">Log in</Link>
         </p>
       </div>
     </div>

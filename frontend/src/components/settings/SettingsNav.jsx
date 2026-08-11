@@ -1,7 +1,6 @@
 const SECTIONS = [
   { id: "profile", label: "Profile" },
   { id: "change-password", label: "Change Password" },
-  { id: "appearance", label: "Appearance" },
   { id: "currency", label: "Currency" },
   { id: "notifications", label: "Notifications" },
   { id: "financial-preferences", label: "Financial Preferences" },

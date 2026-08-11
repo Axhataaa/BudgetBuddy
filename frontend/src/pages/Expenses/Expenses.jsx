@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LuPlus, LuPencil, LuTrash2, LuSearch, LuWallet, LuFilterX } from "react-icons/lu";
+import { LuPlus, LuPencil, LuTrash2, LuSearch, LuWallet, LuFilterX, LuArrowDownRight } from "react-icons/lu";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
@@ -12,7 +12,7 @@ import ExpenseForm from "./ExpenseForm";
 import { formatCurrency } from "../../utils/formatCurrency";
 import { TIME_PERIOD_OPTIONS, getDateRangeForPeriod } from "../../utils/dateRanges";
 import { AMOUNT_DATE_SORT_OPTIONS } from "../../utils/sortOptions";
-import { EXPENSE_CATEGORIES, PAYMENT_METHODS } from "./expenseConstants";
+import { EXPENSE_CATEGORIES, PAYMENT_METHODS, getExpenseCategoryMeta } from "./expenseConstants";
 import {
   listExpenses,
   createExpense,
@@ -204,91 +204,106 @@ export default function Expenses() {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="font-display fs-3 fw-semibold mb-0">Expenses</h1>
+      {/* Header - same bg-surface card + tinted icon container
+          structure as the redesigned Notifications page, just its own
+          .page-header-icon.icon-expense color rather than sharing
+          Notifications' class. */}
+      <div className="bg-surface rounded shadow-token-sm p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div className="d-flex align-items-center gap-3">
+          <span className="page-header-icon icon-expense">
+            <LuArrowDownRight size={22} />
+          </span>
+          <div>
+            <h1 className="font-display fs-3 fw-semibold mb-1">Expenses</h1>
+            <p className="text-muted-ink mb-0">Track and manage all your expenses.</p>
+          </div>
+        </div>
+
         <Button icon={LuPlus} onClick={openAddModal}>
           Add Expense
         </Button>
       </div>
 
-      <div className="row g-2 mb-2">
-        <div className="col-md-4">
-          <div className="position-relative">
-            <LuSearch
-              size={16}
-              className="position-absolute text-muted-ink"
-              style={{ top: 12, left: 12 }}
-            />
-            <input
-              className="form-control ps-5"
-              placeholder="Search by title or description..."
-              value={search}
-              onChange={(e) => setFilter("search")(e.target.value)}
-            />
+      <div className="bg-surface rounded shadow-token-sm p-3 mb-3">
+        <div className="row g-2">
+          <div className="col-md-4">
+            <div className="position-relative">
+              <LuSearch
+                size={16}
+                className="position-absolute text-muted-ink"
+                style={{ top: 12, left: 12 }}
+              />
+              <input
+                className="form-control ps-5"
+                placeholder="Search by title or description..."
+                value={search}
+                onChange={(e) => setFilter("search")(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="col-6 col-md-2">
+            <select className="form-select" value={category} onChange={(e) => setFilter("category")(e.target.value)}>
+              <option value="">All categories</option>
+              {EXPENSE_CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <div className="col-6 col-md-2">
+            <select
+              className="form-select"
+              value={paymentMethod}
+              onChange={(e) => setFilter("paymentMethod")(e.target.value)}
+            >
+              <option value="">All payment methods</option>
+              {PAYMENT_METHODS.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+          <div className="col-6 col-md-2">
+            <select
+              className="form-select"
+              value={timePeriod}
+              onChange={(e) => setFilter("timePeriod")(e.target.value)}
+            >
+              {TIME_PERIOD_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="col-6 col-md-2">
+            <select className="form-select" value={ordering} onChange={(e) => setOrdering(e.target.value)}>
+              {AMOUNT_DATE_SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
           </div>
         </div>
-        <div className="col-6 col-md-2">
-          <select className="form-select" value={category} onChange={(e) => setFilter("category")(e.target.value)}>
-            <option value="">All categories</option>
-            {EXPENSE_CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-        <div className="col-6 col-md-2">
-          <select
-            className="form-select"
-            value={paymentMethod}
-            onChange={(e) => setFilter("paymentMethod")(e.target.value)}
-          >
-            <option value="">All payment methods</option>
-            {PAYMENT_METHODS.map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-        </div>
-        <div className="col-6 col-md-2">
-          <select
-            className="form-select"
-            value={timePeriod}
-            onChange={(e) => setFilter("timePeriod")(e.target.value)}
-          >
-            {TIME_PERIOD_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="col-6 col-md-2">
-          <select className="form-select" value={ordering} onChange={(e) => setOrdering(e.target.value)}>
-            {AMOUNT_DATE_SORT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
 
-      {timePeriod === "custom" && (
-        <div className="row g-2 mb-2">
-          <div className="col-6 col-md-2">
-            <input
-              type="date"
-              className="form-control"
-              value={customFrom}
-              onChange={(e) => setFilter("customFrom")(e.target.value)}
-              aria-label="From date"
-            />
+        {timePeriod === "custom" && (
+          <div className="row g-2 mt-1">
+            <div className="col-6 col-md-2">
+              <input
+                type="date"
+                className="form-control"
+                value={customFrom}
+                onChange={(e) => setFilter("customFrom")(e.target.value)}
+                aria-label="From date"
+              />
+            </div>
+            <div className="col-6 col-md-2">
+              <input
+                type="date"
+                className="form-control"
+                value={customTo}
+                onChange={(e) => setFilter("customTo")(e.target.value)}
+                aria-label="To date"
+              />
+            </div>
           </div>
-          <div className="col-6 col-md-2">
-            <input
-              type="date"
-              className="form-control"
-              value={customTo}
-              onChange={(e) => setFilter("customTo")(e.target.value)}
-              aria-label="To date"
-            />
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="d-flex align-items-center justify-content-between">
         <FilterChips chips={chips} />
@@ -299,9 +314,9 @@ export default function Expenses() {
         )}
       </div>
 
-      <div className="bg-surface rounded shadow-token-sm hover-card">
+      <div className="bg-surface rounded shadow-token-sm">
         <div className="table-responsive" style={{ maxHeight: 640, overflowY: "auto" }}>
-          <table className="table mb-0 align-middle">
+          <table className="table mb-0 align-middle transaction-table">
             <thead className="sticky-top bg-surface">
               <tr className="text-muted-ink small text-uppercase">
                 <th className="py-3">Title</th>
@@ -316,40 +331,51 @@ export default function Expenses() {
               {loading ? (
                 <SkeletonRows rows={6} columns={6} />
               ) : (
-                expenses.map((expense) => (
-                  <tr key={expense.id}>
-                    <td className="py-3">
-                      <div className="fw-medium">{expense.title}</div>
-                      {expense.description && (
-                        <div className="small text-muted-ink">{expense.description}</div>
-                      )}
-                    </td>
-                    <td className="py-3">
-                      <span className="badge bg-surface-sunken text-ink">{expense.category}</span>
-                    </td>
-                    <td className="py-3 text-muted-ink">{expense.payment_method}</td>
-                    <td className="py-3 text-muted-ink">{expense.date}</td>
-                    <td className="py-3 text-end font-currency text-expense fw-medium">
-                      -{formatCurrency(expense.amount)}
-                    </td>
-                    <td className="py-3 text-end">
-                      <button
-                        className="btn btn-sm btn-link text-muted-ink"
-                        onClick={() => openEditModal(expense)}
-                        aria-label="Edit"
-                      >
-                        <LuPencil size={16} />
-                      </button>
-                      <button
-                        className="btn btn-sm btn-link text-danger"
-                        onClick={() => setDeleteTarget(expense)}
-                        aria-label="Delete"
-                      >
-                        <LuTrash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                expenses.map((expense) => {
+                  const meta = getExpenseCategoryMeta(expense.category);
+                  const CategoryIcon = meta.icon;
+                  return (
+                    <tr key={expense.id}>
+                      <td className="py-3">
+                        <div className="d-flex align-items-center gap-3">
+                          <span className={`category-icon ${meta.badge}`}>
+                            <CategoryIcon size={16} />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="fw-medium text-ink">{expense.title}</div>
+                            {expense.description && (
+                              <div className="small text-muted-ink">{expense.description}</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <span className={`badge rounded-pill ${meta.badge}`}>{expense.category}</span>
+                      </td>
+                      <td className="py-3 text-muted-ink">{expense.payment_method}</td>
+                      <td className="py-3 text-muted-ink">{expense.date}</td>
+                      <td className="py-3 text-end font-currency text-expense fw-medium">
+                        -{formatCurrency(expense.amount)}
+                      </td>
+                      <td className="py-3 text-end">
+                        <button
+                          className="btn btn-sm btn-link text-muted-ink row-action-btn"
+                          onClick={() => openEditModal(expense)}
+                          aria-label="Edit"
+                        >
+                          <LuPencil size={16} />
+                        </button>
+                        <button
+                          className="btn btn-sm btn-link text-danger row-action-btn"
+                          onClick={() => setDeleteTarget(expense)}
+                          aria-label="Delete"
+                        >
+                          <LuTrash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

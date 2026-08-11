@@ -1,7 +1,10 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import Login from "./pages/Authentication/Login";
-import Register from "./pages/Authentication/Register";
+import Home from "./pages/Home/Home";
+import Login from "./pages/Home/Login";
+import Register from "./pages/Home/Register";
+import Contact from "./pages/Home/Contact";
+import VerifyEmail from "./pages/Home/VerifyEmail";
 
 import Dashboard from "./pages/Dashboard/Dashboard";
 import Expenses from "./pages/Expenses/Expenses";
@@ -13,9 +16,11 @@ import Reports from "./pages/Reports/Reports";
 import Notifications from "./pages/Notifications/Notifications";
 import Profile from "./pages/Profile/Profile";
 import Settings from "./pages/Settings/Settings";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
 
 import AppShell from "./app/AppShell";
 import ProtectedRoute from "./app/ProtectedRoute";
+import AdminProtectedRoute from "./app/AdminProtectedRoute";
 
 function App() {
   return (
@@ -26,12 +31,36 @@ function App() {
 
         <Route
           path="/"
+          element={<Home />}
+        />
+
+        <Route
+          path="/login"
           element={<Login />}
         />
 
         <Route
           path="/register"
           element={<Register />}
+        />
+
+        <Route
+          path="/contact"
+          element={<Contact />}
+        />
+
+        <Route
+          path="/verify-email"
+          element={<VerifyEmail />}
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboard />
+            </AdminProtectedRoute>
+          }
         />
 
         {/* ================= Protected Routes ================= */}

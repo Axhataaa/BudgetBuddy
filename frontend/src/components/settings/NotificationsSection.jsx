@@ -23,12 +23,26 @@ function ToggleRow({ label, description, checked, onChange, disabled, isLast }) 
 }
 
 /**
- * Two toggles, each saved independently the moment it's flipped
+ * Six toggles, each saved independently the moment it's flipped
  * (Instagram/Google settings convention - no separate Save button for
- * simple on/off preferences). Both map directly to Profile fields
- * from the Backend Preferences step; no new backend surface needed.
+ * simple on/off preferences). All map directly to Profile fields -
+ * email_notifications is the master switch; the other five are the
+ * per-category gates notifications/email_service.py's _get_email_rule()
+ * checks before sending anything. No new backend surface needed - all
+ * six fields already exist on Profile and are already exposed by
+ * ProfileSerializer; this component was just missing four of the six
+ * toggles.
  */
-export default function NotificationsSection({ email, budgetAlerts, onSave, loading }) {
+export default function NotificationsSection({
+  email,
+  budgetAlerts,
+  savingsGoalUpdates,
+  monthlyReports,
+  importantNotifications,
+  achievements,
+  onSave,
+  loading,
+}) {
   const [savingField, setSavingField] = useState(null);
 
   const handleToggle = async (field, checked) => {
@@ -58,17 +72,45 @@ export default function NotificationsSection({ email, budgetAlerts, onSave, load
         <div>
           <ToggleRow
             label="Email notifications"
-            description="Receive account and activity updates by email."
+            description="Master switch - receive account and activity updates by email."
             checked={email}
             onChange={(checked) => handleToggle("email_notifications", checked)}
             disabled={savingField === "email_notifications"}
           />
           <ToggleRow
             label="Budget alerts"
-            description="Get notified when a budget nears or exceeds its limit."
+            description="Get notified when a budget nears (90%+) or exceeds its limit."
             checked={budgetAlerts}
             onChange={(checked) => handleToggle("budget_alert_notifications", checked)}
             disabled={savingField === "budget_alert_notifications"}
+          />
+          <ToggleRow
+            label="Savings goal updates"
+            description="Get notified by email when a savings goal is completed."
+            checked={savingsGoalUpdates}
+            onChange={(checked) => handleToggle("email_savings_goal_notifications", checked)}
+            disabled={savingField === "email_savings_goal_notifications"}
+          />
+          <ToggleRow
+            label="Monthly reports"
+            description="Get an email when your monthly financial report is ready."
+            checked={monthlyReports}
+            onChange={(checked) => handleToggle("email_monthly_report_notifications", checked)}
+            disabled={savingField === "email_monthly_report_notifications"}
+          />
+          <ToggleRow
+            label="Important notifications"
+            description="Security and other important account notices by email."
+            checked={importantNotifications}
+            onChange={(checked) => handleToggle("email_important_notifications", checked)}
+            disabled={savingField === "email_important_notifications"}
+          />
+          <ToggleRow
+            label="Achievements"
+            description="Get notified by email when you unlock an achievement. Off by default."
+            checked={achievements}
+            onChange={(checked) => handleToggle("email_achievement_notifications", checked)}
+            disabled={savingField === "email_achievement_notifications"}
             isLast
           />
         </div>
