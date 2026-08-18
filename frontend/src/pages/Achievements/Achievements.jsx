@@ -143,11 +143,6 @@ function Achievements() {
 
       {loading ? (
 
-        // Matches the Savings Goals page's loading pattern (a
-        // centered Bootstrap spinner within the normal page layout,
-        // not a bare "Loading..." text replacing the whole page) -
-        // this used to be an early return before the header, so the
-        // page title disappeared and reappeared as loading finished.
         <div className="text-center py-5">
           <div
             className="spinner-border text-primary"

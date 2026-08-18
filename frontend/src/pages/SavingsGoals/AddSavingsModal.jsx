@@ -17,11 +17,6 @@ function AddSavingsModal({
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Note: this guard stays here (rather than folding into Modal's own
-  // `open` check) because the form below reads goal.goal_name - that
-  // JSX is evaluated by this component before Modal ever gets to
-  // decide whether to render it, so `goal` must be confirmed non-null
-  // first regardless of what `show` is.
   if (!goal) return null;
 
   async function handleSubmit(e) {
@@ -44,14 +39,6 @@ function AddSavingsModal({
     } catch (error) {
       console.error(error);
 
-      // Bug fix: this used window.alert(), a blocking native dialog
-      // inconsistent with the toast pattern used everywhere else in
-      // the app (Expenses, Income, etc.) - also surface the first
-      // field-level validation detail when the generic message alone
-      // ("Please fix the highlighted fields.") wouldn't explain why.
-      // A details value can be a string (manual dict-raise) or an
-      // array (DRF's own field-validator errors), so this normalizes
-      // both rather than assuming one shape.
       const apiError = error.response?.data?.error;
       const firstValue = Object.values(apiError?.details || {})[0];
       const detail = Array.isArray(firstValue) ? firstValue[0] : firstValue;

@@ -1,32 +1,3 @@
-"""
-Email delivery for the notification system - Batch C.
-
-Design summary (see also the Batch C audit in chat for the full
-reasoning): NOT every notification sends an email. The doc's own
-"Do NOT send an email for every notification" rule is enforced by
-_get_email_rule() below, which is an explicit allow-list keyed
-entirely on (notification_type, priority) - both real fields on the
-Notification model - never on notification.title text. Anything not
-in the allow-list (expense, income, budget, savings_goal at LOW
-priority, reminder, general, the legacy budget_alert) is in-app only,
-by construction, with no further check needed.
-
-For the categories that ARE in the allow-list, two more gates apply
-before anything is actually sent:
-  1. The user's master switch (Profile.email_notifications) must be on.
-  2. The specific category's own preference field
-     (e.g. Profile.email_savings_goal_notifications) must be on.
-
-Async-ready structure: dispatch_notification_email(notification_id) is
-the one function that touches this whole subsystem from the outside
-(notification_service.create_notification() calls only this). It
-takes a primitive id, not a live Notification instance, specifically
-so it can become a Celery task later with no change to its signature
-or its caller - `@shared_task` plus `.delay(notification_id)` instead
-of a direct call is the entire migration, whenever a task queue is
-introduced. Nothing here imports or assumes Celery today.
-"""
-
 import logging
 
 from django.conf import settings
@@ -38,37 +9,6 @@ from .models import Notification
 
 logger = logging.getLogger(__name__)
 
-
-# Doc's "EMAIL RULES" section, translated from titles (as originally
-# written) into the actual (notification_type, priority) combinations
-# Batch B's granular types now make possible:
-#
-#   - "Budget nearing limit (90%)" -> budget_warning at priority=HIGH
-#     specifically. budget_warning also covers the 80% tier at
-#     priority=MEDIUM (see budgets/notifications.py) - that tier is
-#     deliberately NOT in this allow-list, matching the doc's "90%"
-#     wording exactly rather than emailing at every warning tier.
-#   - "Budget exceeded" -> budget_exceeded (always HIGH today, but the
-#     rule doesn't require it - exceeding is exceeding at any priority).
-#   - "Savings Goal Completed" -> savings_goal at priority=MEDIUM. This
-#     is the one existing case where two different real events share a
-#     type (savings_goal also covers Deposit Added/Withdrawal Made/Goal
-#     Created, all priority=LOW) - MEDIUM is what create_notification()
-#     already only ever sets for the *completion* event within this
-#     type (see budgets/serializers.py), so it's a safe, structural
-#     way to isolate that one event without touching title text.
-#   - "Monthly Financial Report Ready" -> monthly_report.
-#   - "Important System Notifications" / "Security Notifications
-#     (future support)" -> admin. No call site produces this type yet
-#     (see notifications/models.py's own comment on that choice) - the
-#     rule exists now so the moment one does, it's already wired up.
-#
-# Achievement (Purchase Completed) isn't named in the doc's Section 7
-# list, but Section 10's own example preference checklist gives it a
-# dedicated toggle (defaulting OFF) - which only makes sense if
-# achievement emails are a real, if opt-in-only, category. Included
-# here for that reason; because its preference field defaults to
-# False, it stays silent for every user until they explicitly opt in.
 _EMAIL_RULES = {
     (Notification.NotificationType.BUDGET_WARNING, Notification.Priority.HIGH): {
         "template": "notifications/emails/budget_warning.html",
@@ -90,10 +30,6 @@ _EMAIL_RULES = {
     },
 }
 
-# Rules that apply regardless of priority (the type alone is enough to
-# decide), kept in a separate mapping so the priority-sensitive rules
-# above can stay an exact (type, priority) match without this second
-# group needing every possible priority value listed out.
 _EMAIL_RULES_ANY_PRIORITY = {
     Notification.NotificationType.ACHIEVEMENT: {
         "template": "notifications/emails/achievement.html",
@@ -117,10 +53,7 @@ _EMAIL_RULES_ANY_PRIORITY = {
 
 
 def _get_email_rule(notification):
-    """Returns the email rule dict for this notification, or None if
-    this notification's (type, priority) isn't email-eligible at all -
-    the single place that answers "should this ever email anyone,
-    regardless of preferences"."""
+
     rule = _EMAIL_RULES.get((notification.notification_type, notification.priority))
     if rule is not None:
         return rule
@@ -128,8 +61,7 @@ def _get_email_rule(notification):
 
 
 def _build_absolute_url(action_url):
-    """Turns a notification's relative SPA route (e.g. "/budgets")
-    into an absolute link an email client can actually follow."""
+
     base = settings.FRONTEND_URL.rstrip("/")
     if not action_url:
         return base
@@ -137,13 +69,7 @@ def _build_absolute_url(action_url):
 
 
 def send_notification_email(notification, rule):
-    """
-    Renders `rule["template"]` (always extending
-    notifications/emails/base.html) and sends it. Never raises - a
-    broken email send must never be allowed to look like a failed
-    notification to any of the 12+ call sites that create
-    notifications, so any exception here is logged and swallowed.
-    """
+
     context = {
         "title": notification.title,
         "message": notification.message,
@@ -154,10 +80,7 @@ def send_notification_email(notification, rule):
 
     try:
         html_body = render_to_string(rule["template"], context)
-        # A plain-text alternative part is standard email deliverability
-        # practice (spam filters, text-only clients) - this is not the
-        # "plain text email" the doc says not to send; the HTML part
-        # above remains the primary, rendered content.
+
         text_body = strip_tags(html_body)
 
         message = EmailMultiAlternatives(
@@ -177,17 +100,7 @@ def send_notification_email(notification, rule):
 
 
 def dispatch_notification_email(notification_id):
-    """
-    The one function notification_service.create_notification() calls.
-    Takes a primitive id (see module docstring) rather than a
-    Notification instance so this can move behind a background worker
-    later with no change to its signature or its caller.
 
-    Re-fetches the notification (with its user's profile) rather than
-    trusting an in-memory object, since this is the boundary meant to
-    survive becoming an async task where the caller's Python object
-    won't exist in the worker process anyway.
-    """
     try:
         notification = (
             Notification.objects
@@ -205,11 +118,6 @@ def dispatch_notification_email(notification_id):
     if profile is None or not profile.email_notifications:
         return
 
-    # Hard gate, independent of every preference toggle above: an
-    # unverified email must never receive a notification email, even
-    # if the user has every relevant preference switched on. See
-    # users/email_verification_service.py for how email_verified
-    # actually becomes True.
     if not profile.email_verified:
         return
 

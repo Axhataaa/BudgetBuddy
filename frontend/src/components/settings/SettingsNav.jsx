@@ -5,7 +5,6 @@ const SECTIONS = [
   { id: "notifications", label: "Notifications" },
   { id: "financial-preferences", label: "Financial Preferences" },
   { id: "data-management", label: "Data Management" },
-  { id: "about", label: "About" },
   { id: "logout", label: "Log Out" },
   { id: "danger-zone", label: "Danger Zone" },
 ];

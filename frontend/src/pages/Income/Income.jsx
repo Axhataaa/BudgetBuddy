@@ -81,11 +81,10 @@ export default function Income() {
     }
   };
 
-  // Same debounce/reset pattern as Expenses.jsx.
   useEffect(() => {
     const timer = setTimeout(fetchIncomes, 300);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   }, [search, source, timePeriod, customFrom, customTo, ordering, page]);
 
   useEffect(() => {
@@ -160,8 +159,6 @@ export default function Income() {
 
   return (
     <div>
-      {/* Header - same structure as Expenses/Notifications, tinted
-          with .icon-income instead. */}
       <div className="bg-surface rounded shadow-token-sm p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div className="d-flex align-items-center gap-3">
           <span className="page-header-icon icon-income">

@@ -8,6 +8,7 @@ import { useToast } from "../../components/ui/Toast";
 import Modal from "../../components/ui/Modal";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
+import { getLocalDateString } from "../../utils/localDate";
 
 function GoalFormModal({
   show,
@@ -67,7 +68,7 @@ function GoalFormModal({
       return;
     }
 
-    if (!isEdit && formData.target_date < new Date().toISOString().slice(0, 10)) {
+    if (!isEdit && formData.target_date < getLocalDateString()) {
       showToast("Target date must be in the future.", "error");
       return;
     }
@@ -95,11 +96,6 @@ function GoalFormModal({
           apiError.details
         )[0];
 
-        // Bug fix: only the array-shaped case was handled here, but
-        // manual `raise ValidationError({"field": "message"})` calls
-        // (as used elsewhere in this API) produce a plain string, not
-        // an array - that case silently fell through to the generic
-        // message before.
         if (
           Array.isArray(firstFieldErrors) &&
           firstFieldErrors.length > 0

@@ -11,11 +11,6 @@ import { formatCurrency } from "../../utils/formatCurrency";
 import { getBudgetStatusColor } from "../../utils/budgetStatus";
 import { getExpenseCategoryMeta } from "../Expenses/expenseConstants";
 import { listBudgets, createBudget, updateBudget, deleteBudget } from "../../services/budgetService";
-// Reusing the already-tested Dashboard aggregation instead of
-// re-implementing "spend per category" here - the summary endpoint's
-// budget_utilization already computes exactly what this page needs to
-// show (spent vs. limit), so it's called directly rather than
-// duplicating the Expense-aggregation logic that lives in analytics/.
 import { getDashboardSummary } from "../../services/dashboardService";
 
 const today = new Date();
@@ -44,11 +39,7 @@ function BudgetCard({ budget, onEdit, onDelete }) {
   const limit = Number(budget.monthly_limit);
   const remaining = limit - spent;
   const barColor = getBudgetStatusColor(percent);
-  // Budgets share the exact same category list as Expenses (see
-  // BudgetForm.jsx, which already imports EXPENSE_CATEGORIES directly)
-  // - so the same icon/tint metadata applies unchanged, giving a
-  // budget for "Food" the identical badge a Food expense already gets
-  // on the Expenses page, rather than a second, different mapping.
+
   const meta = getExpenseCategoryMeta(budget.category);
   const CategoryIcon = meta.icon;
 
@@ -128,11 +119,6 @@ export default function Budgets() {
         getDashboardSummary({ month, year }),
       ]);
 
-      // Merge: budgetsData has id (needed for edit/delete), summary's
-      // budget_utilization has spent/percent_used (needed for display).
-      // Both are scoped to the same category, so a simple lookup joins
-      // them - the alternative (recomputing spend here) would duplicate
-      // logic that's already correct and tested in analytics/views.py.
       const utilizationByCategory = Object.fromEntries(
         summaryData.budget_utilization.map((u) => [u.category, u])
       );
@@ -153,7 +139,7 @@ export default function Budgets() {
 
   useEffect(() => {
     fetchBudgets();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [month, year]);
 
   const openAddModal = () => {
@@ -202,8 +188,7 @@ export default function Budgets() {
 
   return (
     <div>
-      {/* Header - same bg-surface card + tinted icon container
-          structure as Expenses/Income/Notifications. */}
+
       <div className="bg-surface rounded shadow-token-sm p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div className="d-flex align-items-center gap-3">
           <span className="page-header-icon icon-budget">

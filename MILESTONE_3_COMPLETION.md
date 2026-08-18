@@ -15,7 +15,7 @@ Savings Goals, Reports, Notifications & Landing Page
 | CSV export                           | ✅ Done | Client-side (`utils/exportReport.js`); Summary, Trend, Expense by Category, Income by Source, Budget Performance       |
 | Excel export                         | ✅ Done | Multi-sheet workbook (SheetJS), same sections as CSV                                                                   |
 | PDF export                           | ✅ Done | jsPDF + autotable; Summary, Category, Source, Budget Performance, paginated footer (Trend section not included in PDF) |
-| Notifications                        | ✅ Done | `Notification` model, 3 types, priority levels, deduplication                                                          |
+| Notifications                        | ✅ Done | `Notification` model, 11 types (3 legacy + 8 current), priority levels, deduplication                                  |
 | Charts & Analytics                   | ✅ Done | Trend chart, category/source pie charts, budget performance bars (Recharts)                                            |
 
 ---
@@ -51,11 +51,11 @@ Exported amounts are converted to the user's active display currency, matching w
 
 # Notifications
 
-- `Notification` model with `notification_type` (`budget_alert` / `savings_goal` / `general`), `priority` (`low` / `medium` / `high`), `action_url`, `is_read`, and a deduplicating `dedup_key`
+- `Notification` model with `notification_type` (11 values: 3 legacy — `budget_alert` / `savings_goal` / `general` — kept for backward compatibility, plus 8 current values including `budget_warning`, `budget_exceeded`, `achievement`, `monthly_report`), `priority` (`low` / `medium` / `high`), `action_url`, `is_read`, and a deduplicating `dedup_key`
 - `NotificationViewSet`: list/retrieve/delete, mark-read, mark-all-read, clear-all, server-side filtering
-- Notifications fire from expense/income creation, budget threshold crossings (80/90/100%), and savings-goal lifecycle events, all through one shared `create_notification()` helper
+- Notifications fire from expense/income creation, budget threshold crossings (80/90/100%), and savings-goal lifecycle events, through two shared helpers: `sync_entity_notification()` for entity-linked, self-updating notifications (expense/income/budget/savings-goal created or edited) and `create_notification()` for one-off historical events (threshold alerts, reminders, monthly reports, achievements)
 - Two management commands add periodic notifications: `generate_monthly_report_notifications` and `send_savings_reminders --days N` — both manually run (no Celery/scheduler wired in yet)
-- **Email notifications are not implemented** — in-app only. See [README.md § Email Notifications](README.md#-email-notifications)
+- **Email notifications are implemented** (Gmail SMTP) for a subset of high-signal events — budget warning/exceeded, savings goal completed, achievements, monthly report — gated behind email verification and per-category preferences. Email Verification itself is documented separately, as it was built alongside the Milestone 4 work; see [README.md § Email Notifications](README.md#-email-notifications) and [README.md § Email Verification](README.md#-email-verification)
 
 ---
 

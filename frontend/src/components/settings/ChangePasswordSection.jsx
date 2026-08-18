@@ -5,11 +5,6 @@ import Button from "../ui/Button";
 import { useToast } from "../ui/Toast";
 import { changePassword } from "../../services/profileService";
 
-/**
- * Change-password section. Extracted from the original Profile.jsx
- * as-is - same state, same handlers, same validation - so it can be
- * embedded both on /profile and inside Settings without duplication.
- */
 export default function ChangePasswordSection() {
   const { showToast } = useToast();
 

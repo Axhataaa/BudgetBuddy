@@ -8,6 +8,8 @@ import { useToast } from "../../components/ui/Toast";
 
 import { getDashboardSummary, getRecentActivity } from "../../services/dashboardService";
 import { listSavingsGoals } from "../../services/savingsGoalService";
+import { getReportSummary } from "../../services/reportService";
+import { getLastNMonthsRange } from "../../utils/dateRanges";
 
 import HeroSection from "../../components/dashboard/HeroSection";
 import StatCards from "../../components/dashboard/StatCards";
@@ -17,8 +19,14 @@ import SavingsGoals from "../../components/dashboard/SavingsGoals";
 import LatestAchievement from "../../components/dashboard/LatestAchievement";
 import SmartInsights from "../../components/dashboard/SmartInsights";
 import RecentActivity from "../../components/dashboard/RecentActivity";
+import TrendChart from "../../components/reports/TrendChart";
 
 const today = new Date();
+
+function fillMissingMonths(trend, months) {
+  const byPeriod = new Map((trend || []).map((point) => [point.period, point]));
+  return months.map((period) => byPeriod.get(period) || { period, income: 0, expenses: 0 });
+}
 
 export default function Dashboard() {
   const { showToast } = useToast();
@@ -31,6 +39,9 @@ export default function Dashboard() {
   const [recent, setRecent] = useState([]);
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [monthlyTrend, setMonthlyTrend] = useState([]);
+  const [trendLoading, setTrendLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -53,8 +64,25 @@ export default function Dashboard() {
     };
 
     fetchDashboard();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month, year]);
+
+
+  useEffect(() => {
+    const fetchTrend = async () => {
+      setTrendLoading(true);
+      try {
+        const { date_from, date_to, months } = getLastNMonthsRange(6);
+        const report = await getReportSummary({ date_from, date_to });
+        setMonthlyTrend(fillMissingMonths(report.trend, months));
+      } catch {
+        setMonthlyTrend([]);
+      } finally {
+        setTrendLoading(false);
+      }
+    };
+
+    fetchTrend();
+  }, []);
 
   const periodLabel = `${MONTH_NAMES[month - 1]} ${year}`;
   const hasBudgetData = summary?.budget_utilization?.length > 0;
@@ -112,6 +140,19 @@ export default function Dashboard() {
         navigate={navigate}
       />
 
+      {}
+      <div className="bg-surface rounded shadow-token-sm hover-card p-3 mb-3">
+        <h2 className="font-display fs-6 fw-semibold mb-1">Income vs Expenses</h2>
+        <p className="text-muted-ink small mb-3">Last 6 months</p>
+        {trendLoading ? (
+          <div className="placeholder-glow">
+            <span className="placeholder col-12" style={{ height: 260, display: "block" }} />
+          </div>
+        ) : (
+          <TrendChart trend={monthlyTrend} granularity="month" />
+        )}
+      </div>
+
       <BudgetProgress
         summary={summary}
         loading={loading}
@@ -130,17 +171,7 @@ export default function Dashboard() {
 
       <LatestAchievement summary={summary} />
 
-      {/*
-        Part 2 fix: this used to be `isEmptyPeriod ? <EmptyState/> :
-        (...entire rest of the dashboard...)`, which hid the whole
-        page - including the balance and every card above - the
-        moment a selected month had no transactions. Everything above
-        this point either uses lifetime data (HeroSection) or is
-        meaningful independent of the selected month (budgets, goals,
-        achievements), so it stays visible unconditionally now. Only
-        the charts/recent-activity row genuinely has nothing to show
-        for an empty month, so only that row gets the empty state.
-      */}
+      {}
       {isEmptyPeriod ? (
         <EmptyState
           icon={LuInbox}

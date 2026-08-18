@@ -1,12 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { LuUser, LuCamera, LuImage, LuTrash2, LuChevronDown, LuCircleCheck, LuTriangleAlert } from "react-icons/lu";
+import {
+  LuUser,
+  LuUsers,
+  LuCalendar,
+  LuCake,
+  LuCamera,
+  LuImage,
+  LuTrash2,
+  LuChevronDown,
+  LuCircleCheck,
+  LuTriangleAlert,
+} from "react-icons/lu";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { useToast } from "../ui/Toast";
 import { getProfile, updateProfile, resendVerificationEmail } from "../../services/profileService";
 
-// Mirrors backend Profile.Role exactly - kept in sync with the same
-// choices Register.jsx uses (Premium/Admin are not user role values).
 const ROLE_LABELS = {
   student: "Student",
   working_professional: "Working Professional",
@@ -16,18 +25,51 @@ const ROLE_LABELS = {
   admin: "Admin",
 };
 
-/**
- * Account details (avatar + profile fields) section. Extracted from
- * the original Profile.jsx as-is - same state, same handlers, same
- * validation/error handling - so it can be embedded both on the
- * standalone /profile page and inside Settings without duplicating
- * this logic in two places.
- *
- * onProfileLoaded/onProfileUpdated are optional callbacks so a parent
- * (e.g. Settings) can read the loaded profile for other sections
- * (Appearance, Currency, etc.) without this component needing to know
- * anything about those sections.
- */
+function formatDate(value) {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("en-IN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function calculateAge(dateOfBirth) {
+  if (!dateOfBirth) return null;
+  const dob = new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  const dayDiff = today.getDate() - dob.getDate();
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    age -= 1;
+  }
+  return age;
+}
+
+function SummaryRow({ icon: Icon, label, children, isLast }) {
+  return (
+    <div className={`d-flex align-items-start gap-3 py-2 ${isLast ? "" : "border-bottom"}`}>
+      <div
+        className="d-flex align-items-center justify-content-center flex-shrink-0 rounded-circle bg-surface-sunken text-muted-ink"
+        style={{ width: 32, height: 32, marginTop: 2 }}
+      >
+        <Icon size={16} />
+      </div>
+      <div>
+        <div className="text-muted-ink small mb-0" style={{ lineHeight: 1.3 }}>
+          {label}
+        </div>
+        <div className="fw-medium" style={{ lineHeight: 1.4 }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
   const { showToast } = useToast();
   const galleryInputRef = useRef(null);
@@ -36,7 +78,14 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ username: "", full_name: "", email: "", phone_number: "", bio: "" });
+  const [form, setForm] = useState({
+    username: "",
+    full_name: "",
+    email: "",
+    phone_number: "",
+    date_of_birth: "",
+    bio: "",
+  });
   const [formErrors, setFormErrors] = useState({});
   const [previewUrl, setPreviewUrl] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -55,6 +104,7 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
         full_name: data.full_name || "",
         email: data.email || "",
         phone_number: data.phone_number || "",
+        date_of_birth: data.date_of_birth || "",
         bio: data.bio || "",
       });
       onProfileLoaded?.(data);
@@ -67,11 +117,8 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
 
   useEffect(() => {
     loadProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Close the photo menu on outside click - same pattern as Modal's
-  // backdrop-click-to-close, adapted for a dropdown that isn't a modal.
   useEffect(() => {
     if (!photoMenuOpen) return;
     const handleClickOutside = (e) => {
@@ -90,18 +137,10 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
   const handlePictureSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    e.target.value = ""; // allow re-selecting the same file later
+    e.target.value = "";
 
-    // Root-cause fix: this used to only stash the file + a local blob
-    // preview (setPendingPicture/setPreviewUrl) and wait for the
-    // separate "Save Changes" button below to actually upload it - so
-    // selecting a photo looked instant but wasn't persisted at all
-    // unless the user also happened to submit the unrelated Account
-    // Details form afterward. Now it uploads immediately, the same
-    // way handleRemovePhoto already does, so "select a photo" is one
-    // complete, persisted action on its own.
     const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl(objectUrl); // instant feedback while the request is in flight
+    setPreviewUrl(objectUrl);
     setUploadingPicture(true);
     try {
       const updated = await updateProfile({ profile_picture: file });
@@ -112,11 +151,7 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
       showToast("Couldn't update profile picture.", "error");
     } finally {
       setUploadingPicture(false);
-      // profile.profile_picture (the real, persisted URL from the
-      // server) is what renders from here on, whether the upload
-      // succeeded or not - on failure this correctly reverts the
-      // avatar back to whatever it was before, since `profile` was
-      // never touched.
+
       setPreviewUrl(null);
       URL.revokeObjectURL(objectUrl);
     }
@@ -143,7 +178,7 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
     setFormErrors({});
     setSaving(true);
     try {
-      const payload = { ...form };
+      const payload = { ...form, date_of_birth: form.date_of_birth || null };
       const updated = await updateProfile(payload);
       setProfile(updated);
       setForm((prev) => ({ ...prev, username: updated.username }));
@@ -152,9 +187,6 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
     } catch (err) {
       const details = err.response?.data?.error?.details;
       if (details) {
-        // "This username is already taken." arrives here exactly as
-        // the backend phrased it (API Design Doc §7's details shape) -
-        // displayed inline under the Username field, not just a toast.
         setFormErrors(Object.fromEntries(Object.entries(details).map(([k, v]) => [k, v?.[0] || v])));
       }
       const message = err.response?.data?.error?.message || "Couldn't save your profile.";
@@ -183,27 +215,23 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
 
   const hasPhoto = Boolean(previewUrl) || Boolean(profile?.profile_picture);
   const avatarSrc = previewUrl ?? profile?.profile_picture ?? null;
+  const age = calculateAge(profile?.date_of_birth);
 
   return (
-    <div className="row g-4">
-      <div className="col-md-4">
-        <div className="bg-surface rounded shadow-token-sm hover-card p-4 text-center">
+    <div className="row g-4 align-items-stretch">
+      <div className="col-md-4 d-flex">
+        <div className="bg-surface rounded shadow-token-sm hover-card p-4 text-center w-100 h-100 d-flex flex-column">
           <div
             className="mx-auto mb-3 d-flex align-items-center justify-content-center rounded-circle bg-surface-sunken"
-            style={{ width: 120, height: 120, overflow: "hidden" }}
+            style={{ width: 160, height: 160, overflow: "hidden" }}
           >
             {avatarSrc ? (
               <img src={avatarSrc} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
-              <LuUser size={48} className="text-muted-ink" />
+              <LuUser size={56} className="text-muted-ink" />
             )}
           </div>
 
-          {/* Hidden file inputs - one plain, one with capture="environment"
-              so mobile browsers open the camera directly. Both share
-              the same onChange handler; which one fires depends on
-              which menu item was clicked. Desktop browsers without
-              camera support simply ignore the capture attribute. */}
           <input
             ref={galleryInputRef}
             type="file"
@@ -273,30 +301,34 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
 
           <hr />
 
-          <div className="text-start small">
-            <div className="text-muted-ink mb-1">Role</div>
-            <div className="mb-3">
-              <span className="badge bg-primary">{ROLE_LABELS[profile?.role] || profile?.role}</span>
+          <div className="text-start">
+            <div className="text-muted-ink small fw-semibold text-uppercase mb-2" style={{ letterSpacing: "0.03em" }}>
+              Profile Overview
             </div>
 
-            <div className="text-muted-ink mb-1">Member Since</div>
-            <div className="fw-medium">
-              {profile?.date_joined
-                ? new Date(profile.date_joined).toLocaleDateString("en-IN", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })
-                : "—"}
-            </div>
+            <SummaryRow icon={LuUser} label="Role">
+              <span className="badge bg-primary">{ROLE_LABELS[profile?.role] || profile?.role}</span>
+            </SummaryRow>
+
+            <SummaryRow icon={LuCalendar} label="Member Since">
+              {formatDate(profile?.date_joined)}
+            </SummaryRow>
+
+            <SummaryRow icon={LuCake} label="Date of Birth">
+              {formatDate(profile?.date_of_birth)}
+            </SummaryRow>
+
+            <SummaryRow icon={LuUsers} label="Age" isLast>
+              {age != null ? `${age} years old` : "—"}
+            </SummaryRow>
           </div>
         </div>
       </div>
 
-      <div className="col-md-8">
-        <div className="bg-surface rounded shadow-token-sm hover-card p-4">
+      <div className="col-md-8 d-flex">
+        <div className="bg-surface rounded shadow-token-sm hover-card p-4 w-100 h-100 d-flex flex-column">
           <h2 className="font-display fs-6 fw-semibold mb-3">Account Details</h2>
-          <form onSubmit={handleSave}>
+          <form onSubmit={handleSave} className="d-flex flex-column flex-grow-1">
             <div className="row">
               <div className="col-6">
                 <Input
@@ -352,6 +384,18 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
               </div>
             </div>
 
+            <div className="row">
+              <div className="col-12">
+                <Input
+                  label="Date of Birth"
+                  type="date"
+                  value={form.date_of_birth}
+                  onChange={handleChange("date_of_birth")}
+                  error={formErrors.date_of_birth}
+                />
+              </div>
+            </div>
+
             <Input
               label="Bio / About (optional)"
               as="textarea"
@@ -359,7 +403,7 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
               onChange={handleChange("bio")}
             />
 
-            <div className="d-flex justify-content-end mt-2">
+            <div className="d-flex justify-content-end mt-auto pt-2">
               <Button type="submit" loading={saving}>
                 Save Changes
               </Button>

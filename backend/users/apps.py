@@ -5,4 +5,4 @@ class UsersConfig(AppConfig):
     name = "users"
 
     def ready(self):
-        import users.signals  # noqa: F401 - registers the post_save signal
+        import users.signals  

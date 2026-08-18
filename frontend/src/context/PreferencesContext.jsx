@@ -1,7 +1,7 @@
-import { createContext, useCallback, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getProfile, updateProfile } from "../services/profileService";
 import { setActiveCurrency } from "../utils/formatCurrency";
-import { getExchangeRates, getCachedRatesSync } from "../utils/exchangeRates";
+import { refreshExchangeRates, getCachedRatesSync, AUTO_REFRESH_INTERVAL_MS, FALLBACK_RATES } from "../utils/exchangeRates";
 import { useAuth } from "../hooks/useAuth";
 
 const PreferencesContext = createContext(null);
@@ -21,36 +21,6 @@ function applyThemeToDocument(theme) {
   return resolved;
 }
 
-/**
- * Applies Appearance (theme) and Currency (Settings page) app-wide.
- *
- * Theme takes effect immediately via a `data-theme` attribute on
- * <html> - index.css's dark-theme variable block reacts to it, and
- * since every surface in the app already reads color through CSS
- * custom properties (App design system, index.css), no component
- * needs to know about theming at all.
- *
- * Currency is a real conversion, not a relabeled symbol: amounts are
- * always stored and sent by the backend in INR (no currency field on
- * any financial model), and formatCurrency() converts them using a
- * live INR-based exchange rate (utils/exchangeRates.js) before
- * formatting. Rates are fetched once per session (cached ~12h in
- * localStorage, with a hardcoded fallback if the network and cache
- * are both unavailable) and re-applied whenever the user's currency
- * changes. Because formatCurrency isn't itself reactive, AppShell
- * remounts the current route (key={currency}) whenever currency
- * changes, so already-rendered amounts refresh immediately instead of
- * only on next navigation.
- *
- * Settings was previously the only place theme/currency were edited;
- * the sidebar's quick theme toggle (Aug 2026) is a second entry point
- * that goes through this exact same setTheme, so there is still only
- * one place that actually applies and persists a change - this
- * context just applies whatever is current and caches it in
- * localStorage so there's no flash of the wrong theme/currency on
- * load, then reconciles against the real backend value (source of
- * truth) once the user is authenticated.
- */
 export function PreferencesProvider({ children }) {
   const { isAuthenticated } = useAuth();
 
@@ -60,12 +30,18 @@ export function PreferencesProvider({ children }) {
   const [rates, setRates] = useState(() => getCachedRatesSync());
   const [ratesLoading, setRatesLoading] = useState(true);
 
+  // Guards against overlapping fetches (e.g. the auto-refresh interval and a
+  // tab-reactivation refresh landing at nearly the same moment) and against
+  // setting state after unmount. A single source of truth for "is a rate
+  // fetch currently in flight" - never more than one live refresh at once.
+  const fetchInFlight = useRef(false);
+  const mountedRef = useRef(true);
+
   useEffect(() => {
     setResolvedTheme(applyThemeToDocument(theme));
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
-  // Live-update if the OS-level preference changes while set to "system".
   useEffect(() => {
     if (theme !== "system" || typeof window === "undefined" || !window.matchMedia) return undefined;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -74,46 +50,56 @@ export function PreferencesProvider({ children }) {
     return () => mq.removeEventListener("change", handler);
   }, [theme]);
 
-  // Fetch real rates once per session (getExchangeRates itself uses
-  // the ~12h localStorage cache, so this is cheap on repeat visits).
-  useEffect(() => {
-    let cancelled = false;
-    getExchangeRates()
-      .then((fetched) => {
-        if (!cancelled) setRates(fetched);
-      })
-      .finally(() => {
-        if (!cancelled) setRatesLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+  // Live-first rate refresh: fetches fresh rates from both live sources
+  // every time it's called (see exchangeRates.js - the 12h cache there is
+  // read only if a live source fails, never used to skip a live request).
+  // Called on mount, on a periodic interval, and when the tab becomes
+  // visible again after being backgrounded.
+  const refreshRates = useCallback(async () => {
+    if (fetchInFlight.current) return;
+    fetchInFlight.current = true;
+    try {
+      const { rates: fetched } = await refreshExchangeRates();
+      if (mountedRef.current) {
+        setRates(fetched);
+      }
+    } finally {
+      fetchInFlight.current = false;
+      if (mountedRef.current) setRatesLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    const rate = rates[currency] ?? 1;
+    mountedRef.current = true;
+    refreshRates();
+
+    const intervalId = setInterval(refreshRates, AUTO_REFRESH_INTERVAL_MS);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshRates();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      mountedRef.current = false;
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refreshRates]);
+
+  useEffect(() => {
+    // Every supported currency is guaranteed a real, validated, positive
+    // rate by exchangeRates.js (live > secondary live > cache > static
+    // fallback - never silently 1). FALLBACK_RATES[currency] here is only
+    // reached if `currency` itself isn't one of the seven supported codes,
+    // which setCurrency never allows via the UI.
+    const rate = rates[currency] ?? FALLBACK_RATES[currency];
     setActiveCurrency(currency, rate);
     localStorage.setItem(CURRENCY_STORAGE_KEY, currency);
   }, [currency, rates]);
 
-  // Reconcile against the real backend value after login - the
-  // backend is the source of truth *for a preference it has actually
-  // recorded*. But setTheme only started persisting to the backend
-  // once the user is authenticated (see setTheme below) - a theme
-  // picked on the unauthenticated Landing Page never reaches the
-  // backend at all, it only ever lands in localStorage. For a
-  // first-time login, the backend still holds nothing but its own
-  // default (Profile.theme defaults to "system" - see
-  // users/models.py), so blindly pulling data.theme down here would
-  // silently discard exactly the pre-login choice this flow is
-  // supposed to preserve ("if Landing Page was Dark, Dashboard should
-  // open in Dark"). So: if this browser already has its own stored
-  // theme (localStorage, not React state - read fresh here rather
-  // than closing over `theme` to avoid any staleness), that choice
-  // wins and gets pushed to the backend instead; only fall back to
-  // the backend's value when this browser has never stored one at
-  // all (a real "nothing local to prefer" case, e.g. a brand-new
-  // browser/device).
   useEffect(() => {
     if (!isAuthenticated) return undefined;
     let cancelled = false;
@@ -131,8 +117,7 @@ export function PreferencesProvider({ children }) {
         if (data.currency) setCurrencyState(data.currency);
       })
       .catch(() => {
-        // Not fatal - the app keeps working with the cached/default
-        // preference; Settings shows the real value once visited.
+
       });
     return () => {
       cancelled = true;
@@ -142,22 +127,7 @@ export function PreferencesProvider({ children }) {
   const setTheme = useCallback(
     (next) => {
       setThemeState(next);
-      // Sidebar redesign (Aug 2026): theme used to only persist to the
-      // backend when changed via Settings > Appearance, which called
-      // updateProfile itself and passed the result back up. Now that
-      // theme can also be changed from the sidebar's quick toggle
-      // (present on every authenticated page, not just Settings),
-      // persistence moved here instead - so there's exactly one place
-      // that both applies AND saves a theme change, and the sidebar
-      // toggle and Settings (if it ever adds its own control back)
-      // can't drift into two different persistence paths. Unauthenticated
-      // callers (the Landing Page's own toggle) simply have nothing to
-      // persist to yet - localStorage (below) still keeps the choice
-      // for when they do log in. Best-effort/silent: a failed PATCH
-      // here shouldn't surface an error for what is, from the user's
-      // perspective, an instant, low-stakes UI preference - the local
-      // theme still applies immediately either way, exactly like
-      // before this change for any unauthenticated caller.
+
       if (isAuthenticated) {
         updateProfile({ theme: next }).catch(() => {});
       }

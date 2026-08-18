@@ -23,18 +23,6 @@ import RegistrationsChart from "../../components/admin/RegistrationsChart";
 import { getAdminStats } from "../../services/adminService";
 import { formatRelativeDate } from "../../utils/formatRelativeDate";
 
-/**
- * Real Admin Dashboard body (Batch 1) - replaces the earlier
- * placeholder. Routing/guard (AdminProtectedRoute), the header, and
- * the logout flow were already correct from the routing batch and are
- * untouched here; this only fills in the monitoring statistics using
- * AdminStatsView (analytics/views.py) via services/adminService.js.
- *
- * Deliberately read-only: no edit/delete affordance for any user's
- * financial data appears anywhere on this page, per the mentor spec
- * ("Do not allow editing user financial data from the admin
- * dashboard").
- */
 export default function AdminDashboard() {
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -57,7 +45,7 @@ export default function AdminDashboard() {
     };
 
     fetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
 
   const handleLogout = async () => {

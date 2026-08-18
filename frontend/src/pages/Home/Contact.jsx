@@ -21,23 +21,6 @@ import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import { useToast } from "../../components/ui/Toast";
 
-/**
- * Public Contact page - replaces the old "expose the email directly
- * in the footer" pattern with a proper page (footer's Contact link
- * now points here). Also absorbs what used to be a separate
- * standalone Feedback page/route (removed) via the "What's this
- * about?" reason field on the form below (General Question / Feedback
- * / Feature Request / Bug Report / Collaboration / Other) - one form,
- * one page, instead of two near-identical ones. No backend endpoint
- * exists for this form - submit just shows a success toast via the
- * app's existing ToastProvider.
- *
- * Reuses .finance-hero for its own hero banner (same gradient
- * treatment as Home.jsx's hero and Dashboard's HeroSection.jsx - not
- * a new gradient), .landing-glass-card / .landing-contact-card /
- * .landing-topic-chip / .landing-avatar-placeholder from the landing
- * CSS block, and the existing Input/Button/Toast components.
- */
 export default function Contact() {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -46,10 +29,6 @@ export default function Contact() {
   const [submitting, setSubmitting] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
 
-  // Merged in from the old standalone Feedback page - this "reason"
-  // field is what replaces it, so General Question/Feedback/Feature
-  // Request/Bug Report/Collaboration/Other all flow through this one
-  // form instead of a separate page.
   const reasonOptions = [
     { value: "general", label: "General Question" },
     { value: "feedback", label: "Feedback" },
@@ -59,10 +38,6 @@ export default function Contact() {
     { value: "other", label: "Other" },
   ];
 
-  // Client-side route changes (e.g. footer's "About" link -> /contact#about)
-  // don't auto-scroll to a hash the way a full page load does - this
-  // covers that gap without adding any routing/scroll-restoration
-  // library.
   useEffect(() => {
     if (window.location.hash) {
       const id = window.location.hash.slice(1);
@@ -216,48 +191,6 @@ export default function Contact() {
               </div>
             </div>
           </div>
-
-          {/* ================= Meet the Developer ================= */}
-          <section id="about" className="mb-5 py-3">
-            <div className="landing-section-soft p-4 p-md-5">
-              <div className="row align-items-center g-4">
-                <div className="col-12 col-md-4 text-center">
-                  <div className="landing-avatar-placeholder">AL</div>
-                  <p className="text-muted-ink small mt-2 mb-0">Photo coming soon</p>
-                </div>
-                <div className="col-12 col-md-8">
-                  <div className="d-flex align-items-center gap-2 mb-2">
-                    <LuGraduationCap size={20} className="text-primary" />
-                    <span className="text-muted-ink small fw-semibold text-uppercase" style={{ letterSpacing: "0.06em" }}>
-                      Meet the developer
-                    </span>
-                  </div>
-                  <h2 className="font-display fs-3 fw-semibold mb-2">Akshata Lokhande</h2>
-                  <p className="text-muted-ink mb-3">
-                    B.Tech Information Technology student passionate about building useful,
-                    real-world software.
-                  </p>
-                  <div className="row g-2">
-                    {[
-                      "Full Stack Development",
-                      "Artificial Intelligence",
-                      "Building Useful Software",
-                      "Personal Finance Applications",
-                    ].map((item) => (
-                      <div className="col-12 col-sm-6" key={item}>
-                        <div className="d-flex align-items-center gap-2">
-                          <LuSparkles size={14} className="text-primary flex-shrink-0" />
-                          <span className="small">{item}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <hr className="landing-section-divider my-4" />
 
           {/* ================= Contact Cards ================= */}
           <section className="mb-5 py-3">

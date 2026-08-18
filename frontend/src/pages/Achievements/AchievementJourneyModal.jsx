@@ -48,7 +48,6 @@ function AchievementJourneyModal({
         new Date(b.date)
     );
 
-    /* Always keep Purchase as the final milestone */
     const purchaseEvent = timeline.find(
     (item) => item.type === "purchased"
     );
@@ -166,7 +165,7 @@ function AchievementJourneyModal({
                         🏆 Achievement Journey
                     </h3>
 
-                    <p className="text-muted mb-0">
+                    <p className="text-muted-ink mb-0">
                         Every milestone that led to this achievement.
                     </p>
 
@@ -183,7 +182,7 @@ function AchievementJourneyModal({
 
             </div>
 
-            <div className="modal-body">
+            <div className="modal-body journey-stats-container">
 
               {/* Goal */}
 
@@ -193,16 +192,12 @@ function AchievementJourneyModal({
                   {goal.goal_name}
                 </h2>
 
-                <p className="text-muted mb-4">
-
-                    {daysTaken > 1 && (
-                        <p className="text-muted mb-4">
-                            Completed in{" "}
-                            <strong>{daysTaken} days</strong>
-                        </p>
-                    )}
-
-                </p>
+                {daysTaken > 1 && (
+                    <p className="mb-1" style={{ color: "var(--color-ink-muted)" }}>
+                        Completed in{" "}
+                        <strong>{daysTaken} days</strong>
+                    </p>
+                )}
 
                 <div className="progress mx-auto"
                   style={{
@@ -286,7 +281,7 @@ function AchievementJourneyModal({
 
                               </strong>
 
-                              <small className="text-muted">
+                              <small className="text-muted-ink">
 
                                 {new Date(
                                   item.date
@@ -296,7 +291,7 @@ function AchievementJourneyModal({
 
                             </div>
 
-                            <div className="text-muted mt-2">
+                            <div className="text-muted-ink mt-2">
 
                               {event.subtitle}
 
@@ -321,121 +316,92 @@ function AchievementJourneyModal({
                 Statistics
               </h5>
 
-              <div className="row g-3">
+              <div className="journey-stats-grid">
 
-                <div className="col-md-3">
+                <div className="border rounded shadow-sm p-3 h-100 bg-surface-sunken">
 
-                  <div className="border rounded shadow-sm p-3 h-100 bg-surface-sunken">
+                  <small className="text-muted-ink">
+                    Purchase Value
+                  </small>
 
-                    <small className="text-muted">
-                      Purchase Value
-                    </small>
-
-                    <h4 className="fw-bold mt-2 text-primary">
-                      {formatCurrency(goal.target_amount)}
-                    </h4>
-
-                  </div>
+                  <h4 className="fw-bold mt-2 text-primary">
+                    {formatCurrency(goal.target_amount)}
+                  </h4>
 
                 </div>
 
-                <div className="col-md-3">
+                <div className="border rounded shadow-sm p-3 h-100 bg-surface-sunken">
 
-                  <div className="border rounded shadow-sm p-3 h-100 bg-surface-sunken">
+                  <small className="text-muted-ink">
+                    Total Deposited
+                  </small>
 
-                    <small className="text-muted">
-                      Total Deposited
-                    </small>
-
-                    <h4 className="fw-bold mt-2 text-success">
-                      {formatCurrency(totalDeposited)}
-                    </h4>
-
-                  </div>
+                  <h4 className="fw-bold mt-2 text-success">
+                    {formatCurrency(totalDeposited)}
+                  </h4>
 
                 </div>
 
-                <div className="col-md-3">
+                <div className="border rounded shadow-sm p-3 h-100 bg-surface-sunken">
 
-                  <div className="border rounded shadow-sm p-3 h-100 bg-surface-sunken">
+                  <small className="text-muted-ink">
+                    Total Withdrawn
+                  </small>
 
-                    <small className="text-muted">
-                      Total Withdrawn
-                    </small>
-
-                    <h4 className="fw-bold mt-2 text-danger">
-                      {formatCurrency(totalWithdrawn)}
-                    </h4>
-
-                  </div>
+                  <h4 className="fw-bold mt-2 text-danger">
+                    {formatCurrency(totalWithdrawn)}
+                  </h4>
 
                 </div>
 
-                <div className="col-md-3">
+                <div className="border rounded shadow-sm p-3 h-100 bg-surface-sunken">
 
-                  <div className="border rounded shadow-sm p-3 h-100 bg-surface-sunken">
+                  <small className="text-muted-ink">
+                    Days Taken
+                  </small>
 
-                    <small className="text-muted">
-                      Days Taken
-                    </small>
-
-                    <h4 className="fw-bold mt-2">
-                      {daysTaken}
-                    </h4>
-
-                  </div>
+                  <h4 className="fw-bold mt-2">
+                    {daysTaken}
+                  </h4>
 
                 </div>
 
               </div>
 
-              <div className="row g-3 mt-1">
+              <div className="journey-stats-grid-2 mt-3">
 
-                <div className="col-md-6">
+                <div className="border rounded shadow-sm p-3 bg-surface-sunken h-100">
 
-                  <div className="border rounded shadow-sm p-3 bg-surface-sunken h-100">
+                  <small className="text-muted-ink">
+                    Savings Transactions
+                  </small>
 
-                    <small className="text-muted">
-                      Savings Transactions
-                    </small>
-
-                    <h4 className="fw-bold mt-2">
-                      {totalTransactions}
-                    </h4>
-
-                  </div>
+                  <h4 className="fw-bold mt-2">
+                    {totalTransactions}
+                  </h4>
 
                 </div>
 
-                <div className="col-md-6">
+                <div className="border rounded shadow-sm p-3 bg-surface-sunken h-100">
 
-                  <div className="border rounded shadow-sm p-3 bg-surface-sunken h-100">
+                  <small className="text-muted-ink">
+                    Purchase Date
+                  </small>
 
-                    <small className="text-muted">
-                      Purchase Date
-                    </small>
-
-                    <h4 className="fw-bold mt-2">
-                      {new Date(goal.purchase_date).toLocaleDateString(
-                            "en-IN",
-                            {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                            }
-                        )}
-                    </h4>
-
-                  </div>
+                  <h4 className="fw-bold mt-2">
+                    {new Date(goal.purchase_date).toLocaleDateString(
+                          "en-IN",
+                          {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                          }
+                      )}
+                  </h4>
 
                 </div>
 
               </div>
-
-              {/* Congratulations - was Bootstrap's .alert-success,
-                  same unthemed-in-dark-mode issue fixed in
-                  AchievementCard.jsx (see index.css's
-                  .token-callout-success for why). */}
 
               <div className="token-callout-success mt-5 mb-0 p-3">
 

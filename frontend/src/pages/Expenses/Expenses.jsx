@@ -61,9 +61,6 @@ export default function Expenses() {
       if (category) params.category = category;
       if (paymentMethod) params.payment_method = paymentMethod;
 
-      // "custom" uses the two explicit date inputs; every other preset
-      // is computed from getDateRangeForPeriod - either way, both flow
-      // into the same existing date_from/date_to backend params.
       if (timePeriod === "custom") {
         if (customFrom) params.date_from = customFrom;
         if (customTo) params.date_to = customTo;
@@ -85,17 +82,12 @@ export default function Expenses() {
     }
   };
 
-  // Search is debounced (300ms) so we don't fire a request on every
-  // keystroke - every other filter applies through the same debounced
-  // effect (existing pattern, unchanged), just with more dependencies now.
   useEffect(() => {
     const timer = setTimeout(fetchExpenses, 300);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [search, category, paymentMethod, timePeriod, customFrom, customTo, ordering, page]);
 
-  // Any filter change resets to page 1 - staying on page 3 of a filtered
-  // result set that now has 1 page would silently show nothing.
   useEffect(() => {
     setPage(1);
   }, [search, category, paymentMethod, timePeriod, customFrom, customTo, ordering]);
@@ -124,10 +116,6 @@ export default function Expenses() {
       fetchExpenses();
       checkResultingBalance(formValues.date);
     } catch (err) {
-      // Backend validation errors arrive in the approved envelope shape
-      // (API Design Doc §7) - surfacing the message here; per-field
-      // inline errors are handled by ExpenseForm's own client-side
-      // validation for the common cases (amount, date, title).
       const message = err.response?.data?.error?.message || "Couldn't save expense.";
       showToast(message, "error");
     } finally {
@@ -135,15 +123,6 @@ export default function Expenses() {
     }
   };
 
-  // Task 13: BudgetBuddy is a tracker, not a wallet - expenses are
-  // never blocked for exceeding the balance (handleSubmit above always
-  // saves first). This only informs the user afterward if the balance
-  // for that expense's month has gone negative, reusing the same
-  // dashboard summary endpoint the Dashboard page already calls rather
-  // than duplicating the balance calculation on the frontend. Errors
-  // here are swallowed deliberately - the expense itself already saved
-  // successfully, so a failed balance check shouldn't surface as if
-  // something went wrong with the save.
   const checkResultingBalance = async (dateString) => {
     if (!dateString) return;
     const [year, month] = dateString.split("-").map(Number);
@@ -156,8 +135,7 @@ export default function Expenses() {
         );
       }
     } catch {
-      // Non-critical - silently skip the warning rather than
-      // implying the expense save itself failed.
+
     }
   };
 
@@ -204,10 +182,6 @@ export default function Expenses() {
 
   return (
     <div>
-      {/* Header - same bg-surface card + tinted icon container
-          structure as the redesigned Notifications page, just its own
-          .page-header-icon.icon-expense color rather than sharing
-          Notifications' class. */}
       <div className="bg-surface rounded shadow-token-sm p-4 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div className="d-flex align-items-center gap-3">
           <span className="page-header-icon icon-expense">

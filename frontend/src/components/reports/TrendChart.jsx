@@ -2,13 +2,6 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { formatCurrency } from "../../utils/formatCurrency";
 import { usePreferences } from "../../hooks/usePreferences";
 
-// Literal hex values (not CSS var()) - recharts renders these as raw
-// SVG attributes, and while modern browsers do resolve var() in SVG
-// presentation attributes, it's not guaranteed across recharts'
-// internal rendering path, so this picks the real light/dark token
-// value in JS via resolvedTheme instead of gambling on CSS cascading
-// into inline SVG. Values match index.css's actual --color-* tokens
-// for each theme exactly.
 const PALETTE = {
   light: { income: "#1F9D6C", expense: "#D64545", grid: "#DDE1E7", tick: "#5B6472" },
   dark: { income: "#34D399", expense: "#F87171", grid: "#333856", tick: "#A6ACBD" },

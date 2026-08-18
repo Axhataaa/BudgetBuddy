@@ -9,9 +9,6 @@ import {
 } from "recharts";
 import { MONTH_NAMES } from "../../components/ui/PeriodSelector";
 
-// Same brand primary used throughout the app's charts (index.css
-// --color-primary: #303B8E) - recharts needs a literal hex/rgb, CSS
-// custom properties aren't resolved inside its SVG fill props.
 const PRIMARY = "#303B8E";
 
 export default function RegistrationsChart({ data }) {

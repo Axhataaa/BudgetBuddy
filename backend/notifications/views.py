@@ -11,22 +11,6 @@ class NotificationViewSet(
     mixins.DestroyModelMixin,
     viewsets.ReadOnlyModelViewSet,
 ):
-    """
-    Read-only CRUD (list/retrieve) plus DestroyModelMixin (delete a
-    single notification) and write actions, matching the same
-    detail/list @action pattern already used by SavingsGoalViewSet's
-    complete-purchase/achievements actions. Notifications are still
-    system-generated - create/update aren't exposed, only delete
-    (individual, via the mixin) and clear-all (via the extra action
-    below), since a user reasonably expects to be able to dismiss
-    notifications even though they can't author them.
-
-    filterset_class enables ?notification_type=&is_read= the same way
-    every other ViewSet's filterset_class already does (BudgetFilter,
-    ExpenseFilter, ...) via the globally-enabled DjangoFilterBackend -
-    needed because the list is server-paginated, so a client-side-only
-    "Unread" filter would miss unread items on other pages.
-    """
 
     serializer_class = NotificationSerializer
     filterset_class = NotificationFilter
@@ -50,8 +34,6 @@ class NotificationViewSet(
 
     @action(detail=False, methods=["delete"], url_path="clear-all")
     def clear_all(self, request):
-        # Same get_queryset() scoping (user=request.user) as every
-        # other action on this ViewSet - a "clear all" can only ever
-        # delete the requesting user's own notifications.
+
         self.get_queryset().delete()
         return Response({"message": "All notifications cleared."})

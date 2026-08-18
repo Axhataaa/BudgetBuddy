@@ -18,11 +18,6 @@ function WithdrawSavingsModal({
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Note: this guard stays here (rather than folding into Modal's own
-  // `open` check) because the form below reads goal.goal_name/
-  // goal.current_amount - that JSX is evaluated by this component
-  // before Modal ever gets to decide whether to render it, so `goal`
-  // must be confirmed non-null first regardless of what `show` is.
   if (!goal) return null;
 
   async function handleSubmit(e) {
@@ -50,18 +45,6 @@ function WithdrawSavingsModal({
     } catch (error) {
       console.error(error);
 
-      // Bug fix: this read error.response.data.transaction_amount[0],
-      // but the API's actual error shape (config/exceptions.py) nests
-      // field errors under data.error.details - so a real "Withdrawal
-      // cannot make savings negative" validation failure was silently
-      // falling through to the generic message below. Also swapped
-      // alert() for the app's toast system for consistency.
-      //
-      // details.transaction_amount can be either a string (manual
-      // `raise ValidationError({"field": "message"})` in this view)
-      // or an array (DRF's own field-validator errors), so this
-      // normalizes both instead of assuming one shape - `?.[0]` alone
-      // would silently grab just the first character of a string.
       const apiError = error.response?.data?.error;
       const firstDetail = (value) => (Array.isArray(value) ? value[0] : value);
       const detail =

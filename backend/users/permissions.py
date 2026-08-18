@@ -1,6 +1,3 @@
-# Custom role-based permission classes used throughout the application.
-
-
 from rest_framework.permissions import BasePermission
 from .models import Profile
 

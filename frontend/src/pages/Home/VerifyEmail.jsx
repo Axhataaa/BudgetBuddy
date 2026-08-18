@@ -4,22 +4,11 @@ import { LuWallet, LuCircleCheck, LuCircleX } from "react-icons/lu";
 import Button from "../../components/ui/Button";
 import { verifyEmail } from "../../services/profileService";
 
-/**
- * Public route: /verify-email?token=<raw token>
- *
- * Same visual shell as Login.jsx (centered card, BudgetBuddy wordmark)
- * for consistency, but this page has no form - it calls the backend
- * the moment it mounts and just reports the result. AllowAny on the
- * backend (users/views.py VerifyEmailView) means this works whether
- * or not the person clicking the email link happens to have an active
- * session in that browser.
- */
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token");
 
-  // "loading" | "success" | "error"
   const [status, setStatus] = useState("loading");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -38,10 +27,7 @@ export default function VerifyEmail() {
       })
       .catch((err) => {
         if (cancelled) return;
-        // Backend distinguishes expired / already_used / invalid via
-        // error.code, but all three just need a clear message here -
-        // the wording itself already differs per case
-        // (email_verification_service.py's VerificationError messages).
+
         const message =
           err.response?.data?.error?.message ||
           "This verification link isn't valid. Please request a new one.";
@@ -52,7 +38,6 @@ export default function VerifyEmail() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   return (
@@ -65,8 +50,6 @@ export default function VerifyEmail() {
 
         {status === "loading" && (
           <>
-            {/* Same spinner-border Button.jsx already uses for its own
-                loading state - no new animation/CSS needed. */}
             <span className="spinner-border text-primary mb-3" role="status" aria-hidden="true" />
             <p className="text-muted-ink mb-0">Verifying your email...</p>
           </>

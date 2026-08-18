@@ -87,6 +87,16 @@ Typical configuration includes:
 
 See the [Environment Variables](README.md#-environment-variables) table in the README for the exact variable names and an example value for each.
 
+### Optional: Email / SMTP configuration
+
+The `EMAIL_*` variables are optional. If omitted, Django's console backend is used — verification and notification emails print to the terminal running `runserver` instead of being sent, so registration and email verification still work end-to-end locally with zero setup.
+
+To send real email (e.g. via Gmail SMTP), add `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, and `DEFAULT_FROM_EMAIL` to `.env`, and set `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`. For Gmail specifically, `EMAIL_HOST_PASSWORD` must be a 16-character [App Password](https://myaccount.google.com/apppasswords), not the account's normal login password. Do not commit real credentials — see the [Environment Variables](README.md#-environment-variables) table for the full list.
+
+### Optional: AI Financial Analysis (Gemini)
+
+`GEMINI_API_KEY` is also optional. If omitted, the rest of the app works normally — the AI Financial Analysis feature on the Reports page simply responds with a "temporarily unavailable" message instead of an analysis. To enable it, add `GEMINI_API_KEY` (and optionally `GEMINI_MODEL`, default `gemini-3.6-flash`) to `.env`.
+
 ---
 
 ## Apply Database Migrations
@@ -188,15 +198,17 @@ npm run dev
 After both servers are running:
 
 - Open the frontend
-- Register a new user
+- Register a new user, then check the terminal running `runserver` (or your inbox, if SMTP is configured) for the verification email and confirm the link at `/verify-email?token=...` marks the account verified
 - Login
 - Create Income
 - Create Expense
 - Create Budget (then add an Expense in that category to see budget alerts at 80%/90%/100%)
-- Open Dashboard
+- Open Dashboard, including the "Income vs Expenses — Last 6 Months" chart
 - Create a Savings Goal and log a deposit
 - Open Reports, switch between Today / Week / Month / Year / Custom Range, and try each export (CSV/Excel/PDF)
+- On the Reports page, click "Analyze My Finances" to try the AI Financial Analysis feature (requires `GEMINI_API_KEY` in `.env` — without it, the feature responds with a graceful "temporarily unavailable" message instead of an error)
 - Check the Notification Center for the events above
+- In Settings, enable a notification email preference and confirm the corresponding event (e.g. a budget exceeded) triggers an email once the account's email is verified
 - Verify profile management and the Light/Dark theme toggle
 
 If all of the above work correctly, the project has been configured successfully.

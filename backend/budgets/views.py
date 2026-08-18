@@ -4,8 +4,8 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django.utils import timezone
 
-from common.formatting import format_inr
-from notifications.notification_service import create_notification
+from common.formatting import format_currency_for_user
+from notifications.notification_service import create_notification, sync_entity_notification
 from notifications.models import Notification
 
 from .filters import BudgetFilter
@@ -28,9 +28,6 @@ from expenses.models import Expense
 
 
 class BudgetViewSet(viewsets.ModelViewSet):
-    """
-    Full CRUD on the current user's budgets.
-    """
 
     lookup_value_regex = r"\d+"
 
@@ -46,48 +43,35 @@ class BudgetViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         budget = serializer.save(user=self.request.user)
 
-        # "Budget Created" - reuses the same create_notification()
-        # helper as every other notification in the app; dedup_key
-        # keeps this a one-time notification per budget. action_url
-        # points at the Budgets page, where this specific budget can
-        # be reviewed.
-        create_notification(
+        sync_entity_notification(
             user=self.request.user,
             title="Budget Created",
             priority=Notification.Priority.LOW,
             message=(
-                f"Your {budget.get_category_display()} budget of "
-                f"₹{format_inr(budget.monthly_limit)} for "
+                f"Your {budget.get_category_display()} budget for "
                 f"{budget.month}/{budget.year} has been created."
             ),
             notification_type=Notification.NotificationType.BUDGET,
             action_url="/budgets",
             dedup_key=f"budget:{budget.id}:created",
+            budget=budget,
         )
 
     def perform_update(self, serializer):
         budget = serializer.save()
 
-        # "Budget Updated" - each edit is its own notification (unlike
-        # "created", which only ever happens once per budget). Budget
-        # has no updated_at field (confirmed in budgets/models.py, and
-        # this task is explicitly notification-only - no unrelated
-        # model changes), so the dedup_key uses the current timestamp
-        # instead, which is still unique per save and guards against
-        # an accidental duplicate create_notification() call within
-        # the same request.
-        create_notification(
+        sync_entity_notification(
             user=self.request.user,
             title="Budget Updated",
             priority=Notification.Priority.MEDIUM,
             message=(
                 f"Your {budget.get_category_display()} budget for "
-                f"{budget.month}/{budget.year} has been updated to "
-                f"₹{format_inr(budget.monthly_limit)}."
+                f"{budget.month}/{budget.year} has been updated."
             ),
             notification_type=Notification.NotificationType.BUDGET,
             action_url="/budgets",
-            dedup_key=f"budget:{budget.id}:updated:{timezone.now().isoformat()}",
+            dedup_key=f"budget:{budget.id}:updated",
+            budget=budget,
         )
 
 
@@ -132,19 +116,11 @@ class BudgetViewSet(viewsets.ModelViewSet):
 
             is_overspent = usage_percentage >= 100
 
-            # Task 1: mentor spec requires an explicit alert_level
-            # field with 4 tiers. The existing `alert` message below
-            # previously only distinguished ">=90%" vs "nothing" - the
-            # 80-89.99% band silently produced alert=None, which would
-            # now contradict alert_level="warning" existing at the same
-            # time. Extending `alert`'s own tiering to match keeps the
-            # two fields consistent with each other rather than adding
-            # a new field that disagrees with the old one.
             if usage_percentage >= 100:
                 alert_level = "budget_exceeded"
                 alert = (
                     f"Budget exceeded for {budget.get_category_display()} "
-                    f"by ₹{overspent_amount}."
+                    f"by {format_currency_for_user(request.user, overspent_amount)}."
                 )
             elif usage_percentage >= 90:
                 alert_level = "high_warning"
@@ -213,11 +189,6 @@ class SavingsGoalViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = SavingsGoal.objects.filter(user=self.request.user)
 
-        # Only the list endpoint (the main Savings Goals page) should
-        # exclude archived/purchased goals - retrieve, update, destroy,
-        # and the complete-purchase action all need to reach an already-
-        # archived goal by id (e.g. deleting an achievement from the
-        # Achievements page, which is just an archived SavingsGoal row).
         if self.action == "list":
             queryset = queryset.filter(is_archived=False)
 
@@ -228,13 +199,7 @@ class SavingsGoalViewSet(viewsets.ModelViewSet):
             user=self.request.user
         )
 
-        # Task: "Goal Created" was never surfaced as a notification -
-        # every other lifecycle event (completed, purchased) already
-        # notifies via this same create_notification() helper, so this
-        # closes that gap rather than inventing a separate mechanism.
-        # dedup_key keeps this a one-time notification per goal even if
-        # perform_create were ever retried for the same instance.
-        create_notification(
+        sync_entity_notification(
             user=self.request.user,
             title="Goal Created",
             priority=Notification.Priority.LOW,
@@ -242,6 +207,24 @@ class SavingsGoalViewSet(viewsets.ModelViewSet):
             notification_type=Notification.NotificationType.SAVINGS_GOAL,
             action_url="/savings-goals",
             dedup_key=f"savings_goal:{goal.id}:created",
+            savings_goal=goal,
+        )
+
+    def perform_update(self, serializer):
+        goal = serializer.save()
+
+        sync_entity_notification(
+            user=self.request.user,
+            title="Goal Updated",
+            priority=Notification.Priority.LOW,
+            message=(
+                f'Your savings goal "{goal.goal_name}" has been updated. '
+                f"Target date: {goal.target_date}."
+            ),
+            notification_type=Notification.NotificationType.SAVINGS_GOAL,
+            action_url="/savings-goals",
+            dedup_key=f"savings_goal:{goal.id}:updated",
+            savings_goal=goal,
         )
 
     @action(

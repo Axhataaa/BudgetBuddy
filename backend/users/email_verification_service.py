@@ -1,23 +1,3 @@
-"""
-Email verification for BudgetBuddy accounts.
-
-Deliberately NOT routed through notifications/notification_service.py's
-create_notification()/email_service.py pipeline: that pipeline exists
-to gate notification EMAILS behind user preferences and an
-email_verified check - neither of which makes sense here. A
-verification email must always send when explicitly triggered
-(register, resend, email change), and gating it behind
-"is the email verified yet" would be circular. This module reuses that
-pipeline's PATTERN (EmailMultiAlternatives, HTML template via
-render_to_string, same base.html shell, same try/except-and-log
-resilience) without reusing its eligibility logic, which doesn't apply.
-
-Token design: only a SHA-256 hash is ever persisted (see
-EmailVerificationToken's own docstring in models.py). The raw token
-exists only long enough to build the verification URL and hand it to
-the email template - never logged, never stored in plain form.
-"""
-
 import hashlib
 import logging
 import secrets
@@ -42,16 +22,7 @@ def _hash_token(raw_token):
 
 
 def generate_verification_token(user):
-    """
-    Issues a new verification token for the user's CURRENT email,
-    invalidating any previous unused token for this user first (so
-    only the most recently issued link is ever valid - an old email
-    with a stale link can't be used alongside a newer one).
 
-    Returns the raw token (a URL-safe random string) - the only place
-    in this whole flow the raw value exists outside the recipient's
-    inbox.
-    """
     EmailVerificationToken.objects.filter(user=user, used_at__isnull=True).delete()
 
     raw_token = secrets.token_urlsafe(32)
@@ -65,13 +36,7 @@ def generate_verification_token(user):
 
 
 def send_verification_email(user, raw_token):
-    """
-    Sends the verification email to user.email (the address the token
-    was just issued for). Never raises - same resilience contract as
-    notifications/email_service.py's send_notification_email(): a
-    failed send here must not break registration or the profile-update
-    request that triggered it.
-    """
+
     verification_url = (
         f"{settings.FRONTEND_URL.rstrip('/')}/verify-email?token={raw_token}"
     )
@@ -110,9 +75,6 @@ def send_verification_email(user, raw_token):
 
 
 class VerificationError(Exception):
-    """Raised by verify_token() with a `code` VerifyEmailView maps to a
-    specific, distinct user-facing message (invalid / expired /
-    already used) rather than one generic failure."""
 
     def __init__(self, code, message):
         self.code = code
@@ -121,20 +83,7 @@ class VerificationError(Exception):
 
 
 def verify_token(raw_token):
-    """
-    Validates raw_token and marks the matching user's email verified.
 
-    Checks, in order:
-      1. A token with this hash exists at all -> INVALID otherwise.
-      2. It hasn't already been used -> ALREADY_USED otherwise.
-      3. It hasn't expired -> EXPIRED otherwise.
-      4. The email it was issued for still matches the user's CURRENT
-         email -> INVALID otherwise (the user changed their email
-         again since this link was sent; this old link can never
-         verify whatever their email is now - only a fresh one can).
-
-    Returns the Profile that was marked verified.
-    """
     token_hash = _hash_token(raw_token)
 
     try:
@@ -174,9 +123,6 @@ def verify_token(raw_token):
 
 
 def can_resend(user):
-    """Simple DB-timestamp cooldown - no cache/task-queue dependency,
-    consistent with this project's standing "no Celery/Redis" rule.
-    Returns (allowed: bool, seconds_remaining: int)."""
     latest = (
         EmailVerificationToken.objects.filter(user=user)
         .order_by("-created_at")

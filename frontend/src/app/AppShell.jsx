@@ -30,14 +30,6 @@ export default function AppShell() {
           <LuMenu size={18} />
         </button>
 
-        {/* Keyed on currency AND its resolved rate: formatCurrency's
-            active currency/rate (see utils/formatCurrency.js) isn't
-            itself reactive, so this remounts whichever page is
-            currently showing whenever either changes - when the user
-            switches currency in Settings, and also when the async
-            exchange-rate fetch resolves after initial load (the rate
-            for the current currency can change independently of the
-            currency code itself). */}
         <Outlet key={`${currency}-${rates[currency] ?? 1}`} />
       </main>
     </div>

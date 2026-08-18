@@ -7,13 +7,7 @@ from .models import Profile
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
-    """
-    Ensure every User has exactly one Profile.
 
-    Users created through registration initially receive the default
-    Student role, while Django superusers automatically receive the
-    Admin role.
-    """
     if created:
         full_name = f"{instance.first_name} {instance.last_name}".strip()
 

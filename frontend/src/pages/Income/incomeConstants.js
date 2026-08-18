@@ -16,11 +16,6 @@ export const INCOME_SOURCES = [
   "Other",
 ];
 
-// Visual metadata only (Income redesign, Aug 2026). Unlike Expenses'
-// per-category hues, every source shares the same income-subtle tint
-// here - "use the existing income/positive color token for amounts
-// AND icons" applies to every row on this page, not just the amount
-// column, so the icon varies per source but the color doesn't.
 const INCOME_BADGE = "bg-success-subtle text-success";
 
 export const INCOME_SOURCE_META = {

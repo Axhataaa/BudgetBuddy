@@ -8,18 +8,6 @@ const OPTIONS = [
   { value: "system", label: "System", icon: LuMonitor },
 ];
 
-/**
- * Applies the choice immediately (PreferencesContext.setTheme flips
- * the whole app's colors right away, no reload) and persists it via
- * onSave (Settings.jsx -> updateProfile, the same /users/me/ PATCH
- * every other section uses). If the save fails, the theme reverts so
- * the UI never claims a preference the backend didn't accept.
- *
- * Reads its current value from PreferencesContext rather than a
- * `value` prop from the profile fetch - the context already knows the
- * theme immediately (localStorage, then the backend), so this section
- * never needs to show a loading skeleton.
- */
 export default function AppearanceSection({ onSave }) {
   const { theme, setTheme } = usePreferences();
   const [saving, setSaving] = useState(false);

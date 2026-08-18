@@ -10,20 +10,12 @@ import CurrencySection from "../../components/settings/CurrencySection";
 import NotificationsSection from "../../components/settings/NotificationsSection";
 import FinancialPreferencesSection from "../../components/settings/FinancialPreferencesSection";
 import DataManagementSection from "../../components/settings/DataManagementSection";
-import AboutSection from "../../components/settings/AboutSection";
 import LogoutSection from "../../components/settings/LogoutSection";
 import DangerZoneSection from "../../components/settings/DangerZoneSection";
 
 export default function Settings() {
   const { showToast } = useToast();
 
-  // Populated by ProfileSection's onProfileLoaded/onProfileUpdated
-  // callbacks - Settings doesn't fetch the profile a second time,
-  // it just observes the same load that ProfileSection already does
-  // for itself, so there's exactly one GET /users/me/ on page load
-  // from this page (PreferencesContext independently fetches a much
-  // smaller slice - just theme/currency - once per app session, to
-  // apply them before Settings is ever visited).
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
@@ -36,9 +28,6 @@ export default function Settings() {
     setProfile(data);
   };
 
-  // Shared save path for every preference section below - one PATCH
-  // /users/me/ call, one toast, reused instead of every section
-  // duplicating its own request/error/toast handling.
   const savePreferences = async (partialPayload) => {
     try {
       const updated = await updateProfile(partialPayload);
@@ -79,16 +68,6 @@ export default function Settings() {
             <ChangePasswordSection />
           </div>
 
-          {/* Appearance/theme is now a sidebar-level quick toggle
-              (present on every authenticated page, see Sidebar.jsx),
-              persisted through the same PreferencesContext.setTheme
-              this section used to call via onSave - removed here to
-              avoid two separate theme controls in the app. The one
-              thing that control offered that the compact sidebar
-              toggle doesn't is a "System" (match OS) option; that
-              value still works fine if ever set (setTheme("system")
-              is unchanged), there's just no UI left that sets it. */}
-
           <CurrencySection onSave={savePreferences} />
 
           <NotificationsSection
@@ -110,8 +89,6 @@ export default function Settings() {
           />
 
           <DataManagementSection />
-
-          <AboutSection />
 
           <LogoutSection />
 

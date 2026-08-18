@@ -38,11 +38,6 @@ function GoalCard({
       (1000 * 60 * 60 * 24)
   );
 
-  // Same status thresholds as before - only the badge treatment
-  // changed (rounded-pill + a "-subtle" tone for every state, not
-  // just "On Track") so the indicator reads as a small, consistent
-  // status pill rather than a solid block of color, matching how
-  // priority/category badges look everywhere else in the app.
   let status = "On Track";
   let badge = "bg-success-subtle text-success";
 

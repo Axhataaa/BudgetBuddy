@@ -1,12 +1,19 @@
-// One Intl.NumberFormat per currency, built lazily and cached - avoids
-// re-constructing a formatter on every call while still supporting
-// every currency in Profile.Currency (backend users/models.py).
 const CURRENCY_LOCALES = {
   INR: "en-IN",
   USD: "en-US",
   EUR: "en-IE",
   GBP: "en-GB",
+  JPY: "ja-JP",
+  KRW: "ko-KR",
+  CNY: "zh-CN",
 };
+
+// Currencies whose standard display uses 0 decimal places (ISO 4217 minor
+// unit = 0). Everything else in CURRENCY_LOCALES uses 2. Intl.NumberFormat
+// already defaults to the correct value per currency on its own, but we
+// keep this map so exportReport.js (which can't call Intl for its raw
+// numeric CSV/Excel cells) can match the same rounding behavior.
+const ZERO_DECIMAL_CURRENCIES = new Set(["JPY", "KRW"]);
 
 const formatterCache = new Map();
 
@@ -15,27 +22,19 @@ function getFormatter(currency) {
   if (!formatterCache.has(code)) {
     formatterCache.set(
       code,
+      // No explicit minimumFractionDigits/maximumFractionDigits here:
+      // Intl.NumberFormat already applies the correct ISO 4217 minor-unit
+      // default per currency (2 for INR/USD/EUR/GBP/CNY, 0 for JPY/KRW),
+      // so we let it decide instead of hardcoding one value for all.
       new Intl.NumberFormat(CURRENCY_LOCALES[code], {
         style: "currency",
         currency: code,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
       })
     );
   }
   return formatterCache.get(code);
 }
 
-// The database always stores amounts in INR (Backend API Design Doc -
-// no currency field on Expense/Income/Budget/SavingsGoal). The user's
-// chosen display currency (Settings > Currency) is applied here as a
-// real conversion, not just a relabeled symbol: activeRate is "how
-// many units of activeCurrency one INR is worth", fetched from
-// utils/exchangeRates.js and kept in sync by PreferencesContext.
-// Defaulting to INR/rate=1 means every existing call site
-// (Dashboard, Expenses, Income, Budgets, SavingsGoals, Achievements,
-// Reports) keeps working unchanged - they still just call
-// formatCurrency(amountInINR).
 let activeCurrency = "INR";
 let activeRate = 1;
 
@@ -49,34 +48,24 @@ export function getActiveCurrency() {
   return activeCurrency;
 }
 
+// How many decimal places the given currency (defaults to the active
+// display currency) normally displays. Used by exportReport.js, which
+// rounds raw numeric CSV/Excel cells itself rather than going through
+// Intl.NumberFormat.
+export function getCurrencyDecimals(currency = activeCurrency) {
+  return ZERO_DECIMAL_CURRENCIES.has(currency) ? 0 : 2;
+}
+
 export function getActiveRate() {
   return activeRate;
 }
 
-/**
- * Converts an INR amount to the active currency, without formatting -
- * used where the raw converted number is needed (e.g. CSV export
- * columns) rather than a formatted string.
- */
 export function convertFromInr(amountInInr) {
   const value = Number(amountInInr);
   if (Number.isNaN(value)) return 0;
   return value * activeRate;
 }
 
-/**
- * Formats an INR amount in the user's active currency, converting it
- * first. Accepts number, numeric string, null, or undefined - API
- * responses send amounts as decimal strings (e.g. "1250.00"), so this
- * coerces rather than requiring every call site to remember to wrap
- * Number(...).
- *
- * `currency`/`rate` are optional explicit overrides; omit both to use
- * the user's active preference (the normal case for every existing
- * call site in the app). Passing an explicit `currency` without a
- * `rate` formats the raw amount unconverted in that currency (rarely
- * needed, kept for flexibility).
- */
 export function formatCurrency(amountInInr, currency = activeCurrency, rate) {
   const value = Number(amountInInr);
   const effectiveRate = rate ?? (currency === activeCurrency ? activeRate : 1);

@@ -23,21 +23,7 @@ function Login() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      // Routes through AuthContext (not authService directly) so
-      // isAuthenticated updates and ProtectedRoute lets us into
-      // /expenses immediately - this was the gap flagged in the
-      // architecture review: Login previously wrote tokens straight to
-      // localStorage with no shared state, so the rest of the app had
-      // no way to know a user had logged in.
       const data = await login(formData);
-
-      // Role-based routing: decode the access token directly here
-      // (same decodeToken AuthContext itself uses) rather than reading
-      // `user` from useAuth() - that context value is only guaranteed
-      // fresh on the *next* render after login()'s setAccess() call,
-      // so reading it synchronously in this same function could still
-      // see the pre-login (null) value. Decoding the just-received
-      // token directly avoids that timing gap entirely.
       const claims = decodeToken(data.access);
       navigate(claims?.is_staff || claims?.is_superuser ? "/admin" : "/dashboard");
     } catch {
@@ -48,7 +34,7 @@ function Login() {
   };
 
   return (
-    <div className="d-flex align-items-center justify-content-center" style={{ minHeight: "100vh" }}>
+    <div className="d-flex align-items-center justify-content-center auth-shell">
       <div className="bg-surface rounded shadow-token-md p-4" style={{ width: 380 }}>
         <div className="d-flex align-items-center gap-2 justify-content-center mb-4">
           <LuWallet size={24} className="text-primary" />

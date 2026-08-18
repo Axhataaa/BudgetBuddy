@@ -8,8 +8,6 @@ export default function FinancialHealth({ summary }) {
   const { score, label } = getFinancialHealth(summary);
   const [animated, setAnimated] = useState(false);
 
-  // Animate the ring in on mount / whenever the score changes, rather
-  // than snapping straight to its final position.
   useEffect(() => {
     setAnimated(false);
     const id = requestAnimationFrame(() => setAnimated(true));

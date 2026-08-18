@@ -1,11 +1,34 @@
-/**
- * Green under 70%, yellow 70-90%, red above 90% - one shared threshold
- * definition used everywhere a budget utilization percentage is shown
- * (Dashboard's Budget Progress widget, the Budgets page's cards), so
- * the two can never silently drift apart into different color rules.
- */
 export function getBudgetStatusColor(percentUsed) {
   if (percentUsed >= 90) return "var(--color-danger)";
   if (percentUsed >= 70) return "var(--color-warning)";
   return "var(--color-income)";
+}
+
+export function getBudgetChartMax(maxPercentUsed) {
+  if (!Number.isFinite(maxPercentUsed) || maxPercentUsed <= 100) return 100;
+  if (maxPercentUsed <= 125) return 125;
+  if (maxPercentUsed <= 150) return 150;
+  if (maxPercentUsed <= 175) return 175;
+  if (maxPercentUsed <= 200) return 200;
+  return Math.ceil(maxPercentUsed / 50) * 50;
+}
+
+const NICE_TICK_STEPS = [10, 20, 25, 50, 100, 200, 250, 500];
+
+export function getBudgetChartTicks(chartMax) {
+  if (!Number.isFinite(chartMax) || chartMax <= 0) return [0, 100];
+
+  const idealStep = chartMax / 4;
+  const step =
+    NICE_TICK_STEPS.find((s) => s >= idealStep) ||
+    Math.ceil(idealStep / 100) * 100;
+
+  const ticks = new Set();
+  for (let t = 0; t < chartMax; t += step) {
+    ticks.add(t);
+  }
+  ticks.add(chartMax);
+
+  if (chartMax > 100) ticks.add(100);
+  return [...ticks].sort((a, b) => a - b);
 }

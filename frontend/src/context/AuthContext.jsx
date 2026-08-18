@@ -3,10 +3,6 @@ import { loginUser, logoutUser } from "../services/authService";
 
 const AuthContext = createContext(null);
 
-// Minimal JWT payload decode - just enough to read user_id/exp. Not a
-// full verification (the backend is the source of truth for validity);
-// this only lets the UI know who's "probably" logged in before the
-// first API call confirms it.
 export function decodeToken(token) {
   try {
     const payload = token.split(".")[1];
@@ -24,9 +20,6 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  // The axios interceptor (api/axios.js) dispatches this when a refresh
-  // attempt fails - AuthContext is the single place that reacts to it,
-  // rather than every page individually checking token validity.
   useEffect(() => {
     const handleForcedLogout = () => setAccess(null);
     window.addEventListener("auth:logout", handleForcedLogout);

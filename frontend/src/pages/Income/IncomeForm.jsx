@@ -1,31 +1,46 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { INCOME_SOURCES } from "./incomeConstants";
+import { getLocalDateString } from "../../utils/localDate";
+import { useTodayLocalDate } from "../../hooks/useTodayLocalDate";
 
-const emptyForm = {
+const buildEmptyForm = () => ({
   source: INCOME_SOURCES[0],
   amount: "",
-  date: new Date().toISOString().slice(0, 10),
+  date: getLocalDateString(),
   description: "",
-};
+});
 
 export default function IncomeForm({ initialValues, onSubmit, onCancel, submitting }) {
-  const [form, setForm] = useState(initialValues || emptyForm);
+  const today = useTodayLocalDate();
+  const [form, setForm] = useState(initialValues || buildEmptyForm);
   const [errors, setErrors] = useState({});
 
+  // Tracks whether `date` is still the auto-filled "today" value (i.e. the
+  // user hasn't deliberately picked a date). Only in that case should the
+  // midnight rollover below advance the field automatically; a date the
+  // user explicitly selected must never be overwritten.
+  const isDateAutoFilled = useRef(!initialValues);
+
+  useEffect(() => {
+    if (isDateAutoFilled.current) {
+      setForm((prev) => (prev.date === today ? prev : { ...prev, date: today }));
+    }
+  }, [today]);
+
   const handleChange = (field) => (e) => {
+    if (field === "date") {
+      isDateAutoFilled.current = false;
+    }
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
-  // Same validation approach as ExpenseForm - mirrors the backend
-  // IncomeSerializer's rules for instant feedback, backend re-validates
-  // regardless (client-side is UX only, never the integrity boundary).
   const validate = () => {
     const next = {};
     if (!form.amount || Number(form.amount) <= 0) next.amount = "Amount must be greater than 0.";
     if (!form.date) next.date = "Date is required.";
-    else if (form.date > new Date().toISOString().slice(0, 10)) {
+    else if (form.date > today) {
       next.date = "Date cannot be in the future.";
     }
     setErrors(next);
@@ -67,6 +82,7 @@ export default function IncomeForm({ initialValues, onSubmit, onCancel, submitti
         label="Date"
         type="date"
         value={form.date}
+        max={today}
         onChange={handleChange("date")}
         error={errors.date}
       />

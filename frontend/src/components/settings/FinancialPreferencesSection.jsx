@@ -2,13 +2,6 @@ import { useEffect, useState } from "react";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 
-/**
- * Both fields map 1:1 to Profile.monthly_saving_target and
- * Profile.budget_warning_threshold (Backend Preferences step). The
- * threshold is the same value analytics/views.py now reads instead of
- * its old hardcoded 90 - changing it here has a real, immediate effect
- * on the Dashboard's "categories nearing limit" count.
- */
 export default function FinancialPreferencesSection({ savingTarget, warningThreshold, onSave, loading }) {
   const [draftTarget, setDraftTarget] = useState(savingTarget ?? "");
   const [draftThreshold, setDraftThreshold] = useState(warningThreshold ?? 90);

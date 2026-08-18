@@ -1,50 +1,3 @@
-"""
-Generates the "Monthly Report Ready" notification for every
-non-admin user.
-
-Mentor spec (Batch 2): "At the end of every month (or through a manual
-trigger while developing) generate: 'Your Monthly Financial Report is
-Ready.' Clicking the notification should open Reports. Avoid duplicate
-monthly notifications."
-
-Deliberately a plain Django management command, not Celery/APScheduler
-- runnable by hand right now (`python manage.py
-generate_monthly_report_notifications`) and later by cron / Windows
-Task Scheduler hitting the same command once a month, per the
-project's own "no extra scheduling dependency" constraint.
-
-Reuses, rather than duplicates:
-- notifications.notification_service.create_notification() - the
-  exact same helper every other notification in the app (income,
-  expense, budget, savings) already goes through.
-- Notification's existing dedup_key mechanism - one row per
-  (user, dedup_key) is enforced at the DB level (unique_user_dedup_key
-  constraint), so re-running this command for a month that's already
-  been notified is always a safe no-op, not a duplicate.
-- Notification.NotificationType.MONTHLY_REPORT - added in Batch B
-  (notification-system enhancement) specifically for this event; was
-  GENERAL until then (see this project's own git history / prior
-  batch reports for that earlier reasoning).
-- The existing /reports page/route - action_url points at "/reports",
-  the same page ReportSummaryView (reports/views.py) already serves,
-  rather than introducing any new report-generation or persistence
-  logic. The reports.Report model is intentionally left untouched:
-  it's currently unused elsewhere in the app (only registered in
-  admin.py), and wiring a notification command to start writing rows
-  into it would be a scope change beyond "add the two missing
-  notification types."
-
-Excludes is_staff/is_superuser accounts. Those are exactly the
-accounts RoleAwareTokenObtainPairView's own claims (users/
-token_serializer.py) and Login.jsx route to the separate Admin
-Dashboard rather than the BudgetBuddy Dashboard - they aren't
-budget-tracking users, the same distinction already applied to the
-"Users by Occupation" breakdown (analytics/views.py AdminStatsView,
-which excludes Profile.Role.ADMIN from that chart). Sending a
-"Your Monthly Financial Report is Ready" notification to an account
-that isn't using the app's financial features doesn't apply to them.
-"""
-
 from datetime import date
 
 from django.contrib.auth.models import User
@@ -60,12 +13,7 @@ MONTH_NAMES = [
 
 
 class Command(BaseCommand):
-    help = (
-        "Creates a 'Monthly Report Ready' notification for every "
-        "non-admin user (excludes is_staff/is_superuser accounts) "
-        "for the given (or previous, by default) month. Safe to "
-        "re-run - deduplicated per user per month via dedup_key."
-    )
+    help = ()
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -88,9 +36,7 @@ class Command(BaseCommand):
 
         if month is None:
             today = date.today()
-            # Previous calendar month - "the month that just finished"
-            # - so a cron job firing on the 1st of the month reports
-            # on the month that just ended, not the one just starting.
+
             if today.month == 1:
                 month, year = 12, today.year - 1
             else:
@@ -110,10 +56,6 @@ class Command(BaseCommand):
         created_count = 0
         skipped_count = 0
 
-        # is_staff/is_superuser accounts land on the separate Admin
-        # Dashboard (Login.jsx / RoleAwareTokenObtainPairView), not
-        # the BudgetBuddy Dashboard, so they never generate a
-        # financial report of their own to be notified about.
         recipients = User.objects.filter(is_staff=False, is_superuser=False)
 
         for user in recipients:
@@ -132,12 +74,7 @@ class Command(BaseCommand):
 
     @staticmethod
     def _notify(user, month, year, month_label):
-        """
-        Returns (notification, created) - `created` mirrors
-        get_or_create()'s own semantics (True only the first time this
-        user/month pair is notified), surfaced here since
-        create_notification() itself only returns the instance.
-        """
+
         dedup_key = f"monthly_report:{user.id}:{year}-{month:02d}"
 
         existing = Notification.objects.filter(

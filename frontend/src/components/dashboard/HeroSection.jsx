@@ -17,10 +17,6 @@ export default function HeroSection({ summary, periodLabel, loading }) {
   const netSavings = Number(summary.net_savings) || 0;
   const isPositive = netSavings >= 0;
 
-  // Part 2 fix: this used to read summary.current_balance, which is
-  // month-scoped (identical formula to net_savings) - picking an
-  // empty month made a user's balance look like literally zero.
-  // summary.lifetime.current_balance never resets month to month.
   const lifetimeBalance = Number(summary.lifetime?.current_balance) || 0;
 
   const hasBudgets = Number(summary.total_budget) > 0;
@@ -81,12 +77,8 @@ export default function HeroSection({ summary, periodLabel, loading }) {
             {formatCurrency(lifetimeBalance)}
           </div>
 
-          {/* Issue 3: was a prose sentence ("You're saving X this
-              period...") duplicating what the "Cash flow
-              positive/negative" chip below already signals. This
-              compact block keeps monthly performance visible right
-              under the primary (lifetime) balance without a second
-              hero or a full card - exactly the requested layout. */}
+          {}
+          
           <div className="finance-hero-monthly">
             <div className="finance-hero-monthly-label">
               This Month &middot; Net Savings ({periodLabel})

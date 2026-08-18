@@ -116,14 +116,7 @@ function AchievementCard({
 
       <div className="mt-auto pt-4">
 
-        {/* Was Bootstrap's .alert-success, whose background/text
-            colors (--bs-success-bg-subtle/--bs-success-text-emphasis)
-            are Bootstrap's own hardcoded light-mode-only defaults,
-            never remapped for this app's dark theme - a light mint
-            box regardless of page theme. .token-callout-success
-            (index.css) uses this app's own tokens instead, and is
-            more compact ("polished but not oversized" per the
-            redesign brief) than the original alert's padding. */}
+        {}
         <div className="token-callout-success d-flex align-items-center gap-2 p-3">
 
           <LuCircleCheckBig

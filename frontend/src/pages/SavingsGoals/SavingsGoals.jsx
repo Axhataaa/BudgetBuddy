@@ -27,22 +27,9 @@ function SummaryCard({
 }) {
   return (
     <div className="bg-surface rounded shadow-token-sm hover-card p-3 h-100">
-      {/* Polish: align-items-start -> align-items-center so the icon
-          centers against the label+value block as a whole, rather
-          than pinning to the top of it - the two looked visually
-          unbalanced before, especially once values of different
-          lengths (a plain count vs. a formatted currency string)
-          sit side by side across the 4 cards. gap-3 keeps a minimum
-          gap between text and icon at narrow widths instead of
-          relying solely on justify-content-between. */}
       <div className="d-flex justify-content-between align-items-center gap-3">
         <div className="min-w-0">
           <small className="text-muted-ink d-block">{title}</small>
-
-          {/* text-truncate as a safety net for longer formatted
-              currency values (e.g. "₹12,34,567.00") so a long number
-              can never wrap and throw off the card's height/alignment
-              relative to its siblings. */}
           <h3 className={`mt-1 mb-0 fw-bold text-truncate ${colorClass}`}>
             {value}
           </h3>
@@ -142,14 +129,6 @@ function SavingsGoals() {
     setShowPurchaseModal(true);
   }
 
-  // Was window.confirm() - functionally fine, but every other
-  // destructive action in the app (Notifications' Clear All, Settings
-  // Logout/Danger Zone, Achievements' own delete right below) goes
-  // through the app's own ConfirmDialog, not the browser's native
-  // dialog, so this was the one page that looked jarringly different
-  // at the exact moment a person is deciding whether to delete
-  // something. Same deleteTarget/deleting state shape Achievements.jsx
-  // already uses for its own delete confirmation.
   function handleDeleteGoal(goal) {
     setDeleteTarget(goal);
   }

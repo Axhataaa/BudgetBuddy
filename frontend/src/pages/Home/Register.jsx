@@ -6,10 +6,6 @@ import Button from "../../components/ui/Button";
 import { registerUser } from "../../services/authService";
 import { useToast } from "../../components/ui/Toast";
 
-// Mirrors backend Profile.Role exactly - "premium"/"admin" are
-// deliberately absent: Premium is becoming a separate subscription
-// concept (not a role), and Admin is granted via Django's own
-// is_staff/is_superuser, never self-selected at registration.
 const ROLE_OPTIONS = [
   { value: "student", label: "Student" },
   { value: "working_professional", label: "Working Professional" },
@@ -42,9 +38,6 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Same client-side confirm-match check as Change Password - the
-    // backend re-validates this regardless (RegisterSerializer.validate),
-    // this just avoids a round trip for the most common mistake.
     if (formData.password !== formData.confirm_password) {
       setErrors({ confirm_password: "Passwords do not match." });
       return;
@@ -68,7 +61,7 @@ function Register() {
   };
 
   return (
-    <div className="d-flex align-items-center justify-content-center py-5" style={{ minHeight: "100vh" }}>
+    <div className="d-flex align-items-center justify-content-center py-5 auth-shell">
       <div className="bg-surface rounded shadow-token-md p-4" style={{ width: 460 }}>
         <div className="d-flex align-items-center gap-2 justify-content-center mb-4">
           <LuWallet size={24} className="text-primary" />

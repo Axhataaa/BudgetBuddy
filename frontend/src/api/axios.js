@@ -7,7 +7,7 @@ const api = axios.create({
   },
 });
 
-// --- Request interceptor: attach the access token to every request ---
+// Request interceptor: attach the access token to every request 
 api.interceptors.request.use((config) => {
   const access = localStorage.getItem("access");
   if (access) {
@@ -16,11 +16,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// --- Response interceptor: on a 401, try refreshing once, then retry ---
-// the original request. If refresh also fails, clear tokens and let the
-// caller (AuthContext) redirect to /login - this file has no knowledge
-// of routing, it only owns the HTTP/token mechanics per Backend API
-// Design Doc §9.
 let refreshPromise = null;
 
 api.interceptors.response.use(
@@ -41,9 +36,7 @@ api.interceptors.response.use(
     originalRequest._retried = true;
 
     try {
-      // Multiple simultaneous 401s should trigger exactly one refresh
-      // call, not one per failed request - refreshPromise is shared and
-      // cleared once it settles.
+
       if (!refreshPromise) {
         refreshPromise = axios
           .post("http://127.0.0.1:8000/api/v1/users/refresh/", { refresh })
@@ -54,8 +47,7 @@ api.interceptors.response.use(
       const { data } = await refreshPromise;
       localStorage.setItem("access", data.access);
       if (data.refresh) {
-        // Present when ROTATE_REFRESH_TOKENS is enabled (it is - see
-        // Backend API Design Doc §9's resolved decision).
+
         localStorage.setItem("refresh", data.refresh);
       }
       originalRequest.headers.Authorization = `Bearer ${data.access}`;

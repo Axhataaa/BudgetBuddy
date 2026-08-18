@@ -2,7 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from common.formatting import format_inr
+from common.formatting import format_currency_for_user
 from notifications.notification_service import create_notification
 from notifications.models import Notification
 
@@ -207,9 +207,6 @@ class SavingsGoalSerializer(serializers.ModelSerializer):
                 }
             )
 
-        # Only enforced on creation - editing an existing goal whose
-        # target_date has since passed (a goal the user is still
-        # actively funding) shouldn't be blocked from being saved.
         if self.instance is None and target_date < timezone.localdate():
             raise serializers.ValidationError(
                 {
@@ -308,47 +305,34 @@ class SavingsTransactionSerializer(
         goal.save()
 
         if is_deposit:
-            # Task: "Deposit Added" was never surfaced as a
-            # notification - only the separate "goal completed"
-            # transition below was. dedup_key includes this specific
-            # transaction's id so every deposit gets its own
-            # notification (unlike budget alerts, which intentionally
-            # dedupe across many expenses) while still being safe
-            # against an accidental duplicate create_notification()
-            # call for the same transaction.
+
             create_notification(
                 user=goal.user,
                 title="Deposit Added",
                 priority=Notification.Priority.LOW,
                 message=(
-                    f'You added ₹{format_inr(amount)} to "{goal.goal_name}". '
-                    f"Current balance: ₹{format_inr(goal.current_amount)}."
+                    f'You added {format_currency_for_user(goal.user, amount)} to "{goal.goal_name}". '
+                    f"Current balance: {format_currency_for_user(goal.user, goal.current_amount)}."
                 ),
                 notification_type=Notification.NotificationType.SAVINGS_GOAL,
                 action_url="/savings-goals",
                 dedup_key=f"savings_goal:{goal.id}:deposit:{transaction_obj.id}",
             )
         else:
-            # "Withdrawal Made" - same reasoning/dedup pattern as the
-            # deposit notification above, just for the opposite
-            # transaction type.
+
             create_notification(
                 user=goal.user,
                 title="Withdrawal Made",
                 priority=Notification.Priority.LOW,
                 message=(
-                    f'You withdrew ₹{format_inr(amount)} from "{goal.goal_name}". '
-                    f"Current balance: ₹{format_inr(goal.current_amount)}."
+                    f'You withdrew {format_currency_for_user(goal.user, amount)} from "{goal.goal_name}". '
+                    f"Current balance: {format_currency_for_user(goal.user, goal.current_amount)}."
                 ),
                 notification_type=Notification.NotificationType.SAVINGS_GOAL,
                 action_url="/savings-goals",
                 dedup_key=f"savings_goal:{goal.id}:withdrawal:{transaction_obj.id}",
             )
 
-        # Task 3: goal.save() (SavingsGoal.save(), budgets/models.py)
-        # recomputes is_completed from current_amount/target_amount -
-        # only notify on the transition into completed, not on every
-        # later deposit into an already-completed goal.
         if goal.is_completed and not was_completed:
             create_notification(
                 user=goal.user,
@@ -356,7 +340,7 @@ class SavingsTransactionSerializer(
                 priority=Notification.Priority.MEDIUM,
                 message=(
                     f'Your savings goal "{goal.goal_name}" has reached its '
-                    f"target of ₹{format_inr(goal.target_amount)}! "
+                    f"target of {format_currency_for_user(goal.user, goal.target_amount)}! "
                     f"You can now mark it as purchased."
                 ),
                 notification_type=Notification.NotificationType.SAVINGS_GOAL,
@@ -405,10 +389,6 @@ class BudgetSummarySerializer(serializers.Serializer):
         allow_null=True,
     )
 
-    # Task 1: explicit alert_level (null / warning / high_warning /
-    # budget_exceeded) alongside the existing free-text `alert`
-    # message - added as a new field, not a replacement, so existing
-    # consumers reading `alert`/`is_overspent` are unaffected.
     alert_level = serializers.CharField(
         allow_null=True,
     )

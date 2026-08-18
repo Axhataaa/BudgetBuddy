@@ -13,6 +13,7 @@ import TrendChart from "../../components/reports/TrendChart";
 import ExpensePieChart from "../../components/dashboard/ExpensePieChart";
 import BudgetPerformance from "../../components/reports/BudgetPerformance";
 import FinancialInsights from "../../components/reports/FinancialInsights";
+import AIFinancialAnalysis from "../../components/reports/AIFinancialAnalysis";
 
 const DEFAULT_PERIOD = "this_month";
 
@@ -22,6 +23,49 @@ function periodLabelFor(period, from, to) {
   return `${new Date(from).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} – ${new Date(
     to
   ).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`;
+}
+
+function parseISODateLocal(isoDate) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function dayKey(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function monthKey(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+}
+
+function fillTrendGaps(trend, dateFrom, dateTo, granularity) {
+  if (!dateFrom || !dateTo) return trend || [];
+
+  const from = parseISODateLocal(dateFrom);
+  const to = parseISODateLocal(dateTo);
+  const periods = [];
+
+  if (granularity === "month") {
+    const cursor = new Date(from.getFullYear(), from.getMonth(), 1);
+    const end = new Date(to.getFullYear(), to.getMonth(), 1);
+    while (cursor <= end) {
+      periods.push(monthKey(cursor));
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+  } else {
+    const cursor = new Date(from);
+    while (cursor <= to) {
+      periods.push(dayKey(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+
+  const byPeriod = new Map((trend || []).map((point) => [point.period, point]));
+  return periods.map((period) => byPeriod.get(period) || { period, income: 0, expenses: 0 });
 }
 
 export default function Reports() {
@@ -37,13 +81,7 @@ export default function Reports() {
 
   useEffect(() => {
     if (!customFrom || !customTo) return;
-    // Bug 4: without this guard, an in-flight request from a previous
-    // date_from/date_to (or a duplicate fire, e.g. React 18 StrictMode
-    // in dev) can resolve AFTER a newer one and overwrite fresh trend
-    // data with stale data - the graph would then "not reflect" a
-    // just-added transaction even though the latest request's data
-    // was correct. `ignore` makes sure only the most recent request
-    // for the currently-selected range is ever applied to state.
+
     let ignore = false;
     const fetchReport = async () => {
       setLoading(true);
@@ -60,12 +98,15 @@ export default function Reports() {
     return () => {
       ignore = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [customFrom, customTo]);
 
   const label = periodLabelFor(period, customFrom, customTo);
   const hasAnyActivity =
     report && (Number(report.summary.total_income) > 0 || Number(report.summary.total_expenses) > 0);
+  const filledTrend = report
+    ? fillTrendGaps(report.trend, report.date_from, report.date_to, report.trend_granularity)
+    : [];
 
   const handleExportCsv = () => {
     if (!report) return;
@@ -87,10 +128,6 @@ export default function Reports() {
 
   return (
     <div>
-      {/* Header - same bg-surface card + tinted icon container
-          structure as Expenses/Income/Notifications/Budgets. Title
-          text and the dynamic period label (still the page's own
-          subtitle) are unchanged in substance from before this pass. */}
       <div className="bg-surface rounded shadow-token-sm p-4 mb-3 d-flex justify-content-between align-items-start flex-wrap gap-3">
         <div className="d-flex align-items-center gap-3">
           <span className="page-header-icon icon-report">
@@ -139,7 +176,7 @@ export default function Reports() {
             <p className="text-muted-ink small mb-2">
               {report?.trend_granularity === "month" ? "Monthly totals" : "Daily totals"} for this period
             </p>
-            <TrendChart trend={report?.trend} granularity={report?.trend_granularity} />
+            <TrendChart trend={filledTrend} granularity={report?.trend_granularity} />
           </div>
 
           <div className="row g-3 mb-3">
@@ -181,11 +218,18 @@ export default function Reports() {
             <BudgetPerformance budgetPerformance={report?.budget_performance} loading={loading} />
           </div>
 
-          <div className="bg-surface rounded shadow-token-sm hover-card p-3">
+          <div className="bg-surface rounded shadow-token-sm hover-card p-3 mb-3">
             <h2 className="font-display fs-6 fw-semibold mb-1">Financial Insights</h2>
             <p className="text-muted-ink small mb-3">Based on activity in this date range</p>
             <FinancialInsights insights={report?.insights} loading={loading} />
           </div>
+
+          <AIFinancialAnalysis
+            dateFrom={customFrom}
+            dateTo={customTo}
+            periodLabel={label}
+            canAnalyze={!loading && hasAnyActivity}
+          />
         </>
       )}
     </div>

@@ -5,6 +5,7 @@ import { useToast } from "../../components/ui/Toast";
 import Modal from "../../components/ui/Modal";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
+import { getLocalDateString } from "../../utils/localDate";
 
 function PurchaseCompletedModal({
   show,
@@ -19,19 +20,11 @@ function PurchaseCompletedModal({
 
   useEffect(() => {
     if (show) {
-      setPurchaseDate(
-        new Date().toISOString().split("T")[0]
-      );
+      setPurchaseDate(getLocalDateString());
       setPurchaseNote("");
     }
   }, [show]);
 
-  // Note: this guard stays here (rather than folding into Modal's own
-  // `open` check) because the form below reads goal.goal_name - that
-  // JSX is evaluated by this component before Modal ever gets to
-  // decide whether to render it, so `goal` must be confirmed non-null
-  // first regardless of what `show` is. Kept after the useEffect
-  // above, same as before, since hooks can't follow an early return.
   if (!goal) {
     return null;
   }
@@ -51,13 +44,6 @@ function PurchaseCompletedModal({
     } catch (error) {
       console.error(error);
 
-      // Bug fix: alert() replaced with the app's toast system for
-      // consistency with every other modal - the extraction here was
-      // already correct as-is: complete-purchase's business-logic
-      // errors (budgets/views.py) return a raw {"error": "message"}
-      // Response() directly rather than raising a ValidationError, so
-      // they bypass the wrapped {error:{message,details}} shape the
-      // other savings modals need to account for.
       showToast(
         error.response?.data?.error ||
         "Failed to complete purchase.",

@@ -13,20 +13,6 @@ const INCLUDED_ITEMS = [
   "Notifications",
 ];
 
-/**
- * "Export My Data" downloads a complete ZIP archive (Excel workbook +
- * per-category JSON files + README) built server-side by
- * users/data_export_service.py via services/dataExportService.js -
- * every record the user owns, not date-filtered like the Reports page
- * export. See dataExportService.js for why this is a separate
- * function from the Reports export functions rather than a reuse of
- * them.
- *
- * Import is intentionally NOT implemented: there is no bulk-create
- * backend endpoint to accept it, and building one wasn't part of the
- * agreed backend work for this phase. Showing a working button for it
- * would be dishonest, so it's disabled with an explanation instead.
- */
 export default function DataManagementSection() {
   const { showToast } = useToast();
   const [exporting, setExporting] = useState(false);

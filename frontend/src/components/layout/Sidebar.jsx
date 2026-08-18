@@ -18,12 +18,16 @@ import {
 import ConfirmDialog from "../ui/ConfirmDialog";
 import { usePreferences } from "../../hooks/usePreferences";
 import { useAuth } from "../../hooks/useAuth";
+import { useNotifications } from "../../hooks/useNotifications";
 
 export default function Sidebar({ open = false, onClose }) {
   const { resolvedTheme, setTheme } = usePreferences();
   const { logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  const unreadBadgeLabel = unreadCount > 19 ? "19+" : String(unreadCount);
 
   const navClass = ({ isActive }) =>
     `d-flex align-items-center gap-2 px-3 py-2 rounded text-decoration-none ${
@@ -32,10 +36,6 @@ export default function Sidebar({ open = false, onClose }) {
         : "text-muted-ink"
     }`;
 
-  // Same useAuth().logout() Settings > Log Out already uses (token
-  // clearing + the auth state flip that ProtectedRoute reacts to by
-  // redirecting to "/") - not a second logout implementation, just a
-  // second place to trigger the one that already exists.
   const handleLogoutConfirm = async () => {
     setLoggingOut(true);
     try {
@@ -50,28 +50,27 @@ export default function Sidebar({ open = false, onClose }) {
     <aside
       className={`app-sidebar d-flex flex-column bg-surface border-end p-3 ${open ? "open" : ""}`}
       style={{
-        width: 220,
+        width: 240,
         minHeight: "100vh",
       }}
     >
-      {/* ================= Logo ================= */}
 
-      <div className="d-flex align-items-center justify-content-between gap-2 mb-4 px-2">
+      <div className="d-flex align-items-center gap-2 mb-4">
 
-        <div className="d-flex align-items-center gap-2">
+        <div className="d-flex align-items-center gap-2 flex-shrink-0">
           <LuWallet
             size={22}
-            className="text-primary"
+            className="text-primary flex-shrink-0"
           />
 
-          <span className="font-display fw-semibold fs-5">
+          <span className="font-display fw-semibold fs-5 text-nowrap">
             BudgetBuddy
           </span>
         </div>
 
         <button
           type="button"
-          className="btn btn-sm btn-link text-muted-ink d-lg-none p-1"
+          className="sidebar-close-btn d-lg-none ms-auto"
           onClick={onClose}
           aria-label="Close menu"
         >
@@ -154,6 +153,14 @@ export default function Sidebar({ open = false, onClose }) {
         >
           <LuBellRing size={18} />
           Notifications
+          {unreadCount > 0 && (
+            <span
+              className="sidebar-notification-badge ms-auto"
+              aria-label={`${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`}
+            >
+              {unreadBadgeLabel}
+            </span>
+          )}
         </NavLink>
 
         <NavLink
@@ -167,18 +174,8 @@ export default function Sidebar({ open = false, onClose }) {
 
       </nav>
 
-      {/* ================= Utility (theme + logout) =================
-          Visually separated from navigation (border-top + its own
-          top margin/padding) per the redesign - a quick theme toggle
-          and Logout, always reachable without opening Settings.
-          Theme: the exact same usePreferences().setTheme every other
-          theme control in the app already uses (Landing Page's own
-          toggle, previously Settings > Appearance) - just a compact
-          light/dark segment here rather than the 3-way Light/Dark/
-          System picker, since a bottom-of-sidebar quick toggle isn't
-          the place for the System option; System is still reachable
-          by anyone who wants it since setTheme("system") still works
-          exactly as before, there's just no control left that sets it. */}
+      {}
+
       <div className="pt-3 mt-2 border-top d-flex flex-column gap-2">
         <div
           className="sidebar-theme-toggle"

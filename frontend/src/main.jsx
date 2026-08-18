@@ -5,17 +5,20 @@ import App from './App.jsx'
 import ErrorBoundary from './components/ui/ErrorBoundary.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { PreferencesProvider } from './context/PreferencesContext.jsx'
+import { NotificationsProvider } from './context/NotificationsContext.jsx'
 import { ToastProvider } from './components/ui/Toast.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
       <AuthProvider>
-        <PreferencesProvider>
-          <ToastProvider>
-            <App />
-          </ToastProvider>
-        </PreferencesProvider>
+        <NotificationsProvider>
+          <PreferencesProvider>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </PreferencesProvider>
+        </NotificationsProvider>
       </AuthProvider>
     </ErrorBoundary>
   </StrictMode>,

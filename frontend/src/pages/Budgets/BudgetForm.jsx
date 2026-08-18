@@ -1,11 +1,7 @@
 import { useState } from "react";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
-// Reusing the Expenses module's category list rather than duplicating
-// it - Budget.category is a free-text field at the DB level, but the
-// Dashboard's budget_utilization join only works if a budget's category
-// string exactly matches an expense's category string, so the frontend
-// constrains input to the same set rather than letting them drift apart.
+
 import { EXPENSE_CATEGORIES } from "../Expenses/expenseConstants";
 import { MONTH_NAMES } from "../../components/ui/PeriodSelector";
 

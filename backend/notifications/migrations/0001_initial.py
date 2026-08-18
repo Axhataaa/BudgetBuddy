@@ -4,30 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    """
-    Part of moving Notification out of the reports app (see
-    reports/migrations/0004_delete_notification_state_only.py) into
-    this new notifications app.
-
-    SeparateDatabaseAndState with database_operations=[] means this
-    only updates Django's migration STATE - it does NOT create a new
-    database table. The table already exists physically (as
-    reports_notification, with all pre-existing notification data
-    intact) from when it was created by reports' own migration
-    history; this migration just tells Django "notifications now owns
-    this model going forward". The field list below is an exact match
-    of Notification's schema as of reports/migrations/0003 (title,
-    message, notification_type, action_url, dedup_key, is_read,
-    created_at, user, plus the unique constraint) - deliberately not
-    including `priority`, which is a genuinely new field added by
-    0003_notification_priority.py as a real AddField, since it did not
-    exist on the table this migration is taking over.
-
-    0002_alter_notification_table.py (next) is the migration that
-    actually renames the physical table to notifications_notification
-    - a real, safe, atomic ALTER TABLE RENAME that preserves every
-    existing row, index, and constraint.
-    """
 
     initial = True
 
@@ -98,19 +74,6 @@ class Migration(migrations.Migration):
                     ],
                     options={
                         "ordering": ["-created_at"],
-                        # Critical: this MUST match the table's actual
-                        # current physical name (still reports_notification
-                        # at this point - it hasn't been renamed yet).
-                        # Without this, Django's migration state would
-                        # default to assuming the table is already named
-                        # "notifications_notification" (app_label +
-                        # model name) from this migration onward, which
-                        # would make 0002_alter_notification_table.py's
-                        # rename a silent no-op (Django would see
-                        # from-state == to-state and skip the real SQL
-                        # entirely) - confirmed by actually running this
-                        # migration sequence against a populated database
-                        # before shipping it, not assumed.
                         "db_table": "reports_notification",
                     },
                 ),

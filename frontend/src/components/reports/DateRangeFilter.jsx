@@ -1,9 +1,5 @@
 import { getReportDateRangeForPeriod } from "../../utils/dateRanges";
 
-// Same presets Expenses/Income already use, minus "All Time" - Reports
-// always needs a concrete date_from/date_to (the backend's
-// ReportQuerySerializer requires both), so "All Time" isn't a valid
-// option here the way it is on the transaction list pages.
 const REPORT_PERIODS = [
   { value: "today", label: "Today" },
   { value: "last7", label: "Week" },

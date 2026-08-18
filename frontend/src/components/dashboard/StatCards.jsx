@@ -107,11 +107,7 @@ export default function StatCards({ summary, loading, hasBudgetData, budgetRemai
           amount={`${Number(summary.savings_rate).toFixed(1)}%`}
           isCurrency={false}
           subtitle={
-            // Bug fix: net_savings >= 0 is also true when income AND
-            // expenses are both zero (0 >= 0), so a month with no
-            // income at all still showed "You're in the green" next
-            // to a 0% rate - misleading, since there's nothing to
-            // calculate a rate from yet.
+
             Number(summary.total_income) === 0
               ? "No income recorded this month."
               : Number(summary.net_savings) >= 0

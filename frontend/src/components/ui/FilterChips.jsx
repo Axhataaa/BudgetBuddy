@@ -1,9 +1,5 @@
 import { LuX } from "react-icons/lu";
 
-/**
- * chips: [{ key, label, onRemove }]
- * Renders nothing if chips is empty - callers don't need to conditionally wrap it.
- */
 export default function FilterChips({ chips }) {
   if (!chips || chips.length === 0) return null;
 

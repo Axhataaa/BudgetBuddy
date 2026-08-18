@@ -60,16 +60,6 @@ function TransactionRow({ transaction }) {
   );
 }
 
-/**
- * Shows the first VISIBLE_COUNT transactions plainly; anything beyond
- * that renders inside a grid-template-rows collapsible wrapper (0fr
- * -> 1fr), which animates smoothly to/from its real content height
- * without measuring it in JS - unlike animating max-height to a fixed
- * guess, this works correctly regardless of how many extra rows there
- * are. Only mounted at all when there's actually an overflow beyond
- * VISIBLE_COUNT, so a goal with 4 or fewer activities looks exactly
- * as before (no link, no wrapper).
- */
 function TransactionHistory({
   transactions = [],
 }) {
@@ -90,11 +80,6 @@ function TransactionHistory({
   return (
     <div className="mt-3">
 
-      {/* Small uppercase label (same convention Notifications' day
-          groups and Settings' "Email categories" use for a section
-          label that belongs to the card it's in, rather than an h6
-          that reads as its own separate block) - "integrated instead
-          of a separate block" per the redesign brief. */}
       <div className="text-muted-ink small fw-semibold text-uppercase mb-2" style={{ letterSpacing: "0.04em" }}>
         Recent Activity
       </div>

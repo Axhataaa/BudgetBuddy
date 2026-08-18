@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
-import { formatCurrency, convertFromInr, getActiveCurrency } from "./formatCurrency";
+import { formatCurrency, convertFromInr, getActiveCurrency, getCurrencyDecimals } from "./formatCurrency";
 import { NOTO_SANS_REGULAR_BASE64 } from "../assets/fonts/notoSansPdfFont";
 import { NOTO_SANS_BOLD_BASE64 } from "../assets/fonts/notoSansPdfFontBold";
 
@@ -9,26 +9,6 @@ const PDF_FONT_NAME = "NotoSansPdf";
 const PDF_FONT_FILE = "NotoSans-Regular.ttf";
 const PDF_FONT_FILE_BOLD = "NotoSans-Bold.ttf";
 
-/**
- * Registers both weights of the embedded Noto Sans subset (see
- * assets/fonts/notoSansPdfFont.js and notoSansPdfFontBold.js for the
- * full "why" and provenance) on a fresh jsPDF document, and switches
- * to the regular weight as the default font, so every doc.text()/
- * autoTable() call in exportReportPdf() below renders through a font
- * that actually contains a ₹ glyph - the real fix, not the earlier
- * "Rs." text-substitution fallback.
- *
- * Registering the bold weight matters even though header labels
- * ("Value", "Total", "Amount", ...) never contain a ₹ themselves:
- * jspdf-autotable's default table theme requests fontStyle "bold" for
- * header rows, and without a "bold" style registered under this same
- * font name, jsPDF can't resolve PDF_FONT_NAME+"bold" and silently
- * falls back to a different font for every header cell - inconsistent
- * rendering and a console warning, even if not a currency-glyph bug
- * per se. Registering it here means every autoTable call below can
- * safely set both `styles.font` and `headStyles.font` to PDF_FONT_NAME
- * and have both weights actually resolve.
- */
 function registerPdfFont(doc) {
   doc.addFileToVFS(PDF_FONT_FILE, NOTO_SANS_REGULAR_BASE64);
   doc.addFont(PDF_FONT_FILE, PDF_FONT_NAME, "normal");
@@ -37,15 +17,6 @@ function registerPdfFont(doc) {
   doc.setFont(PDF_FONT_NAME, "normal");
 }
 
-/**
- * PDF currency formatter - now renders the real ₹ symbol via the
- * embedded font above, with the same Indian digit grouping
- * (1,52,000.00) formatCurrency() already produces everywhere else in
- * the app. Kept as its own function (rather than inlining
- * formatCurrency() calls) since PDF cells need a plain string built
- * the same way every other export format already builds one, and to
- * keep a single place documenting why this needed a fix at all.
- */
 function formatCurrencyForPdf(amountInInr) {
   return formatCurrency(amountInInr);
 }
@@ -74,22 +45,16 @@ function csvSection(title, rows) {
   return lines.join("\n") + "\n\n";
 }
 
-// Rounds a converted amount to 2 decimal places as a plain number (not
-// a formatted currency string) - CSV columns should stay numeric so
-// spreadsheet apps can sum/chart them directly.
 function money(amountInInr) {
-  return Math.round(convertFromInr(amountInInr) * 100) / 100;
+  // Round to the active display currency's normal decimal precision
+  // (0 for JPY/KRW, 2 for everything else) instead of always rounding
+  // to 2 decimals, so CSV/Excel numeric cells match what the UI and
+  // PDF export show for the same currency.
+  const decimals = getCurrencyDecimals();
+  const factor = decimals === 0 ? 1 : 100;
+  return Math.round(convertFromInr(amountInInr) * factor) / factor;
 }
 
-/**
- * Exports the exact data currently shown on the Reports page - same
- * payload from getReportSummary(), no separate aggregation logic and
- * no backend involvement (client-side export, per the agreed plan).
- * The backend always returns amounts in INR; every monetary column
- * here is converted to the user's active display currency (the same
- * conversion formatCurrency() applies on-screen) so the export isn't
- * silently in a different currency than what the page shows.
- */
 export function exportReportCsv(report, periodLabel) {
   const { summary, trend, expense_by_category, income_by_source, budget_performance, transactions } = report;
   const currency = getActiveCurrency();
@@ -148,15 +113,6 @@ export function exportReportCsv(report, periodLabel) {
   downloadBlob(`budgetbuddy-report-${report.date_from}-to-${report.date_to}.csv`, csv, "text/csv;charset=utf-8;");
 }
 
-/**
- * Milestone 3 audit gap: the app previously only had CSV export,
- * which is Excel-*openable* but not an actual Excel *file* (no real
- * sheets, no cell types, no formatting). This builds a genuine
- * multi-sheet .xlsx workbook - one sheet per report section, mirroring
- * the CSV export's sections exactly - using the same row-shaping and
- * the same money()/currency-label conventions already established
- * there, rather than a second, divergent data-formatting path.
- */
 export function exportReportExcel(report, periodLabel) {
   const { summary, trend, expense_by_category, income_by_source, budget_performance, transactions } = report;
   const currency = getActiveCurrency();
@@ -232,16 +188,6 @@ export function exportReportPdf(report, periodLabel) {
   const currency = getActiveCurrency();
   registerPdfFont(doc);
 
-  // Header: "BUDGETBUDDY" wordmark + "Personal Financial Report"
-  // subtitle, then the reporting period called out on its own line -
-  // matches the doc's requested header exactly, replacing the
-  // previous single-line "BudgetBuddy Report | <period> | ..." combo.
-  // The "BUDGETBUDDY" wordmark stays on jsPDF's default bold font
-  // (only the embedded Noto Sans subset above has a bold weight
-  // missing, and this line never contains a ₹ symbol, so there's
-  // nothing here that needs the custom font); everything from
-  // "Personal Financial Report" onward switches to it, since amounts
-  // do appear from that point on.
   doc.setFontSize(18);
   doc.setTextColor(48, 59, 142);
   doc.setFont(undefined, "bold");
@@ -276,11 +222,6 @@ export function exportReportPdf(report, periodLabel) {
 
   let nextY = doc.lastAutoTable.finalY + 10;
 
-  // A fresh page-break check before each optional section - autoTable
-  // already paginates its own rows, but the section heading drawn with
-  // doc.text() just above each table does not, so without this a
-  // heading can be stranded alone at the bottom of a page with its
-  // table pushed onto the next one.
   const ensureSpace = (neededHeight) => {
     const pageHeight = doc.internal.pageSize.getHeight();
     if (nextY + neededHeight > pageHeight - 20) {
@@ -379,10 +320,6 @@ export function exportReportPdf(report, periodLabel) {
     });
   }
 
-  // Footer on every page: "Generated by BudgetBuddy" on the left,
-  // "Page X of Y" on the right - added last, after every section/table
-  // above is drawn, since only at this point does jsPDF know the final
-  // total page count for the whole document.
   const pageCount = doc.internal.getNumberOfPages();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();

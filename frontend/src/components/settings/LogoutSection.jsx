@@ -4,13 +4,6 @@ import Button from "../ui/Button";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import { useAuth } from "../../hooks/useAuth";
 
-/**
- * Was previously a plain link in the sidebar footer - moved here per
- * the Settings redesign, now with a confirmation step (a destructive,
- * one-click sidebar link becoming a full-page button warrants one).
- * Reuses the existing useAuth().logout - same token clearing and
- * redirect behavior as before, not a reimplementation.
- */
 export default function LogoutSection() {
   const { logout } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);

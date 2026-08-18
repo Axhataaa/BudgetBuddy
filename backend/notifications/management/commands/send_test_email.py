@@ -1,19 +1,3 @@
-"""
-Sends one real test email using the currently configured EMAIL_*
-settings (settings.py / .env), independent of the notification system
-itself - a direct way to verify SMTP delivery (Brevo, Gmail, or any
-other provider) actually works before relying on it for real
-notifications.
-
-Reuses the same base.html template shell every notification email
-uses (via the generic admin.html child template), so a successful test
-also confirms the HTML template renders correctly, not just that SMTP
-credentials are valid.
-
-Usage:
-    python manage.py send_test_email you@example.com
-"""
-
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.core.management.base import BaseCommand, CommandError
@@ -23,10 +7,7 @@ CONSOLE_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 
 class Command(BaseCommand):
-    help = (
-        "Sends a real test email to verify EMAIL_* configuration "
-        "(Brevo, Gmail, or any SMTP provider) end-to-end."
-    )
+    help = ()
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -39,13 +20,7 @@ class Command(BaseCommand):
 
         if settings.EMAIL_BACKEND == CONSOLE_BACKEND:
             self.stdout.write(
-                self.style.WARNING(
-                    "EMAIL_BACKEND is still the console backend - this "
-                    "will print the email below instead of actually "
-                    "sending it. Uncomment and fill in the Brevo or "
-                    "Gmail block in your .env (see 'Email Configuration') "
-                    "to send a real message."
-                )
+                self.style.WARNING()
             )
 
         context = {

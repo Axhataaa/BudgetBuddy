@@ -10,12 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    # Deliberately NOT Profile.Role.choices - Admin is a valid backend
-    # role (Django Admin/staff accounts) but must never be self-selected
-    # at registration. Restricting the choices here is the actual
-    # enforcement boundary; the frontend simply not rendering an Admin
-    # option in the dropdown is not enough on its own, since someone
-    # could still POST role="admin" directly to this endpoint.
+
     REGISTRATION_ROLE_CHOICES = [
         choice for choice in Profile.Role.choices if choice[0] != Profile.Role.ADMIN
     ]
@@ -41,9 +36,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         ]
 
     def validate_password(self, value):
-        # Wasn't enforced before - registration accepted any password,
-        # including trivially weak ones, while ChangePasswordSerializer
-        # already used Django's real validators. Aligning the two here.
+
         validate_password(value)
         return value
 
@@ -63,20 +56,11 @@ class RegisterSerializer(serializers.ModelSerializer):
             first_name=validated_data.get("first_name", ""),
             last_name=validated_data.get("last_name", ""),
         )
-        # The post_save signal (signals.py) already created a Profile
-        # with the default role by this point - updated here with the
-        # registration-time choices the signal has no way to know about,
-        # rather than duplicating profile-creation logic in two places.
+
         user.profile.role = profile_data.get("role", Profile.Role.STUDENT)
         user.profile.phone_number = profile_data.get("phone_number", "")
         user.profile.save(update_fields=["role", "phone_number"])
 
-        # email_verified defaults to False (models.py) - send the
-        # first verification email now so the user has a link waiting
-        # as soon as they check their inbox. Wrapped in try/except as
-        # defense in depth on top of send_verification_email()'s own
-        # internal handling - registration succeeding must never
-        # depend on the verification email actually going out.
         try:
             raw_token = generate_verification_token(user)
             send_verification_email(user, raw_token)
@@ -90,12 +74,6 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    """
-    Flattens User + Profile into one response, per API Design Doc §3's
-    planned /users/me/ endpoint. role/date_joined are deliberately
-    read-only. username and email are editable but sourced from the
-    related User, so `update()` below handles them specially.
-    """
 
     username = serializers.CharField(source="user.username")
     email = serializers.EmailField(source="user.email")
@@ -109,6 +87,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             "email",
             "full_name",
             "phone_number",
+            "date_of_birth",
             "bio",
             "role",
             "profile_picture",
@@ -144,10 +123,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         return value
 
     def validate_profile_picture(self, value):
-        # Enforced here per API Design Doc §18 - was documented but not
-        # yet implemented until this module. `value` is None when the
-        # client is clearing the picture (allow_null=True above) - skip
-        # the size/type checks in that case, there's nothing to check.
+
         if value is None:
             return value
         if value.size > 2 * 1024 * 1024:
@@ -159,11 +135,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         return value
 
     def update(self, instance, validated_data):
-        # `username`/`email` are the only writable fields sourced from
-        # the related User (dotted source), so DRF nests both under
-        # validated_data["user"] - everything else in validated_data
-        # belongs to Profile directly and is handled by the normal
-        # ModelSerializer update path via super().
+
         user_data = validated_data.pop("user", None)
         if user_data:
             update_fields = []
@@ -177,14 +149,6 @@ class ProfileSerializer(serializers.ModelSerializer):
             if update_fields:
                 instance.user.save(update_fields=update_fields)
 
-            # A changed email is unverified until proven otherwise -
-            # the person typing a new address into this form hasn't
-            # demonstrated they can receive mail there yet. Reset the
-            # flag and send a fresh verification link to the NEW
-            # address immediately, same as at registration. Wrapped in
-            # try/except for the same reason as RegisterSerializer:
-            # saving the profile update must never depend on the
-            # verification email actually going out.
             if email_changed:
                 instance.email_verified = False
                 instance.save(update_fields=["email_verified"])
@@ -227,20 +191,12 @@ class ChangePasswordSerializer(serializers.Serializer):
         return value
 
     def validate_new_password(self, value):
-        # Reuses Django's own password validators (length, common
-        # password, numeric-only checks, etc.) rather than inventing a
-        # separate password-strength policy for this one endpoint.
+
         validate_password(value)
         return value
 
 
 class DeleteAccountSerializer(serializers.Serializer):
-    """
-    Requires EITHER the account password OR the literal text "DELETE"
-    (case-sensitive), matching the two confirmation methods the
-    Settings > Danger Zone UI offers. Whichever is provided is
-    validated; at least one is required.
-    """
 
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
     confirmation_text = serializers.CharField(write_only=True, required=False, allow_blank=True)

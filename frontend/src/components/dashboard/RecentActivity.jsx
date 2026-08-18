@@ -23,9 +23,6 @@ function TransactionSkeleton() {
   );
 }
 
-// Groups the already-fetched activity list by its existing created_at
-// field ("Today" / "Yesterday" / "N days ago" / date) - purely a
-// presentation grouping, no new data.
 function groupByDay(recent) {
   const groups = [];
   let currentLabel = null;

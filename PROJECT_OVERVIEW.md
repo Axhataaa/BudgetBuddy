@@ -15,9 +15,11 @@ The application enables users to manage their personal finances through a secure
 - Track income and expenses
 - Manage category-wise monthly budgets, with automatic threshold alerts
 - Set and fund savings goals, and review completed goals as achievements
-- View a month/year-navigable dashboard summary
+- View a month/year-navigable dashboard summary, including a 6-month income vs. expenses trend chart
 - Generate date-range reports with trend charts, category/source breakdowns, and budget performance, and export them as CSV, Excel, or PDF
-- Receive in-app notifications for budget alerts and savings-goal events
+- Request an opt-in, Gemini-backed AI Financial Analysis of that same report data, on demand
+- Receive in-app notifications for budget alerts, savings-goal events, achievements, and monthly reports, with opt-in email delivery for a subset of these
+- Verify their email address on registration or after changing it, via a single-use expiring link
 - Manage their profile, theme (light/dark), display currency, and export a personal data backup
 
 The application follows a RESTful architecture: **Django REST Framework** for the backend, **React (Vite)** for the frontend, communicating exclusively over JSON APIs secured with JWT.
@@ -51,6 +53,10 @@ Individuals who want to track and organize their personal finances — students,
 
 Registration, login, JWT access/refresh, server-side logout (token blacklisting), password change. See [README.md § Authentication & Security](README.md#-authentication--security).
 
+### Email Verification
+
+Single-use, expiring (24h), SHA-256-hashed tokens issued on registration and on email change; resend with a 60-second cooldown; distinct invalid/expired/already-used error handling. Gates notification emails until verified. See [README.md § Email Verification](README.md#-email-verification).
+
 ### User Profile & Settings
 
 Profile picture, username/email/full name/phone/bio, password change, appearance (light/dark theme), display currency, and a personal data export.
@@ -73,15 +79,19 @@ Deposit/withdrawal transactions against a target amount; a completed, archived g
 
 ### Dashboard
 
-Month/year-navigable financial overview: total income, total expenses, net savings, budget progress, category spending, recent transactions.
+Month/year-navigable financial overview: total income, total expenses, net savings, budget progress, category spending, recent transactions, and a 6-month income vs. expenses trend chart built from the same reports API used by the Reports page.
 
 ### Reports & Analytics
 
 Date-range-driven (Today/Week/Month/Year/Custom Range) summary, income vs. expense trend, category/source breakdowns, budget performance, and derived insights — all from one backend endpoint, exported client-side as CSV, Excel, or PDF from that same data.
 
+### AI Financial Analysis
+
+An opt-in, on-demand feature on the Reports page: the user requests a Gemini-generated, plain-language read of their own report data for the selected range (observations, patterns, risks, recommendations, savings strategy). Nothing runs automatically or in the background, no figures are invented beyond what's in the underlying report snapshot, and the feature degrades to a graceful "unavailable" message if no API key is configured. See [README.md § AI Financial Analysis](README.md#-ai-financial-analysis).
+
 ### Notifications
 
-In-app notification center covering three types (`budget_alert`, `savings_goal`, `general`), priority levels, and deduplication. Two management commands generate periodic notifications (monthly report ready, savings reminders) — run manually or via an external scheduler; **no email delivery is implemented**.
+In-app notification center covering 11 types (3 legacy values kept for backward compatibility, plus 8 current types such as `budget_warning`, `budget_exceeded`, `achievement`, and `monthly_report`), priority levels, and deduplication. Entity-linked notifications (expense/income/budget/savings-goal added or edited) are kept in sync in place via `sync_entity_notification()` rather than duplicated on every edit, and a sidebar unread-count badge reflects the current total. Two management commands generate periodic notifications (monthly report ready, savings reminders) — run manually or via an external scheduler. A subset of high-signal events (budget warning/exceeded, savings goal completed, achievements, monthly report) also send email via Gmail SMTP, gated behind email verification and per-category user preferences.
 
 ### Admin Dashboard
 
@@ -99,6 +109,7 @@ See **[README.md § Tech Stack](README.md#-tech-stack)** for the full, version-a
 
 **Backend:** Python, Django, Django REST Framework, Simple JWT, PostgreSQL, Pillow
 **Frontend:** React, Vite, Bootstrap, Axios, React Router, Recharts, jsPDF, SheetJS (xlsx)
+**External services:** Google Gemini (AI Financial Analysis), Gmail SMTP (email)
 **Tools:** Git, GitHub, VS Code, Postman, pgAdmin 4
 
 ---
@@ -114,6 +125,7 @@ incomes          → Income CRUD
 budgets          → Budget, SavingsGoal, SavingsTransaction + alert logic
 analytics        → Dashboard summary, recent activity, admin stats
 reports          → Date-range report aggregation
+ai_analysis      → AI Financial Analyst (Gemini snapshot + single endpoint)
 notifications    → Notification model, service, management commands
 common           → Shared formatting helpers (e.g. INR formatting)
 dashboard        → Registered but currently unused (no models/views/urls)

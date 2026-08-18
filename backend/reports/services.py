@@ -1,24 +1,3 @@
-"""
-Aggregation logic for the Reports page.
-
-Deliberately NOT calling analytics.services.get_dashboard_summary() -
-that function is unused, all-time (no date filtering) dead code; the
-actual Dashboard endpoint (analytics/views.py DashboardSummaryView)
-builds its own month/year-filtered queries inline instead. Reports
-needs arbitrary date_from/date_to ranges (not just calendar months),
-so this module follows the SAME aggregation patterns as that view
-(Sum(), Decimal handling, category grouping, savings-rate formula)
-rather than reusing a function that doesn't do what's needed here.
-
-Report period consistency fix: get_report_data() now also returns a
-"transactions" list (one row per Expense/Income in range, with
-Date/Type/Category/Description/Amount) built from the exact same
-expense_qs/income_qs already used for every other section below - so
-CSV/Excel/PDF exports (utils/exportReport.js on the frontend) have a
-real line-item source to export, filtered by the identical date range
-as everything else on the Reports page, with no separate query.
-"""
-
 from decimal import Decimal
 from collections import defaultdict
 
@@ -34,9 +13,7 @@ def _money(value):
 
 
 def _date_range_months(date_from, date_to):
-    """Every (month, year) pair a date range touches, even partially -
-    used to find which monthly Budgets are relevant to the range,
-    since Budget is keyed by month/year rather than a date field."""
+
     months = set()
     cursor = date_from.replace(day=1)
     while cursor <= date_to:
@@ -67,15 +44,6 @@ def get_report_data(user, date_from, date_to):
         else 0.0
     )
 
-    # ---------------- Trend (income vs expense over time) ----------------
-    # Daily buckets for ranges up to ~45 days (readable on a chart);
-    # monthly buckets for anything longer, same threshold used below
-    # to decide how "best saving period" is labeled.
-    #
-    # Bucketed in Python rather than via TruncDate/TruncMonth - `date`
-    # is already a plain DateField (not a datetime), and this keeps
-    # the aggregation portable across DB backends without relying on
-    # each backend's date-truncation SQL functions.
     span_days = (date_to - date_from).days + 1
     monthly_buckets = span_days > 45
 
@@ -123,12 +91,6 @@ def get_report_data(user, date_from, date_to):
         for row in source_rows
     ]
 
-    # ---------------- Budget performance ----------------
-    # Budgets are keyed by (category, month, year), not a date field,
-    # so "budget performance for this range" = every budget whose
-    # month falls inside the range, compared against actual spend in
-    # that category during the range (not the whole month) - the
-    # honest comparison for an arbitrary date window.
     relevant_months = _date_range_months(date_from, date_to)
     budget_qs = Budget.objects.filter(user=user)
     budget_qs = [
@@ -159,8 +121,6 @@ def get_report_data(user, date_from, date_to):
         )
     budget_performance.sort(key=lambda b: b["percent_used"], reverse=True)
 
-    # ---------------- Insights (derived only from the above - no
-    # invented numbers) ----------------
     highest_category = expense_by_category[0] if expense_by_category else None
 
     largest_expense_row = expense_qs.order_by("-amount").first()
@@ -186,15 +146,6 @@ def get_report_data(user, date_from, date_to):
             "granularity": "month" if monthly_buckets else "day",
         }
 
-    # ---------------- Transaction rows (Date/Type/Category/
-    # Description/Amount) ----------------
-    # Built from the exact same expense_qs/income_qs used for every
-    # aggregate above - not a second query with its own date filter -
-    # so the line-item rows exported to CSV/Excel/PDF can never drift
-    # from what the charts/summary above were computed from. This is
-    # also why the transactions are computed here in the shared
-    # service rather than in the export endpoint/frontend: one
-    # (date_from, date_to) filter, reused for everything.
     transactions = [
         {
             "date": row["date"].isoformat(),

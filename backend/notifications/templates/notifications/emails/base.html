@@ -1,18 +1,3 @@
-{% comment %}
-Shared shell for every BudgetBuddy notification email. Child templates
-(budget_warning.html, budget_exceeded.html, savings_goal_completed.html,
-achievement.html, monthly_report.html, admin.html) extend this and only
-fill in {% block content %} plus the two small override blocks below -
-the logo, header, footer, and outer card chrome live here exactly once.
-
-Table-based layout and fully inline styles throughout (not a linked or
-<style>-block stylesheet) because major email clients (Outlook desktop
-in particular) strip <style> blocks and don't support CSS custom
-properties - so unlike the rest of this app, this file can't reuse
-index.css's --color-* variables directly. The literal hex values below
-are copied from those same tokens (index.css :root) so the email still
-matches the app's actual palette, just without the indirection.
-{% endcomment %}
 <!DOCTYPE html>
 <html lang="en">
 <head>

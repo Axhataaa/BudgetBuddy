@@ -1,44 +1,3 @@
-"""
-Settings -> "Export My Data": a complete, portable copy of everything
-a user owns in BudgetBuddy - NOT the same feature as the Reports page
-export (reports/services.py + utils/exportReport.js on the frontend),
-which is a formatted financial report for a chosen date range. This
-module has no date filtering at all - it always exports everything.
-
-Security (see build_user_data_export()'s own docstring for the
-per-field reasoning): every queryset here is filtered by
-`user=<the authenticated user>`, and every serializer used is one
-that's already used elsewhere in the API for that same user's own
-data - none of them expose password hashes, JWT tokens, or any
-other-user data, because none of them ever have.
-
-Structure produced (matches the Settings feature spec exactly):
-
-    BudgetBuddy_Data_Export_YYYY-MM-DD.zip
-    |-- BudgetBuddy_Data.xlsx      (one sheet per category)
-    |-- JSON/
-    |   |-- profile.json
-    |   |-- income.json
-    |   |-- expenses.json
-    |   |-- budgets.json
-    |   |-- savings_goals.json
-    |   |-- achievements.json
-    |   |-- savings_transactions.json
-    |   `-- notifications.json
-    `-- README.txt
-
-Performance (Section 14 of the spec): this runs synchronously inside
-the request/response cycle today, same as every other view in this
-project (no Celery/Redis here, matching the project's own standing
-"no task queue" constraint). It's still structured so a background-job
-migration is straightforward later: build_user_data_export(user) takes
-only a user and returns plain bytes - no request/response object
-anywhere inside it - so wrapping it in a task later
-("write these bytes to storage, email a download link") wouldn't
-require changing this function at all, only how its return value is
-delivered.
-"""
-
 import io
 import json
 import zipfile
@@ -62,9 +21,7 @@ HEADER_FONT = Font(bold=True)
 
 
 def _autosize_columns(sheet, rows, headers):
-    """Rough column-width heuristic (openpyxl doesn't auto-size) -
-    widest of the header or any cell in that column, capped so one
-    long description field can't blow out the whole sheet."""
+
     widths = [len(str(h)) for h in headers]
     for row in rows:
         for i, value in enumerate(row):
@@ -87,10 +44,9 @@ def _build_excel_workbook(
     profile_data, income_qs, expense_qs, budget_qs, goals_qs, achievements_qs, savings_transaction_qs, notification_qs
 ):
     workbook = Workbook()
-    workbook.remove(workbook.active)  # drop the default blank "Sheet"
+    workbook.remove(workbook.active)  
 
-    # --- Profile: key/value rows rather than a header row - it's one
-    # record, not a table. ---
+    # --- Profile ---
     profile_sheet = workbook.create_sheet(title="Profile")
     profile_sheet.append(["Field", "Value"])
     for cell in profile_sheet[1]:

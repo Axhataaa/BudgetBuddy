@@ -2,35 +2,16 @@ import { useState } from "react";
 import Button from "../ui/Button";
 import { usePreferences } from "../../hooks/usePreferences";
 
-// Mirrors backend Profile.Currency choices exactly.
 const CURRENCY_OPTIONS = [
   { value: "INR", label: "Indian Rupee (₹)" },
   { value: "USD", label: "US Dollar ($)" },
   { value: "EUR", label: "Euro (€)" },
   { value: "GBP", label: "British Pound (£)" },
+  { value: "JPY", label: "Japanese Yen (¥)" },
+  { value: "KRW", label: "South Korean Won (₩)" },
+  { value: "CNY", label: "Chinese Yuan (¥)" },
 ];
 
-/**
- * Reads/writes the currency through PreferencesContext, which is what
- * actually makes formatCurrency() convert and render every amount in
- * the app in this currency (see utils/formatCurrency.js,
- * utils/exchangeRates.js, and AppShell.jsx for how that takes effect
- * immediately, not just on the next page load). Persists the choice
- * the same way every other section does, via onSave -> updateProfile;
- * reverts on failure.
- *
- * Renders the <select> directly rather than through the shared Input
- * component: Input's wrapper hardcodes a hierarchy-relative "mb-3
- * ${className}" class string, and since Bootstrap's .mb-3 and .mb-0
- * utility classes have equal CSS specificity, which one wins is
- * decided by their order in Bootstrap's compiled stylesheet (not the
- * order they're listed in the class attribute) - .mb-3 is declared
- * later there, so it silently won over an .mb-0 override passed via
- * `className`, leaving an extra ~1rem of bottom margin under the
- * select that the adjacent Button didn't have, throwing off their
- * alignment. Rendering the control directly here avoids relying on
- * overriding that margin at all.
- */
 export default function CurrencySection({ onSave }) {
   const { currency, setCurrency } = usePreferences();
   const [draft, setDraft] = useState(currency);

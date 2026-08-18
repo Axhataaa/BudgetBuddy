@@ -7,13 +7,6 @@ from .services import get_report_data
 
 
 class ReportSummaryView(APIView):
-    """
-    GET /api/v1/reports/summary/?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD
-
-    Single aggregate endpoint for the whole Reports page - same
-    "one call, one payload" pattern already used by the dashboard's
-    /dashboard/summary/, rather than one round trip per chart.
-    """
 
     permission_classes = [IsAuthenticated]
 

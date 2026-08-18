@@ -1,36 +1,49 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { EXPENSE_CATEGORIES, PAYMENT_METHODS } from "./expenseConstants";
+import { getLocalDateString } from "../../utils/localDate";
+import { useTodayLocalDate } from "../../hooks/useTodayLocalDate";
 
-const emptyForm = {
+const buildEmptyForm = () => ({
   title: "",
   amount: "",
   category: EXPENSE_CATEGORIES[0],
   payment_method: "UPI",
-  date: new Date().toISOString().slice(0, 10),
+  date: getLocalDateString(),
   description: "",
-};
+});
 
 export default function ExpenseForm({ initialValues, onSubmit, onCancel, submitting }) {
-  const [form, setForm] = useState(initialValues || emptyForm);
+  const today = useTodayLocalDate();
+  const [form, setForm] = useState(initialValues || buildEmptyForm);
   const [errors, setErrors] = useState({});
 
+  // Tracks whether `date` is still the auto-filled "today" value (i.e. the
+  // user hasn't deliberately picked a date). Only in that case should the
+  // midnight rollover below advance the field automatically; a date the
+  // user explicitly selected must never be overwritten.
+  const isDateAutoFilled = useRef(!initialValues);
+
+  useEffect(() => {
+    if (isDateAutoFilled.current) {
+      setForm((prev) => (prev.date === today ? prev : { ...prev, date: today }));
+    }
+  }, [today]);
+
   const handleChange = (field) => (e) => {
+    if (field === "date") {
+      isDateAutoFilled.current = false;
+    }
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
-  // Client-side validation mirrors the backend's serializer rules
-  // (Backend API Design Doc §19) so the user sees the error instantly
-  // instead of waiting on a round trip - but the backend re-validates
-  // regardless, since client-side checks are a UX convenience, never
-  // the actual security/integrity boundary (that's server-side, always).
   const validate = () => {
     const next = {};
     if (!form.title.trim()) next.title = "Title is required.";
     if (!form.amount || Number(form.amount) <= 0) next.amount = "Amount must be greater than 0.";
     if (!form.date) next.date = "Date is required.";
-    else if (form.date > new Date().toISOString().slice(0, 10)) {
+    else if (form.date > today) {
       next.date = "Date cannot be in the future.";
     }
     setErrors(next);
@@ -64,6 +77,7 @@ export default function ExpenseForm({ initialValues, onSubmit, onCancel, submitt
             label="Date"
             type="date"
             value={form.date}
+            max={today}
             onChange={handleChange("date")}
             error={errors.date}
           />

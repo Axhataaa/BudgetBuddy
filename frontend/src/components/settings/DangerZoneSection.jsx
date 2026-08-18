@@ -9,20 +9,7 @@ import { deleteAccount } from "../../services/profileService";
 const METHOD_PASSWORD = "password";
 const METHOD_TEXT = "text";
 
-/**
- * Reuses ConfirmDialog (same modal style as Logout, and now portaled
- * to document.body - see components/ui/ConfirmDialog.jsx - so it
- * can't flicker regardless of any hover-transform on this card, the
- * exact bug that affected Logout) via its `children` slot, rather
- * than building a separate confirmation UI for this one action.
- *
- * On success, clears tokens and hard-redirects rather than going
- * through AuthContext's normal logout() (which makes a network call
- * to blacklist the refresh token) - the account and its user row are
- * already gone at that point, so a full reload is the safest way to
- * guarantee every piece of in-memory state (auth, preferences, cached
- * profile data) is wiped cleanly after an irreversible action.
- */
+
 export default function DangerZoneSection() {
   const { showToast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
