@@ -49,13 +49,7 @@ FALLBACK_RATES_FROM_INR = {
 
 
 def convert_from_inr(amount_inr, currency_code):
-    """
-    Convert an INR-denominated amount into the given currency as a plain
-    rounded Decimal (no symbol/grouping), using the same static
-    FALLBACK_RATES_FROM_INR table as format_currency() above. Intended for
-    callers that need the numeric value itself (e.g. building a structured
-    payload for the AI Financial Analyst) rather than display text.
-    """
+
     code = currency_code if currency_code in CURRENCY_SYMBOLS else "INR"
     rate = FALLBACK_RATES_FROM_INR.get(code, Decimal("1"))
     value = Decimal(str(amount_inr)) * rate
@@ -66,15 +60,7 @@ def convert_from_inr(amount_inr, currency_code):
 
 
 def format_currency(amount_inr, currency_code):
-    """
-    Format an INR-denominated amount for display in the given currency,
-    for use in backend-generated notification/alert text.
 
-    INR is handled via the existing format_inr() so INR-currency output
-    is byte-for-byte unchanged from before this function existed. Other
-    currencies are converted using the static approximate rate table
-    above and grouped with standard (Western) thousands separators.
-    """
     code = currency_code if currency_code in CURRENCY_SYMBOLS else "INR"
 
     if code == "INR":
@@ -97,11 +83,7 @@ def format_currency(amount_inr, currency_code):
 
 
 def format_currency_for_user(user, amount_inr):
-    """
-    Convenience wrapper: format amount_inr using the given user's
-    Profile.currency (defaulting to INR if the user has no profile or
-    no currency set, matching Profile.Currency's own model default).
-    """
+
     profile = getattr(user, "profile", None)
     currency_code = getattr(profile, "currency", None) or "INR"
     return format_currency(amount_inr, currency_code)

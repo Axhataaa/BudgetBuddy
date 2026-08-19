@@ -89,7 +89,7 @@ class UserListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
     def get_queryset(self):
-        return User.objects.select_related("profile").all()
+        return User.objects.select_related("profile").order_by("id")
 
 
 class VerifyEmailView(APIView):

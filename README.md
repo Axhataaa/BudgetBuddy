@@ -590,12 +590,6 @@ _(Explicitly planned, not implemented.)_
 
 The `Screenshots/` directory contains images from early **Milestone 1** setup and API testing (Django welcome page, Postman requests for the auth endpoints, the initial React + Vite scaffold, `makemigrations`/`migrate` output). **They do not reflect the current UI** — no Dashboard, Reports, Landing Page, or other current-feature screenshots exist in this repository at this time.
 
-<!-- Screenshot: Dashboard (light theme) -->
-<!-- Screenshot: Reports page with export controls -->
-<!-- Screenshot: Landing Page -->
-
----
-
 ## 📚 Documentation Index
 
 | Document                                               | Purpose                                             |
