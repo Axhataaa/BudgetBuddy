@@ -189,9 +189,19 @@ EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+# Applies to the SMTP backend natively, and is reused as the default
+# request timeout by ResendEmailBackend below. Without this, a blocked
+# or slow SMTP/HTTP connection can hang indefinitely and take down a
+# Gunicorn worker instead of failing fast.
+EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", default=10, cast=int)
 DEFAULT_FROM_EMAIL = config(
     "DEFAULT_FROM_EMAIL", default="BudgetBuddy <no-reply@budgetbuddy.app>"
 )
+
+# Used only by users.email_backends.ResendEmailBackend (the HTTPS email
+# transport for production). Not required for the default SMTP or
+# console backends used locally, so local .env needs no changes.
+RESEND_API_KEY = config("RESEND_API_KEY", default="")
 
 GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
 GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.6-flash")
