@@ -132,6 +132,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 
 # Media files (user uploads, e.g. Profile.profile_picture)
 MEDIA_URL = "media/"
