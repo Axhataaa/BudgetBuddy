@@ -43,6 +43,10 @@
   --bs-body-font-family: var(--font-sans);
 }
 
+html {
+  font-size: 90%;
+}
+
 body {
   background-color: var(--color-bg);
   color: var(--color-ink);
@@ -866,7 +870,7 @@ img {
 }
 
 html, body, #root {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .goals-grid {
@@ -923,7 +927,7 @@ html, body, #root {
 
 
 .landing-page {
-  overflow-x: hidden;
+  overflow-x: clip;
   position: relative;
   background:
     radial-gradient(ellipse 55% 40% at 12% 0%, rgba(48, 59, 142, 0.035), transparent 60%),
@@ -1844,3 +1848,4 @@ html, body, #root {
     height: 180px;
   }
 }
+
