@@ -22,7 +22,7 @@ FRONTEND_URL = config(
 )
 
 CSRF_TRUSTED_ORIGINS = [
-    FRONTEND_URL,
+    "https://budget-buddy-beta-sand.vercel.app",
 ]
 
 # Application definition
@@ -172,7 +172,7 @@ SIMPLE_JWT = {
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
-    FRONTEND_URL,
+    "https://budget-buddy-beta-sand.vercel.app",
     "http://localhost:5173",
 ]
 
