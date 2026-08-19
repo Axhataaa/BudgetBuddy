@@ -61,14 +61,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.profile.phone_number = profile_data.get("phone_number", "")
         user.profile.save(update_fields=["role", "phone_number"])
 
-        try:
-            raw_token = generate_verification_token(user)
-            send_verification_email(user, raw_token)
-        except Exception:
-            logger.exception(
-                "Failed to issue/send verification email at registration (user_id=%s)",
-                user.id,
-            )
+        # Verification email is intentionally NOT sent here. Verification is
+        # now user-initiated from Settings/Profile via
+        # ResendVerificationEmailView (POST /api/users/resend-verification/),
+        # which reuses generate_verification_token / send_verification_email.
 
         return user
 
