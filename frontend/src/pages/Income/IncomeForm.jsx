@@ -58,6 +58,7 @@ export default function IncomeForm({ initialValues, onSubmit, onCancel, submitti
       <div className="row">
         <div className="col-6">
           <Input
+            id="income-source"
             label="Source"
             as="select"
             value={form.source}
@@ -67,6 +68,7 @@ export default function IncomeForm({ initialValues, onSubmit, onCancel, submitti
         </div>
         <div className="col-6">
           <Input
+            id="income-amount"
             label="Amount"
             type="number"
             step="0.01"
@@ -79,6 +81,7 @@ export default function IncomeForm({ initialValues, onSubmit, onCancel, submitti
       </div>
 
       <Input
+        id="income-date"
         label="Date"
         type="date"
         value={form.date}
@@ -88,6 +91,7 @@ export default function IncomeForm({ initialValues, onSubmit, onCancel, submitti
       />
 
       <Input
+        id="income-description"
         label="Description (optional)"
         as="textarea"
         value={form.description}

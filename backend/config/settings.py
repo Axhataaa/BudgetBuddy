@@ -11,7 +11,19 @@ SECRET_KEY = config("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", cast=bool)
 
-ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",")
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default="localhost,127.0.0.1"
+).split(",")
+
+FRONTEND_URL = config(
+    "FRONTEND_URL",
+    default="http://localhost:5173"
+)
+
+CSRF_TRUSTED_ORIGINS = [
+    FRONTEND_URL,
+]
 
 # Application definition
 
@@ -148,8 +160,6 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "config.exceptions.custom_exception_handler",
 }
 
-from datetime import timedelta
-
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
@@ -160,6 +170,7 @@ SIMPLE_JWT = {
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
+    FRONTEND_URL,
     "http://localhost:5173",
 ]
 
@@ -177,10 +188,5 @@ DEFAULT_FROM_EMAIL = config(
     "DEFAULT_FROM_EMAIL", default="BudgetBuddy <no-reply@budgetbuddy.app>"
 )
 
-FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
-
-# AI Financial Analyst (Google Gemini). The key must live only in the
-# backend environment - never in frontend code, never committed. See
-# ai_analysis/gemini_client.py for how this is used.
 GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
 GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.6-flash")

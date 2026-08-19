@@ -40,6 +40,7 @@ export default function BudgetForm({ initialValues, onSubmit, onCancel, submitti
   return (
     <form onSubmit={handleSubmit}>
       <Input
+        id="budget-category"
         label="Category"
         as="select"
         value={form.category}
@@ -48,6 +49,7 @@ export default function BudgetForm({ initialValues, onSubmit, onCancel, submitti
       />
 
       <Input
+        id="budget-monthly-limit"
         label="Monthly Limit"
         type="number"
         step="0.01"
@@ -60,6 +62,7 @@ export default function BudgetForm({ initialValues, onSubmit, onCancel, submitti
       <div className="row">
         <div className="col-6">
           <Input
+            id="budget-month"
             label="Month"
             as="select"
             value={form.month}
@@ -68,7 +71,7 @@ export default function BudgetForm({ initialValues, onSubmit, onCancel, submitti
           />
         </div>
         <div className="col-6">
-          <Input label="Year" type="number" value={form.year} onChange={handleChange("year")} />
+          <Input id="budget-year" label="Year" type="number" value={form.year} onChange={handleChange("year")} />
         </div>
       </div>
 

@@ -19,13 +19,18 @@ export default function Input({
 
   const isToggleablePassword = showPasswordToggle && type === "password";
   const resolvedType = isToggleablePassword ? (visible ? "text" : "password") : type;
+  const fieldId = props.id || props.name;
 
   return (
     <div className={`mb-3 ${className}`}>
-      {label && <label className="form-label fw-medium">{label}</label>}
+      {label && (
+        <label className="form-label fw-medium" htmlFor={fieldId}>
+          {label}
+        </label>
+      )}
 
       {as === "select" ? (
-        <select className={`form-select ${error ? "is-invalid" : ""}`} {...props}>
+        <select id={fieldId} className={`form-select ${error ? "is-invalid" : ""}`} {...props}>
           {options?.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -33,10 +38,10 @@ export default function Input({
           ))}
         </select>
       ) : as === "textarea" ? (
-        <textarea className={`form-control ${error ? "is-invalid" : ""}`} rows={3} {...props} />
+        <textarea id={fieldId} className={`form-control ${error ? "is-invalid" : ""}`} rows={3} {...props} />
       ) : isToggleablePassword ? (
         <div className="position-relative">
-          <input type={resolvedType} className={fieldClasses} {...props} />
+          <input id={fieldId} type={resolvedType} className={fieldClasses} {...props} />
           <button
             type="button"
             onClick={() => setVisible((v) => !v)}
@@ -48,7 +53,7 @@ export default function Input({
           </button>
         </div>
       ) : (
-        <input type={type} className={fieldClasses} {...props} />
+        <input id={fieldId} type={type} className={fieldClasses} {...props} />
       )}
 
       {error && <div className="invalid-feedback d-block">{error}</div>}

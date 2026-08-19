@@ -58,11 +58,12 @@ export default function ExpenseForm({ initialValues, onSubmit, onCancel, submitt
 
   return (
     <form onSubmit={handleSubmit}>
-      <Input label="Title" value={form.title} onChange={handleChange("title")} error={errors.title} />
+      <Input id="expense-title" label="Title" value={form.title} onChange={handleChange("title")} error={errors.title} />
 
       <div className="row">
         <div className="col-6">
           <Input
+            id="expense-amount"
             label="Amount"
             type="number"
             step="0.01"
@@ -74,6 +75,7 @@ export default function ExpenseForm({ initialValues, onSubmit, onCancel, submitt
         </div>
         <div className="col-6">
           <Input
+            id="expense-date"
             label="Date"
             type="date"
             value={form.date}
@@ -87,6 +89,7 @@ export default function ExpenseForm({ initialValues, onSubmit, onCancel, submitt
       <div className="row">
         <div className="col-6">
           <Input
+            id="expense-category"
             label="Category"
             as="select"
             value={form.category}
@@ -96,6 +99,7 @@ export default function ExpenseForm({ initialValues, onSubmit, onCancel, submitt
         </div>
         <div className="col-6">
           <Input
+            id="expense-payment-method"
             label="Payment Method"
             as="select"
             value={form.payment_method}
@@ -106,6 +110,7 @@ export default function ExpenseForm({ initialValues, onSubmit, onCancel, submitt
       </div>
 
       <Input
+        id="expense-description"
         label="Description (optional)"
         as="textarea"
         value={form.description}
