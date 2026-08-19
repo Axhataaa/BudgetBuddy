@@ -22,7 +22,9 @@ FRONTEND_URL = config(
 )
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://budget-buddy-beta-sand.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://budget-buddy-ivory-mu.vercel.app",
 ]
 
 # Application definition
@@ -172,8 +174,9 @@ SIMPLE_JWT = {
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
-    "https://budget-buddy-beta-sand.vercel.app",
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://budget-buddy-ivory-mu.vercel.app",
 ]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
