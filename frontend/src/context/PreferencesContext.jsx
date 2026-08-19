@@ -24,16 +24,12 @@ function applyThemeToDocument(theme) {
 export function PreferencesProvider({ children }) {
   const { isAuthenticated } = useAuth();
 
-  const [theme, setThemeState] = useState(() => localStorage.getItem(THEME_STORAGE_KEY) || "system");
+  const [theme, setThemeState] = useState(() => localStorage.getItem(THEME_STORAGE_KEY) || "light");
   const [currency, setCurrencyState] = useState(() => localStorage.getItem(CURRENCY_STORAGE_KEY) || "INR");
   const [resolvedTheme, setResolvedTheme] = useState(() => applyThemeToDocument(theme));
   const [rates, setRates] = useState(() => getCachedRatesSync());
   const [ratesLoading, setRatesLoading] = useState(true);
 
-  // Guards against overlapping fetches (e.g. the auto-refresh interval and a
-  // tab-reactivation refresh landing at nearly the same moment) and against
-  // setting state after unmount. A single source of truth for "is a rate
-  // fetch currently in flight" - never more than one live refresh at once.
   const fetchInFlight = useRef(false);
   const mountedRef = useRef(true);
 
@@ -50,11 +46,7 @@ export function PreferencesProvider({ children }) {
     return () => mq.removeEventListener("change", handler);
   }, [theme]);
 
-  // Live-first rate refresh: fetches fresh rates from both live sources
-  // every time it's called (see exchangeRates.js - the 12h cache there is
-  // read only if a live source fails, never used to skip a live request).
-  // Called on mount, on a periodic interval, and when the tab becomes
-  // visible again after being backgrounded.
+
   const refreshRates = useCallback(async () => {
     if (fetchInFlight.current) return;
     fetchInFlight.current = true;
@@ -90,11 +82,6 @@ export function PreferencesProvider({ children }) {
   }, [refreshRates]);
 
   useEffect(() => {
-    // Every supported currency is guaranteed a real, validated, positive
-    // rate by exchangeRates.js (live > secondary live > cache > static
-    // fallback - never silently 1). FALLBACK_RATES[currency] here is only
-    // reached if `currency` itself isn't one of the seven supported codes,
-    // which setCurrency never allows via the UI.
     const rate = rates[currency] ?? FALLBACK_RATES[currency];
     setActiveCurrency(currency, rate);
     localStorage.setItem(CURRENCY_STORAGE_KEY, currency);
