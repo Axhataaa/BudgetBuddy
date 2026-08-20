@@ -347,12 +347,12 @@ export default function ProfileSection({ onProfileLoaded, onProfileUpdated }) {
                   error={formErrors.email}
                 />
                 {profile?.email_verified ? (
-                  <div className="d-flex align-items-center gap-1 text-income small mt-1">
+                  <div className="d-flex align-items-center gap-1 text-income small mt-n2 mb-3">
                     <LuCircleCheck size={14} />
                     <span>Verified</span>
                   </div>
                 ) : (
-                  <div className="d-flex align-items-center flex-wrap gap-2 mt-1">
+                  <div className="d-flex align-items-center flex-wrap gap-2 mt-n2 mb-3">
                     <span className="d-flex align-items-center gap-1 text-warning small">
                       <LuTriangleAlert size={14} />
                       Email not verified

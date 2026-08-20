@@ -1,34 +1,31 @@
-const SECTIONS = [
-  { id: "profile", label: "Profile" },
-  { id: "change-password", label: "Change Password" },
-  { id: "currency", label: "Currency" },
+const CATEGORIES = [
+  { id: "profile-security", label: "Profile & Security" },
+  { id: "currency-financial", label: "Currency & Financial Preferences" },
   { id: "notifications", label: "Notifications" },
-  { id: "financial-preferences", label: "Financial Preferences" },
   { id: "data-management", label: "Data Management" },
-  { id: "logout", label: "Log Out" },
-  { id: "danger-zone", label: "Danger Zone" },
+  { id: "account-actions", label: "Account Actions" },
 ];
 
-function scrollToSection(id) {
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-export default function SettingsNav() {
+export default function SettingsNav({ active, onSelect }) {
   return (
-    <nav className="d-none d-lg-block" style={{ position: "sticky", top: 90 }}>
-      <div className="bg-surface rounded shadow-token-sm p-2">
-        {SECTIONS.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className={`btn btn-sm btn-link text-decoration-none d-block w-100 text-start px-3 py-2 ${
-              s.id === "logout" || s.id === "danger-zone" ? "text-danger" : "text-ink"
-            }`}
-            onClick={() => scrollToSection(s.id)}
-          >
-            {s.label}
-          </button>
-        ))}
+    <nav>
+      <div className="bg-surface rounded shadow-token-sm p-2 d-flex flex-wrap gap-2">
+        {CATEGORIES.map((c) => {
+          const isActive = c.id === active;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              className={`btn btn-sm text-decoration-none px-3 py-2 ${
+                isActive ? "btn-primary" : "btn-link text-ink"
+              }`}
+              aria-current={isActive ? "true" : undefined}
+              onClick={() => onSelect?.(c.id)}
+            >
+              {c.label}
+            </button>
+          );
+        })}
       </div>
     </nav>
   );
