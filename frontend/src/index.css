@@ -803,6 +803,15 @@ img {
   flex-shrink: 0;
 }
 
+@media (min-width: 992px) {
+  .app-sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+}
+
 .sidebar-close-btn {
   width: 32px;
   height: 32px;
