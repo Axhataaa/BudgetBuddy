@@ -9,13 +9,16 @@ export default function Input({
   options,
   className = "",
   showPasswordToggle = false,
+  icon: Icon,
   ...props
 }) {
   const [visible, setVisible] = useState(false);
 
+  const hasIcon = Boolean(Icon) && as === "input";
+
   const fieldClasses = `form-control ${type === "number" ? "font-currency text-end" : ""} ${
-    error ? "is-invalid" : ""
-  }`;
+    hasIcon ? "ps-5" : ""
+  } ${error ? "is-invalid" : ""}`;
 
   const isToggleablePassword = showPasswordToggle && type === "password";
   const resolvedType = isToggleablePassword ? (visible ? "text" : "password") : type;
@@ -39,18 +42,27 @@ export default function Input({
         </select>
       ) : as === "textarea" ? (
         <textarea id={fieldId} className={`form-control ${error ? "is-invalid" : ""}`} rows={3} {...props} />
-      ) : isToggleablePassword ? (
+      ) : isToggleablePassword || hasIcon ? (
         <div className="position-relative">
+          {hasIcon && (
+            <Icon
+              size={16}
+              className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted-ink"
+              aria-hidden="true"
+            />
+          )}
           <input id={fieldId} type={resolvedType} className={fieldClasses} {...props} />
-          <button
-            type="button"
-            onClick={() => setVisible((v) => !v)}
-            className="btn btn-sm btn-link text-muted-ink position-absolute top-50 end-0 translate-middle-y me-1 p-1"
-            aria-label={visible ? "Hide password" : "Show password"}
-            tabIndex={-1}
-          >
-            {visible ? <LuEyeOff size={16} /> : <LuEye size={16} />}
-          </button>
+          {isToggleablePassword && (
+            <button
+              type="button"
+              onClick={() => setVisible((v) => !v)}
+              className="btn btn-sm btn-link text-muted-ink position-absolute top-50 end-0 translate-middle-y me-1 p-1"
+              aria-label={visible ? "Hide password" : "Show password"}
+              tabIndex={-1}
+            >
+              {visible ? <LuEyeOff size={16} /> : <LuEye size={16} />}
+            </button>
+          )}
         </div>
       ) : (
         <input id={fieldId} type={type} className={fieldClasses} {...props} />

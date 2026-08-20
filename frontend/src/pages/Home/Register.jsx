@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { LuWallet } from "react-icons/lu";
+import { LuWallet, LuUser, LuMail, LuLock, LuTag, LuPhone } from "react-icons/lu";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { registerUser } from "../../services/authService";
@@ -62,85 +62,45 @@ function Register() {
 
   return (
     <div className="d-flex align-items-center justify-content-center py-5 auth-shell">
-      <div className="bg-surface rounded shadow-token-md p-4" style={{ width: 460 }}>
-        <div className="d-flex align-items-center gap-2 justify-content-center mb-4">
+      <div className="bg-surface rounded shadow-token-md p-4 p-md-5 w-100" style={{ maxWidth: 520 }}>
+        <div className="d-flex align-items-center gap-2 justify-content-center mb-3">
           <LuWallet size={24} className="text-primary" />
           <span className="font-display fs-4 fw-semibold">BudgetBuddy</span>
         </div>
 
+        <h1 className="font-display fs-3 fw-bold mb-4">Create account</h1>
+
         <form onSubmit={handleSubmit}>
-          <div className="row">
-            <div className="col-6">
-              <Input label="First name" name="first_name" value={formData.first_name} onChange={handleChange} />
+          <div className="row g-3">
+            <div className="col-12 col-sm-6">
+              <Input label="First name" name="first_name" placeholder="First name" icon={LuTag} value={formData.first_name} onChange={handleChange} />
             </div>
-            <div className="col-6">
-              <Input label="Last name" name="last_name" value={formData.last_name} onChange={handleChange} />
-            </div>
-          </div>
-
-          <Input
-            label="Username"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            error={errors.username}
-          />
-          <Input
-            label="Email"
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            error={errors.email}
-          />
-
-          <div className="row">
-            <div className="col-6">
-              <Input
-                label="Password"
-                type="password"
-                name="password"
-                showPasswordToggle
-                value={formData.password}
-                onChange={handleChange}
-                error={errors.password}
-              />
-            </div>
-            <div className="col-6">
-              <Input
-                label="Confirm Password"
-                type="password"
-                name="confirm_password"
-                showPasswordToggle
-                value={formData.confirm_password}
-                onChange={handleChange}
-                error={errors.confirm_password}
-              />
+            <div className="col-12 col-sm-6">
+              <Input label="Last name" name="last_name" placeholder="Last name" icon={LuTag} value={formData.last_name} onChange={handleChange} />
             </div>
           </div>
 
-          <Input
-            label="Occupation"
-            as="select"
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            options={ROLE_OPTIONS}
-          />
+          <Input label="Username" name="username" placeholder="Choose a username" icon={LuUser} value={formData.username} onChange={handleChange} error={errors.username} />
+          <Input label="Email" type="email" name="email" placeholder="name@example.com" icon={LuMail} value={formData.email} onChange={handleChange} error={errors.email} />
 
-          <Input
-            label="Phone Number (optional)"
-            name="phone_number"
-            value={formData.phone_number}
-            onChange={handleChange}
-          />
+          <div className="row g-3">
+            <div className="col-12 col-sm-6">
+              <Input label="Password" type="password" name="password" placeholder="At least 6 characters" icon={LuLock} showPasswordToggle value={formData.password} onChange={handleChange} error={errors.password} />
+            </div>
+            <div className="col-12 col-sm-6">
+              <Input label="Confirm Password" type="password" name="confirm_password" placeholder="Re-enter password" icon={LuLock} showPasswordToggle value={formData.confirm_password} onChange={handleChange} error={errors.confirm_password} />
+            </div>
+          </div>
 
-          <Button type="submit" className="w-100 justify-content-center mt-2" loading={submitting}>
+          <Input label="Occupation" as="select" name="role" value={formData.role} onChange={handleChange} options={ROLE_OPTIONS} />
+          <Input label="Phone Number (optional)" name="phone_number" icon={LuPhone} value={formData.phone_number} onChange={handleChange} />
+
+          <Button type="submit" className="w-100 justify-content-center mt-3" loading={submitting}>
             Create account
           </Button>
         </form>
 
-        <p className="text-center small text-muted-ink mt-3 mb-0">
+        <p className="text-center small text-muted-ink mt-4 mb-0">
           Already have an account? <Link to="/login" className="text-primary">Log in</Link>
         </p>
       </div>

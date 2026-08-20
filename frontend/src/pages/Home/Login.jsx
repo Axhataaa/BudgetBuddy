@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { LuWallet } from "react-icons/lu";
+import { LuWallet, LuUser, LuLock } from "react-icons/lu";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { useAuth } from "../../hooks/useAuth";
@@ -35,27 +35,23 @@ function Login() {
 
   return (
     <div className="d-flex align-items-center justify-content-center auth-shell">
-      <div className="bg-surface rounded shadow-token-md p-4" style={{ width: 380 }}>
-        <div className="d-flex align-items-center gap-2 justify-content-center mb-4">
+      <div className="bg-surface rounded shadow-token-md p-4 p-md-5 w-100" style={{ maxWidth: 460 }}>
+        <div className="d-flex align-items-center gap-2 justify-content-center mb-3">
           <LuWallet size={24} className="text-primary" />
           <span className="font-display fs-4 fw-semibold">BudgetBuddy</span>
         </div>
 
+        <h1 className="font-display fs-3 fw-bold mb-4">Welcome Back</h1>
+
         <form onSubmit={handleSubmit}>
-          <Input label="Username" name="username" value={formData.username} onChange={handleChange} />
-          <Input
-            label="Password"
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-          />
-          <Button type="submit" className="w-100 justify-content-center mt-2" loading={submitting}>
+          <Input label="Username" name="username" placeholder="Enter your username" icon={LuUser} value={formData.username} onChange={handleChange} />
+          <Input label="Password" type="password" name="password" placeholder="Enter your password" icon={LuLock} showPasswordToggle value={formData.password} onChange={handleChange} />
+          <Button type="submit" className="w-100 justify-content-center mt-3" loading={submitting}>
             Log in
           </Button>
         </form>
 
-        <p className="text-center small text-muted-ink mt-3 mb-0">
+        <p className="text-center small text-muted-ink mt-4 mb-0">
           Don't have an account? <Link to="/register" className="text-primary">Register</Link>
         </p>
       </div>
