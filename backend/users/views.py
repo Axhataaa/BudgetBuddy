@@ -10,9 +10,11 @@ from .google_auth import GoogleAuthenticationError, authenticate_google_credenti
 from .token_serializer import RoleAwareTokenObtainPairSerializer
 from .serializers import (
     ChangePasswordSerializer,
+    ConfirmPasswordResetSerializer,
     DeleteAccountSerializer,
     ProfileSerializer,
     RegisterSerializer,
+    RequestPasswordResetSerializer,
     UserListSerializer,
 )
 from .permissions import IsAdmin
@@ -22,6 +24,13 @@ from .email_verification_service import (
     generate_verification_token,
     send_verification_email,
     verify_token,
+)
+from .password_reset_service import (
+    PasswordResetError,
+    can_request_password_reset,
+    generate_password_reset_token,
+    reset_password,
+    send_password_reset_email,
 )
 
 
@@ -35,16 +44,71 @@ class GoogleLoginView(APIView):
 
     def post(self, request):
         credential = request.data.get("credential", "")
+        mode = request.data.get("mode", "login")
+
+        if mode not in {"login", "register"}:
+            return Response(
+                {
+                    "error": {
+                        "code": "invalid_mode",
+                        "message": "Invalid Google authentication mode.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
             email, first_name, last_name = authenticate_google_credential(credential)
-            user, created = get_or_create_google_user(email, first_name, last_name)
+
+            existing_user = User.objects.filter(email__iexact=email).first()
+
+            if mode == "login" and existing_user is None:
+                return Response(
+                    {
+                        "error": {
+                            "code": "account_not_found",
+                            "message": (
+                                "No account is registered with this Google email. "
+                                "Please create an account first."
+                            ),
+                        }
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            if mode == "register" and existing_user is not None:
+                return Response(
+                    {
+                        "error": {
+                            "code": "account_exists",
+                            "message": (
+                                "An account with this email already exists. "
+                                "Please log in instead."
+                            ),
+                        }
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            user, created = get_or_create_google_user(
+                email,
+                first_name,
+                last_name,
+            )
+
         except GoogleAuthenticationError as exc:
             return Response(
-                {"error": {"code": "google_authentication_failed", "message": str(exc)}},
+                {
+                    "error": {
+                        "code": "google_authentication_failed",
+                        "message": str(exc),
+                    }
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         refresh = RoleAwareTokenObtainPairSerializer.get_token(user)
+
         return Response(
             {
                 "access": str(refresh.access_token),
@@ -174,5 +238,66 @@ class ResendVerificationEmailView(APIView):
 
         return Response(
             {"message": "Verification email sent."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class RequestPasswordResetView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = RequestPasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+
+        user = User.objects.filter(
+            email__iexact=email,
+            is_active=True,
+        ).first()
+
+        # Always return the same response so we don't reveal
+        # whether an account exists with this email.
+        if user is not None:
+            allowed, seconds_remaining = can_request_password_reset(user)
+
+            if allowed:
+                raw_token = generate_password_reset_token(user)
+                send_password_reset_email(user, raw_token)
+
+        return Response(
+            {
+                "message": "If an account exists with this email, "
+                "a password reset link has been sent."
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class ConfirmPasswordResetView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ConfirmPasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            reset_password(
+                serializer.validated_data["token"],
+                serializer.validated_data["new_password"],
+            )
+        except PasswordResetError as exc:
+            return Response(
+                {
+                    "error": {
+                        "code": exc.code,
+                        "message": exc.message,
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {"message": "Password reset successfully."},
             status=status.HTTP_200_OK,
         )

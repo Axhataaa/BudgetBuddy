@@ -16,7 +16,25 @@ export const logoutUser = async () => {
 
   await api.post("users/logout/", { refresh }).catch(() => {});
 };
-export const googleLogin = async (credential) => {
-  const response = await api.post("users/google-login/", { credential });
+
+export const googleLogin = async (credential, mode = "login") => {
+  const response = await api.post("users/google-login/", {
+    credential,
+    mode,
+  });
+  return response.data;
+};
+
+export const requestPasswordReset = async (email) => {
+  const response = await api.post("users/password-reset/", { email });
+  return response.data;
+};
+
+export const confirmPasswordReset = async (token, newPassword, confirmPassword) => {
+  const response = await api.post("users/password-reset/confirm/", {
+    token,
+    new_password: newPassword,
+    confirm_password: confirmPassword,
+  });
   return response.data;
 };

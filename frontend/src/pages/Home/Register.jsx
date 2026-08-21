@@ -37,7 +37,7 @@ function Register() {
 
   const handleGoogleSuccess = async (credential) => {
     try {
-      const data = await loginWithGoogle(credential);
+      const data = await loginWithGoogle(credential, "register");
       const claims = decodeToken(data.access);
       navigate(claims?.is_staff || claims?.is_superuser ? "/admin" : "/dashboard");
     } catch (error) {

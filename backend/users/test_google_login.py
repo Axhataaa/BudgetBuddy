@@ -14,8 +14,13 @@ class GoogleLoginViewTests(TestCase):
     def test_google_login_creates_user_and_returns_jwt(self, mock_auth):
         mock_auth.return_value = ("newgoogle@example.com", "Google", "User")
 
-        response = self.client.post("/api/v1/users/google-login/", {"credential": "fake-token"}, format="json")
+        response = self.client.post(
+            "/api/v1/users/google-login/",
+            {"credential": "fake-token", "mode": "register"},
+            format="json"
+        )
 
+        print("GOOGLE LOGIN RESPONSE:", response.status_code, response.data)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data["is_new_user"])
         self.assertIn("access", response.data)
@@ -30,7 +35,11 @@ class GoogleLoginViewTests(TestCase):
         user = User.objects.create_user(username="existing", email="existing@example.com", password="Password123!")
         mock_auth.return_value = ("existing@example.com", "Updated", "Name")
 
-        response = self.client.post("/api/v1/users/google-login/", {"credential": "fake-token"}, format="json")
+        response = self.client.post(
+            "/api/v1/users/google-login/",
+            {"credential": "fake-token", "mode": "login"},
+            format="json"
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.data["is_new_user"])

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { LuLock } from "react-icons/lu";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
@@ -56,6 +57,7 @@ export default function ChangePasswordSection() {
         <LuLock size={16} />
         Change Password
       </h2>
+
       <form onSubmit={handlePasswordSubmit}>
         <Input
           label="Current Password"
@@ -65,6 +67,16 @@ export default function ChangePasswordSection() {
           onChange={handlePasswordChange("old_password")}
           error={passwordErrors.old_password}
         />
+
+        <div className="mb-3">
+          <Link
+            to="/forgot-password?source=settings"
+            className="text-primary small"
+          >
+            Forgot your password?
+          </Link>
+        </div>
+
         <div className="row">
           <div className="col-6">
             <Input
@@ -76,6 +88,7 @@ export default function ChangePasswordSection() {
               error={passwordErrors.new_password}
             />
           </div>
+
           <div className="col-6">
             <Input
               label="Confirm New Password"
@@ -86,7 +99,9 @@ export default function ChangePasswordSection() {
               error={passwordErrors.confirm_new_password}
             />
           </div>
+
         </div>
+
         <div className="d-flex justify-content-end mt-2">
           <Button type="submit" variant="secondary" loading={changingPassword}>
             Update Password

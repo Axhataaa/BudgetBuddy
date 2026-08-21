@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 import Home from "./pages/Home/Home";
 import Login from "./pages/Home/Login";
@@ -22,9 +23,35 @@ import AppShell from "./app/AppShell";
 import ProtectedRoute from "./app/ProtectedRoute";
 import AdminProtectedRoute from "./app/AdminProtectedRoute";
 
+import ForgotPassword from "./pages/Home/ForgotPassword";
+import ResetPassword from "./pages/Home/ResetPassword";
+
+function PasswordResetNavigation() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handlePasswordReset = () => {
+      navigate("/login", { replace: true });
+    };
+
+    window.addEventListener("auth:password-reset", handlePasswordReset);
+
+    return () => {
+      window.removeEventListener(
+        "auth:password-reset",
+        handlePasswordReset
+      );
+    };
+  }, [navigate]);
+
+  return null;
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <PasswordResetNavigation />
+
       <Routes>
 
         {/* ================= Public Routes ================= */}
@@ -42,6 +69,16 @@ function App() {
         <Route
           path="/register"
           element={<Register />}
+        />
+
+        <Route
+          path="/forgot-password"
+          element={<ForgotPassword />}
+        />
+
+        <Route
+          path="/reset-password"
+          element={<ResetPassword />}
         />
 
         <Route

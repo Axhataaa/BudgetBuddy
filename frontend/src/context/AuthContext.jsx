@@ -21,9 +21,38 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    const handleForcedLogout = () => setAccess(null);
+    const handleForcedLogout = () => {
+      localStorage.removeItem("access");
+      localStorage.removeItem("refresh");
+      setAccess(null);
+    };
+
+    const handlePasswordReset = (event) => {
+      console.log("🔥 PASSWORD RESET EVENT RECEIVED", event);
+      if (event.key !== "budgetbuddy:password-reset" || !event.newValue) {
+        return;
+      }
+
+      const currentAccess = localStorage.getItem("access");
+
+      if (!currentAccess) {
+        return;
+      }
+
+      localStorage.removeItem("access");
+      localStorage.removeItem("refresh");
+      setAccess(null);
+
+      window.location.replace("/login");
+    };
+
     window.addEventListener("auth:logout", handleForcedLogout);
-    return () => window.removeEventListener("auth:logout", handleForcedLogout);
+    window.addEventListener("storage", handlePasswordReset);
+
+    return () => {
+      window.removeEventListener("auth:logout", handleForcedLogout);
+      window.removeEventListener("storage", handlePasswordReset);
+    };
   }, []);
 
   const login = useCallback(async (credentials) => {
@@ -34,8 +63,8 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
-  const loginWithGoogle = useCallback(async (credential) => {
-    const data = await googleLogin(credential);
+  const loginWithGoogle = useCallback(async (credential, mode = "login") => {
+    const data = await googleLogin(credential, mode);
     localStorage.setItem("access", data.access);
     localStorage.setItem("refresh", data.refresh);
     setAccess(data.access);

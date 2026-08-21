@@ -61,11 +61,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.profile.phone_number = profile_data.get("phone_number", "")
         user.profile.save(update_fields=["role", "phone_number"])
 
-        # Verification email is intentionally NOT sent here. Verification is
-        # now user-initiated from Settings/Profile via
-        # ResendVerificationEmailView (POST /api/users/resend-verification/),
-        # which reuses generate_verification_token / send_verification_email.
-
         return user
 
 
@@ -217,3 +212,24 @@ class DeleteAccountSerializer(serializers.Serializer):
         raise serializers.ValidationError(
             "Enter your password or type \"DELETE\" to confirm account deletion."
         )
+
+
+class RequestPasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class ConfirmPasswordResetSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate_new_password(self, value):
+        validate_password(value)
+        return value
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError(
+                {"confirm_password": "Passwords do not match."}
+            )
+        return attrs

@@ -22,7 +22,7 @@ function Login() {
 
   const handleGoogleSuccess = async (credential) => {
     try {
-      const data = await loginWithGoogle(credential);
+      const data = await loginWithGoogle(credential, "login");
       const claims = decodeToken(data.access);
       navigate(claims?.is_staff || claims?.is_superuser ? "/admin" : "/dashboard");
     } catch (error) {
@@ -56,8 +56,28 @@ function Login() {
 
         <form onSubmit={handleSubmit}>
           <Input label="Username" name="username" placeholder="Enter your username" icon={LuUser} value={formData.username} onChange={handleChange} />
-          <Input label="Password" type="password" name="password" placeholder="Enter your password" icon={LuLock} showPasswordToggle value={formData.password} onChange={handleChange} />
-          <Button type="submit" className="w-100 justify-content-center mt-3" loading={submitting}>
+          <Input
+            label="Password"
+            type="password"
+            name="password"
+            placeholder="Enter your password"
+            icon={LuLock}
+            showPasswordToggle
+            value={formData.password}
+            onChange={handleChange}
+          />
+
+          <div className="text-end mt-2">
+            <Link to="/forgot-password" className="text-primary small">
+              Forgot password?
+            </Link>
+          </div>
+
+          <Button
+            type="submit"
+            className="w-100 justify-content-center mt-3"
+            loading={submitting}
+          >
             Log in
           </Button>
         </form>
