@@ -6,6 +6,8 @@ It is built with **Django REST Framework** (backend) and **React + Vite** (front
 
 > This README reflects the project **as currently implemented in the source code**, not as originally planned. See [Known Limitations](#-known-limitations) for what is intentionally not yet built.
 
+**Live Application:** https://budget-buddy-ivory-mu.vercel.app
+
 ---
 
 ## 📋 Table of Contents
@@ -51,14 +53,14 @@ Managing personal finances across scattered spreadsheets, banking apps, and ment
 - An opt-in **AI Financial Analyst** (Google Gemini) turns a report's own numbers into a plain-language read — patterns, risks, recommendations — without inventing figures that aren't in the underlying data.
 - A Django-backed Admin Dashboard gives a separate, role-gated monitoring view of platform-wide usage.
 
-BudgetBuddy does not claim real bank connectivity or production-scale infrastructure — it is a complete, working CRUD + analytics application, built on a conventional Django REST Framework + React stack, with one opt-in AI feature layered on top of its own (non-AI) reporting data. See [AI Financial Analysis](#-ai-financial-analysis).
+BudgetBuddy does not claim real bank connectivity or production-scale infrastructure — it is a complete, working CRUD + analytics application, built on a conventional Django REST Framework + React stack, with one opt-in AI feature layered on top of its own (non-AI) reporting data. The current project is deployed for production use/testing; it does not claim real bank connectivity or bank-account integration. See [AI Financial Analysis](#-ai-financial-analysis).
 
 ---
 
 ## ✨ Key Features
 
 - **Authentication** — JWT-based register/login/refresh/logout with server-side token blacklisting
-- **Email Verification** — registration and email-change verification via single-use, expiring, SHA-256-hashed tokens; resend with cooldown; distinct invalid/expired/already-used error states
+- **Email Verification** — single-use, expiring, SHA-256-hashed tokens; authenticated resend with cooldown; email-change re-verification; distinct invalid/expired/already-used error states
 - **Expense tracking** — 8 categories, 4 payment methods, search, filtering, sorting, pagination
 - **Income tracking** — 6 sources, full CRUD, search, sorting, pagination
 - **Budgets** — one budget per user/category/month/year, with utilization tracking and threshold alerts
@@ -67,7 +69,7 @@ BudgetBuddy does not claim real bank connectivity or production-scale infrastruc
 - **Dashboard** — month/year-navigable summary: income, expenses, net savings, budget progress, category spending, recent activity
 - **Reports** — date-range-driven summary, trend chart, category/source breakdowns, budget performance, and CSV/Excel/PDF export
 - **AI Financial Analysis** — opt-in, Gemini-backed plain-language read on a report's own data (observations, patterns, risks, recommendations); degrades gracefully with no key configured
-- **Notifications** — in-app notification center with a live sidebar unread-count badge, plus opt-in email delivery (Gmail SMTP) for budget alerts, savings-goal milestones, achievements, and monthly reports
+- **Notifications** — in-app notification center with a live sidebar unread-count badge, plus opt-in email delivery through SendGrid for budget alerts, savings-goal milestones, achievements, and monthly reports
 - **Profile & Settings** — profile picture, personal details, password change, appearance (theme), currency, and data export
 - **Admin Dashboard** — separate role-gated view with platform-wide usage statistics
 - **Landing Page & Contact Page** — public marketing pages with an integrated contact/feedback form
@@ -78,28 +80,28 @@ BudgetBuddy does not claim real bank connectivity or production-scale infrastruc
 
 ## 🧩 Application Modules
 
-| Module                 | Status             | Notes                                                                                                                                                                                  |
-| ---------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Authentication         | ✅ Implemented     | JWT + blacklist, RBAC via `Profile.role`                                                                                                                                               |
-| Email Verification     | ✅ Implemented     | Register + email-change, expiring single-use tokens. See [Email Verification](#-email-verification)                                                                                    |
-| Dashboard              | ✅ Implemented     | Month/year navigation, live summary                                                                                                                                                    |
-| Expenses               | ✅ Implemented     | Full CRUD, filters, pagination                                                                                                                                                         |
-| Income                 | ✅ Implemented     | Full CRUD, filters, pagination                                                                                                                                                         |
-| Budgets                | ✅ Implemented     | Threshold-based alerts (80/90/100%)                                                                                                                                                    |
-| Savings Goals          | ✅ Implemented     | Deposit/withdrawal transactions                                                                                                                                                        |
-| Achievements           | ✅ Implemented     | Derived from completed savings goals (no separate model)                                                                                                                               |
-| Reports & Analytics    | ✅ Implemented     | Date-range driven, CSV/Excel/PDF export                                                                                                                                                |
-| AI Financial Analysis  | ✅ Implemented     | Opt-in, Google Gemini-backed. See [AI Financial Analysis](#-ai-financial-analysis)                                                                                                     |
-| Notifications (in-app) | ✅ Implemented     | 11 types, priority levels, deduplication                                                                                                                                               |
-| Email Notifications    | ✅ Implemented     | Gmail SMTP, per-category opt-in. See [Email Notifications](#-email-notifications)                                                                                                      |
-| Profile                | ✅ Implemented     | Picture upload, personal details, password change                                                                                                                                      |
-| Settings               | ✅ Implemented     | Appearance, currency, data export                                                                                                                                                      |
-| Data Import            | ❌ Not implemented | UI shows a disabled button with an explanation                                                                                                                                         |
-| Admin Dashboard        | ✅ Implemented     | Platform-wide stats, role-gated                                                                                                                                                        |
-| Landing Page           | ✅ Implemented     | Public marketing page                                                                                                                                                                  |
-| Contact Page           | ✅ Implemented     | Includes merged feedback form (no separate Feedback page)                                                                                                                              |
-| Theme (Light/Dark)     | ✅ Implemented     | `data-theme` attribute + CSS variables                                                                                                                                                 |
-| Automated test suite   | ⚠️ Partial         | Real `TestCase` coverage in `expenses`, `notifications`, `ai_analysis`; empty stubs in `budgets`, `incomes`, `reports`, `users`. See [Testing & Verification](#-testing--verification) |
+| Module                 | Status             | Notes                                                                                                                                         |
+| ---------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authentication         | ✅ Implemented     | JWT + blacklist, RBAC via `Profile.role`                                                                                                      |
+| Email Verification     | ✅ Implemented     | Register + email-change, expiring single-use tokens. See [Email Verification](#-email-verification)                                           |
+| Dashboard              | ✅ Implemented     | Month/year navigation, live summary                                                                                                           |
+| Expenses               | ✅ Implemented     | Full CRUD, filters, pagination                                                                                                                |
+| Income                 | ✅ Implemented     | Full CRUD, filters, pagination                                                                                                                |
+| Budgets                | ✅ Implemented     | Threshold-based alerts (80/90/100%)                                                                                                           |
+| Savings Goals          | ✅ Implemented     | Deposit/withdrawal transactions                                                                                                               |
+| Achievements           | ✅ Implemented     | Derived from completed savings goals (no separate model)                                                                                      |
+| Reports & Analytics    | ✅ Implemented     | Date-range driven, CSV/Excel/PDF export                                                                                                       |
+| AI Financial Analysis  | ✅ Implemented     | Opt-in, Google Gemini-backed. See [AI Financial Analysis](#-ai-financial-analysis)                                                            |
+| Notifications (in-app) | ✅ Implemented     | 11 types, priority levels, deduplication                                                                                                      |
+| Email Notifications    | ✅ Implemented     | SendGrid HTTP API, verification-gated and per-category opt-in. See [Email Notifications](#-email-notifications)                               |
+| Profile                | ✅ Implemented     | Picture upload, personal details, password change                                                                                             |
+| Settings               | ✅ Implemented     | Appearance, currency, data export                                                                                                             |
+| Data Import            | ❌ Not implemented | UI shows a disabled button with an explanation                                                                                                |
+| Admin Dashboard        | ✅ Implemented     | Platform-wide stats, role-gated                                                                                                               |
+| Landing Page           | ✅ Implemented     | Public marketing page                                                                                                                         |
+| Contact Page           | ✅ Implemented     | Includes merged feedback form (no separate Feedback page)                                                                                     |
+| Theme (Light/Dark)     | ✅ Implemented     | `data-theme` attribute + CSS variables                                                                                                        |
+| Automated test suite   | ✅ Implemented     | Backend suite: 157/157 passing; frontend Vitest + Testing Library suite: 47/50 passing, with 3 Login test-selector failures documented below. |
 
 ---
 
@@ -126,7 +128,7 @@ Exact versions: [`backend/requirements.txt`](backend/requirements.txt).
 | Service                                       | Used for                                                                                                                                         |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Google Gemini (`gemini-3.6-flash` by default) | AI Financial Analysis — called directly via `urllib` (no SDK dependency), server-side only. See [AI Financial Analysis](#-ai-financial-analysis) |
-| Gmail SMTP                                    | Email verification links and opt-in notification emails. See [Email Notifications](#-email-notifications)                                        |
+| SendGrid                                      | Email verification links and opt-in notification emails. See [Email Notifications](#-email-notifications)                                        |
 
 ### Frontend
 
@@ -336,42 +338,36 @@ Implemented as the `notifications` Django app (`Notification` model + `Notificat
 
 ## ✉️ Email Verification
 
-Registration and any change to `Profile`'s email address (`RegisterSerializer`, `ProfileSerializer.update()`) issue a single-use, SHA-256-hashed token (`EmailVerificationToken`) and email a verification link via `users/email_verification_service.py`. Only the hash is ever persisted; the raw token exists only long enough to build the link.
+Email verification uses single-use, SHA-256-hashed, 24-hour-expiring tokens. The raw token is used only to construct the verification link and is never persisted.
 
-- **Link:** `POST /api/v1/users/verify-email/` with `{"token": "<raw token>"}`, `AllowAny` — the token itself, not an active session, proves the request.
-- **Expiry:** 24 hours (`TOKEN_TTL_HOURS`).
-- **Resend:** `POST /api/v1/users/resend-verification/`, `IsAuthenticated`, always targets `request.user.email`, 60-second cooldown (`RESEND_COOLDOWN_SECONDS`).
-- **Distinct error states**, each mapped to its own user-facing message: invalid token, already-used token, expired token.
-- **Email change re-verification:** changing `email` flips `Profile.email_verified` back to `False` and issues a fresh token for the new address; any previously unused token for that user is deleted first, and an old link stops matching once the address it was issued for no longer equals the account's current email.
-- **Gates notification email:** `email_verified` must be `True` before any notification email is sent — see [Email Notifications](#-email-notifications).
-- Manually verified end-to-end with a real Gmail-delivered verification email.
+- **Verification:** `POST /api/v1/users/verify-email/` with the raw token.
+- **Resend:** `POST /api/v1/users/resend-verification/`, authenticated and subject to a 60-second cooldown.
+- **Distinct states:** invalid, already-used, and expired tokens have separate user-facing handling.
+- **Email change:** changing the account email resets verification status and issues a fresh verification token for the new address.
+- **Notification-email gate:** notification emails require `Profile.email_verified=True`.
+- **Registration behavior:** registration creates the verification state, but the current implementation does not automatically send a verification email from `RegisterSerializer.create()`. The user can initiate the resend-verification flow from the authenticated Settings/Profile flow.
+- **Manual verification:** the verification flow was manually exercised end-to-end with a real delivered email.
 
 ## 📧 Email Notifications
 
-**Implemented**, via Gmail SMTP (`config/settings.py` reads `EMAIL_*` from `.env` with `EmailMultiAlternatives`, HTML + plain-text parts, and a set of Django templates under `notifications/templates/notifications/emails/`).
+**Implemented via SendGrid.** BudgetBuddy uses the custom `SendGridEmailBackend` in `backend/users/email_backends.py`, which sends through the SendGrid HTTP API rather than Gmail SMTP.
 
-Not every in-app notification sends an email — `notifications/email_service.py` uses an explicit allow-list keyed on `(notification_type, priority)`:
+Supported high-signal email events include:
 
-| Event                                 | Type / priority                 | Template                      |
-| ------------------------------------- | ------------------------------- | ----------------------------- |
-| Budget nearing limit (90%)            | `budget_warning` @ `high`       | `budget_warning.html`         |
-| Budget exceeded                       | `budget_exceeded` @ `high`      | `budget_exceeded.html`        |
-| Savings goal completed                | `savings_goal` @ `medium`       | `savings_goal_completed.html` |
-| Achievement (purchase completed)      | `achievement` (any priority)    | `achievement.html`            |
-| Monthly report ready                  | `monthly_report` (any priority) | `monthly_report.html`         |
-| Admin/system (reserved, unused today) | `admin` (any priority)          | `admin.html`                  |
+- Budget warning / exceeded
+- Savings goal completion
+- Achievements
+- Monthly report ready
 
-Everything else (routine Expense/Income Added, budget's 80% warning tier, savings deposit/withdrawal, reminders, etc.) stays in-app only, by construction.
+Email delivery is gated by:
 
-Before anything is sent, three independent gates all have to pass:
+1. the master `Profile.email_notifications` preference;
+2. the relevant category preference; and
+3. `Profile.email_verified=True`.
 
-1. `Profile.email_notifications` — the master switch — must be `True`.
-2. The event's own category preference (e.g. `Profile.email_savings_goal_notifications`, `Profile.budget_alert_notifications`) must be `True`. `email_achievement_notifications` defaults to `False`, so achievement emails are opt-in only.
-3. `Profile.email_verified` must be `True` — an unverified email address is a hard gate that overrides every preference toggle above it.
+A failed email delivery is handled gracefully so it does not block the underlying in-app notification.
 
-A failed send is logged and swallowed (`dispatch_notification_email` never raises), so a broken email delivery never blocks or corrupts the underlying in-app notification.
-
----
+The `email_achievement_notifications` preference defaults to **True** in the current model.
 
 ## 📊 Reports & Analytics
 
@@ -505,28 +501,24 @@ npm run dev
 
 Backend configuration is read via `python-decouple` from a `.env` file in `backend/`. Copy `.env.example` and fill in real values — **never commit real credentials.**
 
-| Variable              | Required | Purpose                                         | Example                                       |
-| --------------------- | -------- | ----------------------------------------------- | --------------------------------------------- |
-| `SECRET_KEY`          | Yes      | Django cryptographic signing key                | `your-secret-key`                             |
-| `DEBUG`               | Yes      | Enables Django debug mode (`True`/`False`)      | `True`                                        |
-| `ALLOWED_HOSTS`       | Yes      | Comma-separated list of allowed hostnames       | `127.0.0.1,localhost`                         |
-| `DB_NAME`             | Yes      | PostgreSQL database name                        | `budgetbuddy`                                 |
-| `DB_USER`             | Yes      | PostgreSQL username                             | `postgres`                                    |
-| `DB_PASSWORD`         | Yes      | PostgreSQL password                             | `your_postgres_password`                      |
-| `DB_HOST`             | Yes      | PostgreSQL host                                 | `localhost`                                   |
-| `DB_PORT`             | Yes      | PostgreSQL port                                 | `5432`                                        |
-| `EMAIL_BACKEND`       | No       | Django email backend class                      | `django.core.mail.backends.smtp.EmailBackend` |
-| `EMAIL_HOST`          | No       | SMTP host                                       | `smtp.gmail.com`                              |
-| `EMAIL_PORT`          | No       | SMTP port                                       | `587`                                         |
-| `EMAIL_USE_TLS`       | No       | Use TLS for SMTP                                | `True`                                        |
-| `EMAIL_HOST_USER`     | No       | SMTP account username                           | `you@gmail.com`                               |
-| `EMAIL_HOST_PASSWORD` | No       | SMTP account password / app password            | `your-app-password`                           |
-| `DEFAULT_FROM_EMAIL`  | No       | "From" address on outgoing email                | `BudgetBuddy <you@gmail.com>`                 |
-| `FRONTEND_URL`        | No       | Base URL used to build absolute links in emails | `http://localhost:5173`                       |
-| `GEMINI_API_KEY`      | No       | Google Gemini API key for AI Financial Analysis | `your-gemini-api-key`                         |
-| `GEMINI_MODEL`        | No       | Gemini model name                               | `gemini-3.6-flash` (default)                  |
+| Variable              | Required | Purpose                                         | Example                                     |
+| --------------------- | -------- | ----------------------------------------------- | ------------------------------------------- |
+| `SECRET_KEY`          | Yes      | Django cryptographic signing key                | `your-secret-key`                           |
+| `DEBUG`               | Yes      | Enables Django debug mode (`True`/`False`)      | `True`                                      |
+| `ALLOWED_HOSTS`       | Yes      | Comma-separated list of allowed hostnames       | `127.0.0.1,localhost`                       |
+| `DB_NAME`             | Yes      | PostgreSQL database name                        | `budgetbuddy`                               |
+| `DB_USER`             | Yes      | PostgreSQL username                             | `postgres`                                  |
+| `DB_PASSWORD`         | Yes      | PostgreSQL password                             | `your_postgres_password`                    |
+| `DB_HOST`             | Yes      | PostgreSQL host                                 | `localhost`                                 |
+| `DB_PORT`             | Yes      | PostgreSQL port                                 | `5432`                                      |
+| `EMAIL_BACKEND`       | No       | Email backend class                             | `users.email_backends.SendGridEmailBackend` |
+| `SENDGRID_API_KEY`    | No       | SendGrid API key                                | `your-sendgrid-api-key`                     |
+| `SENDGRID_FROM_EMAIL` | No       | Verified sender email address                   | `noreply@example.com`                       |
+| `FRONTEND_URL`        | No       | Base URL used to build absolute links in emails | `http://localhost:5173`                     |
+| `GEMINI_API_KEY`      | No       | Google Gemini API key for AI Financial Analysis | `your-gemini-api-key`                       |
+| `GEMINI_MODEL`        | No       | Gemini model name                               | `gemini-3.6-flash` (default)                |
 
-All `EMAIL_*`/`FRONTEND_URL` variables fall back to safe defaults (`console.EmailBackend` and `http://localhost:5173`) if omitted, so the project still runs without them — but no real email will be delivered until valid SMTP credentials are supplied. See [Email Notifications](#-email-notifications).
+Email delivery uses the custom `SendGridEmailBackend`. If the SendGrid configuration is absent, the application can fall back to console email behavior for local development; real email delivery requires valid SendGrid configuration. `FRONTEND_URL` is used when building absolute links. See [Email Notifications](#-email-notifications).
 
 `GEMINI_API_KEY` defaults to an empty string if omitted — the project still runs, but the AI Financial Analysis feature returns `{"status": "unavailable"}` for every request instead of erroring. See [AI Financial Analysis](#-ai-financial-analysis).
 
@@ -534,57 +526,71 @@ All `EMAIL_*`/`FRONTEND_URL` variables fall back to safe defaults (`console.Emai
 
 ## ✅ Testing & Verification
 
-**Automated tests:** every Django app has a `tests.py`, but coverage is uneven. `expenses`, `notifications`, and `ai_analysis` have real `TestCase`/`APIClient`-based test suites (same-date ordering tiebreaks, entity-notification sync/dedup behavior, and the AI analysis endpoint's insufficient-data/unavailable/success paths, respectively); `budgets`, `incomes`, `reports`, and `users` still have empty framework stubs with no real test cases. There is no frontend test suite, and no CI pipeline runs any of this automatically.
+### Backend automated tests
 
-```bash
-# Run the existing backend tests
-cd backend
-python manage.py test expenses notifications ai_analysis
+The current backend suite was executed successfully:
+
+```text
+157 tests — OK
 ```
 
-**Manual verification performed on this codebase:**
+The suite covers the implemented backend applications and includes API, model, notification, reporting, authentication, and AI-analysis behavior.
+
+Additional checks also pass:
 
 ```bash
-# Backend
 python manage.py check
 python manage.py makemigrations --check --dry-run
-
-# Frontend
-npm run build      # Vite production build
-npx oxlint          # Linting
 ```
 
-These confirm the project has no system-check errors, no un-generated model migrations, and that the frontend builds cleanly for production. They are **not** a substitute for full test coverage, and do not verify runtime behavior against a live database.
+### Frontend automated tests
 
----
+The project uses **Vitest + Testing Library**.
+
+Current verified result:
+
+```text
+47 / 50 tests passing
+```
+
+Three Login tests currently fail because the selector `getByLabelText(/password/i)` also matches the "Show password" button's `aria-label`. This is a test-selector issue; it does not mean the password functionality itself is broken.
+
+### Production/manual verification
+
+The production frontend build was verified with:
+
+```bash
+npm run build
+```
+
+The deployed frontend has also been manually exercised using multiple accounts, and the deployed website was shared with other users who were able to access and use the frontend successfully.
+
+These manual checks complement automated tests; they are not a substitute for formal QA certification or a complete automated E2E regression suite.
 
 ## ⚠️ Known Limitations
 
-- **Automated test coverage is partial** — real tests exist for `expenses`, `notifications`, and `ai_analysis`; `budgets`, `incomes`, `reports`, and `users` still have empty `tests.py` stubs, and there is no frontend test suite or CI pipeline.
-- **AI Financial Analysis depends on an external, paid API** — with no `GEMINI_API_KEY` configured (or on a Gemini outage), the feature returns a plain "temporarily unavailable" message rather than an error; every other part of the app is unaffected.
-- **Notifications are not scheduled automatically** — the monthly-report and savings-reminder commands must be run manually (or wired to an external scheduler like cron/Task Scheduler); there is no Celery/APScheduler integration.
-- **No data import** — "Export My Data" works; the corresponding import is UI-disabled with no backend support.
-- **Reports exports are aggregate-only** — no per-transaction line items in CSV/Excel/PDF, and the PDF omits the Trend section that CSV/Excel include.
-- **"Week"/"Month"/"Year" report presets are rolling/to-date windows**, not always full calendar periods (see [Reports & Analytics](#-reports--analytics)).
-- **No production deployment** — the project currently runs via Django's dev server and Vite's dev server only; no deployment configuration (WSGI/ASGI server, static file hosting, HTTPS) is included.
-- **CORS is configured for local development only** — `CORS_ALLOWED_ORIGINS` in `config/settings.py` hardcodes `http://localhost:5173`; there is no production-origin or environment-driven CORS configuration yet.
-- **Screenshots are outdated** — see [Screenshots](#-screenshots).
-- **The `dashboard` backend app is an empty scaffold** — registered but contains no models, views, or URLs; all dashboard logic actually lives in the `analytics` app.
-- **`reports.models.Report` is an unused model** — defined and admin-registered, but no view or service ever creates an instance of it. The Reports feature is computed live on every request by `reports.services.get_report_data()` and nothing is persisted to this table.
-
----
+- **Frontend automated test suite:** 47/50 currently pass; three Login tests need selector correction because of an ambiguous password-label query.
+- **No formal security audit:** application-level security controls are implemented, but no formal third-party security audit or penetration test was performed.
+- **No automated E2E regression suite:** end-to-end workflows have been manually exercised, including multi-account and deployed-frontend testing.
+- **AI Financial Analysis depends on Gemini:** without a configured `GEMINI_API_KEY` or when the service is unavailable, the feature degrades gracefully instead of affecting the rest of the application.
+- **Notifications are not automatically scheduled:** monthly-report and savings-reminder management commands are available but are manually run; no Celery/APScheduler scheduler is wired in.
+- **No data import:** "Export My Data" is implemented; corresponding import functionality is not implemented.
+- **Reports exports are aggregate-oriented:** CSV/Excel/PDF are generated client-side from the report response; PDF does not include the Trend section that CSV/Excel include.
+- **Report presets:** Week/Month/Year use the application's defined rolling/to-date behavior rather than always representing full calendar periods.
+- **Screenshots:** repository screenshots are from earlier development stages and do not represent every current UI screen.
+- **Architecture notes:** the registered `dashboard` backend app is an empty scaffold; dashboard logic lives in `analytics`. The `reports.models.Report` model is currently unused because reports are computed live.
 
 ## 🚀 Future Improvements
 
-_(Explicitly planned, not implemented.)_
+_(Planned enhancements, not required for Milestone 4 completion.)_
 
-- Celery or APScheduler for automatic monthly-report/savings-reminder scheduling instead of manual command runs
-- Data import to complement the existing data export
-- Automated backend test coverage for `budgets`, `incomes`, `reports`, and `users`, plus a frontend test suite
-- Production deployment configuration
-- Transaction-level line items in report exports
-
----
+- Correct the three frontend Login test selectors and bring the frontend suite to 50/50.
+- Add automated E2E regression coverage.
+- Add a formal security audit / penetration testing process.
+- Add Celery or APScheduler for automatic monthly-report and savings-reminder scheduling.
+- Add data import to complement the existing data export.
+- Add transaction-level line items to report exports.
+- Refresh repository screenshots with the current UI.
 
 ## 📷 Screenshots
 

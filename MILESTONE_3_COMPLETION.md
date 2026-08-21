@@ -55,7 +55,7 @@ Exported amounts are converted to the user's active display currency, matching w
 - `NotificationViewSet`: list/retrieve/delete, mark-read, mark-all-read, clear-all, server-side filtering
 - Notifications fire from expense/income creation, budget threshold crossings (80/90/100%), and savings-goal lifecycle events, through two shared helpers: `sync_entity_notification()` for entity-linked, self-updating notifications (expense/income/budget/savings-goal created or edited) and `create_notification()` for one-off historical events (threshold alerts, reminders, monthly reports, achievements)
 - Two management commands add periodic notifications: `generate_monthly_report_notifications` and `send_savings_reminders --days N` — both manually run (no Celery/scheduler wired in yet)
-- **Email notifications are implemented** (Gmail SMTP) for a subset of high-signal events — budget warning/exceeded, savings goal completed, achievements, monthly report — gated behind email verification and per-category preferences. Email Verification itself is documented separately, as it was built alongside the Milestone 4 work; see [README.md § Email Notifications](README.md#-email-notifications) and [README.md § Email Verification](README.md#-email-verification)
+- \*\*Email notifications are implemented via SendGrid for a subset of high-signal events — budget warning/exceeded, savings goal completed, achievements, monthly report — gated behind email verification and per-category preferences. Email Verification itself is documented separately, as it was built alongside the Milestone 4 work; see [README.md § Email Notifications](README.md#-email-notifications) and [README.md § Email Verification](README.md#-email-verification)
 
 ---
 

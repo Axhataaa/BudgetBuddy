@@ -87,11 +87,16 @@ Typical configuration includes:
 
 See the [Environment Variables](README.md#-environment-variables) table in the README for the exact variable names and an example value for each.
 
-### Optional: Email / SMTP configuration
+### Optional: Email configuration (SendGrid)
 
-The `EMAIL_*` variables are optional. If omitted, Django's console backend is used — verification and notification emails print to the terminal running `runserver` instead of being sent, so registration and email verification still work end-to-end locally with zero setup.
+The current production email implementation uses the custom `SendGridEmailBackend`. Configure:
 
-To send real email (e.g. via Gmail SMTP), add `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, and `DEFAULT_FROM_EMAIL` to `.env`, and set `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`. For Gmail specifically, `EMAIL_HOST_PASSWORD` must be a 16-character [App Password](https://myaccount.google.com/apppasswords), not the account's normal login password. Do not commit real credentials — see the [Environment Variables](README.md#-environment-variables) table for the full list.
+- `EMAIL_BACKEND=users.email_backends.SendGridEmailBackend`
+- `SENDGRID_API_KEY`
+- `SENDGRID_FROM_EMAIL`
+- `FRONTEND_URL`
+
+For local development, email delivery can fall back to the console backend when SendGrid configuration is omitted. Never commit real API keys or credentials.
 
 ### Optional: AI Financial Analysis (Gemini)
 
@@ -198,7 +203,7 @@ npm run dev
 After both servers are running:
 
 - Open the frontend
-- Register a new user, then check the terminal running `runserver` (or your inbox, if SMTP is configured) for the verification email and confirm the link at `/verify-email?token=...` marks the account verified
+- Register a new user, then use the authenticated Settings/Profile verification flow to request a verification email. With SendGrid configured, check the configured inbox and confirm the verification link marks the account verified
 - Login
 - Create Income
 - Create Expense
@@ -220,4 +225,4 @@ python manage.py check
 python manage.py makemigrations --check --dry-run
 ```
 
-Both should complete with no errors and no un-generated migrations. Neither of these is a substitute for a real test suite — see [Known Limitations](README.md#-known-limitations) in the README.
+Both should complete with no errors and no un-generated migrations. For the current automated test results, see [Testing & Verification](README.md#-testing--verification) in the README.

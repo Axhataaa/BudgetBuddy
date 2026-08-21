@@ -1,17 +1,3 @@
-"""
-Tests for the user-initiated verification flow:
-  POST /api/users/resend-verification/  (ResendVerificationEmailView)
-  POST /api/users/verify-email/         (VerifyEmailView)
-
-These cover:
-  - an authenticated user can request a verification email for themselves
-  - an unauthenticated request is rejected
-  - Resend/email-layer failures don't crash the request (existing
-    send_verification_email graceful-degradation behavior is reused)
-  - the existing token verification endpoint still works end-to-end
-
-Place at users/tests/test_resend_verification_email.py in the real project.
-"""
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 from io import BytesIO
@@ -78,17 +64,12 @@ class ResendVerificationEmailUnauthenticatedTests(APITestCase):
 
 
 @override_settings(
-    EMAIL_BACKEND="users.email_backends.ResendEmailBackend",
-    RESEND_API_KEY="test-key",
+    EMAIL_BACKEND="users.email_backends.SendGridEmailBackend",
+    SENDGRID_API_KEY="test-key",
+    SENDGRID_FROM_EMAIL="noreply@example.com",
     EMAIL_TIMEOUT=5,
 )
 class ResendVerificationEmailFailureHandlingTests(APITestCase):
-    """
-    send_verification_email() already swallows and logs backend exceptions
-    (see email_verification_service.send_verification_email). These tests
-    confirm the authenticated resend endpoint stays safe through the real
-    send path when the Resend HTTP call fails in various ways.
-    """
 
     def setUp(self):
         self.user = User.objects.create_user(
@@ -101,7 +82,7 @@ class ResendVerificationEmailFailureHandlingTests(APITestCase):
 
     @patch("users.email_backends.urllib_request.urlopen")
     def test_resend_survives_timeout(self, mock_urlopen):
-        mock_urlopen.side_effect = URLError("Resend unreachable (simulated)")
+        mock_urlopen.side_effect = URLError("SendGrid unreachable (simulated)")
         response = self.client.post(self.url)
         self.assertIn(
             response.status_code,
@@ -112,7 +93,7 @@ class ResendVerificationEmailFailureHandlingTests(APITestCase):
     @patch("users.email_backends.urllib_request.urlopen")
     def test_resend_survives_http_422(self, mock_urlopen):
         mock_urlopen.side_effect = HTTPError(
-            url="https://api.resend.com/emails",
+            url="https://api.sendgrid.com/v3/mail/send",
             code=422,
             msg="Unprocessable",
             hdrs=None,
@@ -124,7 +105,7 @@ class ResendVerificationEmailFailureHandlingTests(APITestCase):
     @patch("users.email_backends.urllib_request.urlopen")
     def test_resend_survives_http_500(self, mock_urlopen):
         mock_urlopen.side_effect = HTTPError(
-            url="https://api.resend.com/emails",
+            url="https://api.sendgrid.com/v3/mail/send",
             code=500,
             msg="Server Error",
             hdrs=None,
@@ -135,10 +116,8 @@ class ResendVerificationEmailFailureHandlingTests(APITestCase):
 
 
 class ExistingVerifyEmailTokenFlowStillWorksTests(APITestCase):
-    """
-    Guards requirement: the existing token verification endpoint/link must
-    keep working unchanged after this feature.
-    """
+
+    # Guards requirement: the existing token verification endpoint/link must keep working unchanged after this feature.
 
     def setUp(self):
         self.user = User.objects.create_user(

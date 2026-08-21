@@ -19,7 +19,7 @@ The application enables users to manage their personal finances through a secure
 - Generate date-range reports with trend charts, category/source breakdowns, and budget performance, and export them as CSV, Excel, or PDF
 - Request an opt-in, Gemini-backed AI Financial Analysis of that same report data, on demand
 - Receive in-app notifications for budget alerts, savings-goal events, achievements, and monthly reports, with opt-in email delivery for a subset of these
-- Verify their email address on registration or after changing it, via a single-use expiring link
+- Verify their email address through the single-use, expiring verification flow; email changes automatically require re-verification
 - Manage their profile, theme (light/dark), display currency, and export a personal data backup
 
 The application follows a RESTful architecture: **Django REST Framework** for the backend, **React (Vite)** for the frontend, communicating exclusively over JSON APIs secured with JWT.
@@ -55,7 +55,7 @@ Registration, login, JWT access/refresh, server-side logout (token blacklisting)
 
 ### Email Verification
 
-Single-use, expiring (24h), SHA-256-hashed tokens issued on registration and on email change; resend with a 60-second cooldown; distinct invalid/expired/already-used error handling. Gates notification emails until verified. See [README.md § Email Verification](README.md#-email-verification).
+Single-use, expiring (24h), SHA-256-hashed tokens are used for verification; resend is available with a 60-second cooldown, and invalid/expired/already-used states are handled distinctly. The current registration flow does not automatically send the verification email; users can initiate resend from the authenticated Settings/Profile flow. Gates notification emails until verified. See [README.md § Email Verification](README.md#-email-verification).
 
 ### User Profile & Settings
 
@@ -91,7 +91,7 @@ An opt-in, on-demand feature on the Reports page: the user requests a Gemini-gen
 
 ### Notifications
 
-In-app notification center covering 11 types (3 legacy values kept for backward compatibility, plus 8 current types such as `budget_warning`, `budget_exceeded`, `achievement`, and `monthly_report`), priority levels, and deduplication. Entity-linked notifications (expense/income/budget/savings-goal added or edited) are kept in sync in place via `sync_entity_notification()` rather than duplicated on every edit, and a sidebar unread-count badge reflects the current total. Two management commands generate periodic notifications (monthly report ready, savings reminders) — run manually or via an external scheduler. A subset of high-signal events (budget warning/exceeded, savings goal completed, achievements, monthly report) also send email via Gmail SMTP, gated behind email verification and per-category user preferences.
+In-app notification center covering 11 types (3 legacy values kept for backward compatibility, plus 8 current types such as `budget_warning`, `budget_exceeded`, `achievement`, and `monthly_report`), priority levels, and deduplication. Entity-linked notifications (expense/income/budget/savings-goal added or edited) are kept in sync in place via `sync_entity_notification()` rather than duplicated on every edit, and a sidebar unread-count badge reflects the current total. Two management commands generate periodic notifications (monthly report ready, savings reminders) — run manually or via an external scheduler. A subset of high-signal events (budget warning/exceeded, savings goal completed, achievements, monthly report) also send email via SendGrid, gated behind email verification and per-category user preferences.
 
 ### Admin Dashboard
 
@@ -109,7 +109,7 @@ See **[README.md § Tech Stack](README.md#-tech-stack)** for the full, version-a
 
 **Backend:** Python, Django, Django REST Framework, Simple JWT, PostgreSQL, Pillow
 **Frontend:** React, Vite, Bootstrap, Axios, React Router, Recharts, jsPDF, SheetJS (xlsx)
-**External services:** Google Gemini (AI Financial Analysis), Gmail SMTP (email)
+**External services:** Google Gemini (AI Financial Analysis), SendGrid (transactional email)
 **Tools:** Git, GitHub, VS Code, Postman, pgAdmin 4
 
 ---
@@ -139,9 +139,9 @@ The frontend communicates with the backend exclusively through REST APIs under `
 
 The project was developed incrementally using milestone-based development. See **[DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md)** for the detailed timeline and the individual `MILESTONE_*_COMPLETION.md` files for per-milestone deliverables.
 
-| Milestone | Scope                                                                           | Status                                                                 |
-| --------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| 1         | Project setup, authentication foundation                                        | ✅ Completed                                                           |
-| 2         | Core finance management modules (Expenses, Income, Budgets, Dashboard, Profile) | ✅ Completed                                                           |
-| 3         | Savings Goals, Reports, Notifications, Landing Page & Contact Page              | ✅ Completed                                                           |
-| 4         | Deployment, automated testing, final optimization                               | 🚧 In Progress — see [Known Limitations](README.md#-known-limitations) |
+| Milestone | Scope                                                                           | Status                                                                     |
+| --------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 1         | Project setup, authentication foundation                                        | ✅ Completed                                                               |
+| 2         | Core finance management modules (Expenses, Income, Budgets, Dashboard, Profile) | ✅ Completed                                                               |
+| 3         | Savings Goals, Reports, Notifications, Landing Page & Contact Page              | ✅ Completed                                                               |
+| 4         | Deployment, automated testing, final optimization                               | ✅ Completed — deployed, tested, documented, and production build verified |
