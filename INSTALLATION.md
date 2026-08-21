@@ -95,6 +95,7 @@ The current production email implementation uses the custom `SendGridEmailBacken
 - `SENDGRID_API_KEY`
 - `SENDGRID_FROM_EMAIL`
 - `FRONTEND_URL`
+- `GOOGLE_CLIENT_ID` for Google sign-in
 
 For local development, email delivery can fall back to the console backend when SendGrid configuration is omitted. Never commit real API keys or credentials.
 
@@ -204,7 +205,9 @@ After both servers are running:
 
 - Open the frontend
 - Register a new user, then use the authenticated Settings/Profile verification flow to request a verification email. With SendGrid configured, check the configured inbox and confirm the verification link marks the account verified
-- Login
+- Login with email/password
+- Try Google sign-in (requires Google client ID/configuration)
+- Try Forgot Password → Reset Password
 - Create Income
 - Create Expense
 - Create Budget (then add an Expense in that category to see budget alerts at 80%/90%/100%)
@@ -223,6 +226,7 @@ If all of the above work correctly, the project has been configured successfully
 ```bash
 python manage.py check
 python manage.py makemigrations --check --dry-run
+python manage.py test
 ```
 
-Both should complete with no errors and no un-generated migrations. For the current automated test results, see [Testing & Verification](README.md#-testing--verification) in the README.
+The final backend verification completed with **160/160 tests passing**. Both checks should complete with no errors and no un-generated migrations. For the current automated test results, see [Testing & Verification](README.md#-testing--verification) in the README.

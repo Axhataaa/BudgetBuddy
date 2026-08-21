@@ -59,8 +59,9 @@ BudgetBuddy does not claim real bank connectivity or production-scale infrastruc
 
 ## ✨ Key Features
 
-- **Authentication** — JWT-based register/login/refresh/logout with server-side token blacklisting
-- **Email Verification** — single-use, expiring, SHA-256-hashed tokens; authenticated resend with cooldown; email-change re-verification; distinct invalid/expired/already-used error states
+- **Authentication** — JWT-based register/login/refresh/logout with server-side token blacklisting, plus Google sign-in and password recovery/reset
+- **Google Sign-In** — Google credential-based sign-in/register flow, with separate login/register handling and JWT issuance
+- **Password Recovery** — forgot-password request, expiring reset tokens, reset-password flow, and authenticated password change
 - **Expense tracking** — 8 categories, 4 payment methods, search, filtering, sorting, pagination
 - **Income tracking** — 6 sources, full CRUD, search, sorting, pagination
 - **Budgets** — one budget per user/category/month/year, with utilization tracking and threshold alerts
@@ -80,28 +81,28 @@ BudgetBuddy does not claim real bank connectivity or production-scale infrastruc
 
 ## 🧩 Application Modules
 
-| Module                 | Status             | Notes                                                                                                                                         |
-| ---------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Authentication         | ✅ Implemented     | JWT + blacklist, RBAC via `Profile.role`                                                                                                      |
-| Email Verification     | ✅ Implemented     | Register + email-change, expiring single-use tokens. See [Email Verification](#-email-verification)                                           |
-| Dashboard              | ✅ Implemented     | Month/year navigation, live summary                                                                                                           |
-| Expenses               | ✅ Implemented     | Full CRUD, filters, pagination                                                                                                                |
-| Income                 | ✅ Implemented     | Full CRUD, filters, pagination                                                                                                                |
-| Budgets                | ✅ Implemented     | Threshold-based alerts (80/90/100%)                                                                                                           |
-| Savings Goals          | ✅ Implemented     | Deposit/withdrawal transactions                                                                                                               |
-| Achievements           | ✅ Implemented     | Derived from completed savings goals (no separate model)                                                                                      |
-| Reports & Analytics    | ✅ Implemented     | Date-range driven, CSV/Excel/PDF export                                                                                                       |
-| AI Financial Analysis  | ✅ Implemented     | Opt-in, Google Gemini-backed. See [AI Financial Analysis](#-ai-financial-analysis)                                                            |
-| Notifications (in-app) | ✅ Implemented     | 11 types, priority levels, deduplication                                                                                                      |
-| Email Notifications    | ✅ Implemented     | SendGrid HTTP API, verification-gated and per-category opt-in. See [Email Notifications](#-email-notifications)                               |
-| Profile                | ✅ Implemented     | Picture upload, personal details, password change                                                                                             |
-| Settings               | ✅ Implemented     | Appearance, currency, data export                                                                                                             |
-| Data Import            | ❌ Not implemented | UI shows a disabled button with an explanation                                                                                                |
-| Admin Dashboard        | ✅ Implemented     | Platform-wide stats, role-gated                                                                                                               |
-| Landing Page           | ✅ Implemented     | Public marketing page                                                                                                                         |
-| Contact Page           | ✅ Implemented     | Includes merged feedback form (no separate Feedback page)                                                                                     |
-| Theme (Light/Dark)     | ✅ Implemented     | `data-theme` attribute + CSS variables                                                                                                        |
-| Automated test suite   | ✅ Implemented     | Backend suite: 157/157 passing; frontend Vitest + Testing Library suite: 47/50 passing, with 3 Login test-selector failures documented below. |
+| Module                 | Status             | Notes                                                                                                            |
+| ---------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Authentication         | ✅ Implemented     | JWT + blacklist, RBAC via `Profile.role`, Google sign-in, password recovery/reset                                |
+| Email Verification     | ✅ Implemented     | Register + email-change, expiring single-use tokens. See [Email Verification](#-email-verification)              |
+| Dashboard              | ✅ Implemented     | Month/year navigation, live summary                                                                              |
+| Expenses               | ✅ Implemented     | Full CRUD, filters, pagination                                                                                   |
+| Income                 | ✅ Implemented     | Full CRUD, filters, pagination                                                                                   |
+| Budgets                | ✅ Implemented     | Threshold-based alerts (80/90/100%)                                                                              |
+| Savings Goals          | ✅ Implemented     | Deposit/withdrawal transactions                                                                                  |
+| Achievements           | ✅ Implemented     | Derived from completed savings goals (no separate model)                                                         |
+| Reports & Analytics    | ✅ Implemented     | Date-range driven, CSV/Excel/PDF export                                                                          |
+| AI Financial Analysis  | ✅ Implemented     | Opt-in, Google Gemini-backed. See [AI Financial Analysis](#-ai-financial-analysis)                               |
+| Notifications (in-app) | ✅ Implemented     | 11 types, priority levels, deduplication                                                                         |
+| Email Notifications    | ✅ Implemented     | SendGrid HTTP API, verification-gated and per-category opt-in. See [Email Notifications](#-email-notifications)  |
+| Profile                | ✅ Implemented     | Picture upload, personal details, password change                                                                |
+| Settings               | ✅ Implemented     | Appearance, currency, data export                                                                                |
+| Data Import            | ❌ Not implemented | UI shows a disabled button with an explanation                                                                   |
+| Admin Dashboard        | ✅ Implemented     | Platform-wide stats, role-gated                                                                                  |
+| Landing Page           | ✅ Implemented     | Public marketing page                                                                                            |
+| Contact Page           | ✅ Implemented     | Includes merged feedback form (no separate Feedback page)                                                        |
+| Theme (Light/Dark)     | ✅ Implemented     | `data-theme` attribute + CSS variables                                                                           |
+| Automated test suite   | ✅ Implemented     | Backend suite: **160/160 passing**; frontend Vitest + Testing Library suite remains separately documented below. |
 
 ---
 
@@ -286,7 +287,7 @@ BudgetBuddy/
 
 ## 🔄 Core Workflows
 
-**Registration → Login:** a new user registers, a `Profile` is auto-created via a Django signal (one-to-one with `User`, default role `student`), then logs in through the JWT endpoint.
+**Registration → Login:** a new user registers, a `Profile` is auto-created via a Django signal (one-to-one with `User`, default role `student`), then logs in through the JWT endpoint. Existing users can also use the Google sign-in flow; the backend validates the Google credential and returns the same JWT access/refresh tokens.
 
 **Logging a transaction:** creating an Expense or Income immediately (a) reflects in Dashboard/Reports on next fetch, and (b) fires a low-priority "Added" notification via `sync_entity_notification()`. Editing that same Expense/Income later re-syncs the identical notification (same `dedup_key`) rather than creating a new one, so the Notification Center never accumulates duplicate entries for one transaction.
 
@@ -297,6 +298,29 @@ BudgetBuddy/
 **Reports:** selecting a period (Today/Week/Month/Year/Custom Range) resolves to `{date_from, date_to}` on the frontend, which is sent to `/api/v1/reports/summary/`. The single JSON response drives the summary cards, trend chart, category/source breakdowns, budget performance, and the three export formats.
 
 ---
+
+## 🔑 Google Sign-In
+
+BudgetBuddy supports Google sign-in through a backend-validated Google credential flow. The frontend sends the Google credential to `POST /api/v1/users/google-login/`; the backend validates it, then either signs in the existing account or creates a Google-based account when the request is explicitly made in register mode. Successful authentication returns the normal BudgetBuddy JWT access and refresh tokens.
+
+The backend distinguishes these cases explicitly:
+
+- Login with an unregistered Google email → `404 account_not_found`
+- Register with an already-registered Google email → `409 account_exists`
+- Invalid Google credential → `400 google_authentication_failed`
+- Successful authentication → JWT access/refresh tokens plus `is_new_user`
+
+Google-created users have their email marked verified and do not rely on a local password for authentication.
+
+## 🔁 Password Recovery & Reset
+
+BudgetBuddy supports both authenticated password changes and unauthenticated password recovery.
+
+- **Forgot password:** a user submits their email from the Forgot Password page to request a reset link.
+- **Reset password:** the link opens the Reset Password page, where the user sets a new password using the reset token.
+- **Security:** reset tokens are stored as hashed values and are time-limited/single-use according to the backend reset-token implementation; the raw token is used only in the reset link.
+- **Change password:** authenticated users can change their password from Settings.
+- Password reset/recovery is handled through the backend service and email template rather than exposing credentials in the frontend.
 
 ## 🔔 Notification System
 
@@ -449,6 +473,8 @@ Every queryset is scoped to `user=request.user`, and every serializer used is th
 ## 🔐 Authentication & Security
 
 - **JWT** via `djangorestframework-simplejwt`, with `rest_framework_simplejwt.token_blacklist` installed — logout blacklists the refresh token server-side (`LogoutView` → `LogoutSerializer`), it isn't just a client-side token drop.
+- **Google sign-in:** the backend validates the Google credential before issuing BudgetBuddy JWTs; Google authentication does not expose or store the user's Google password.
+- **Password recovery:** reset tokens are hashed before persistence and are handled through the dedicated password-reset service and email template.
 - **Roles** (`Profile.Role`): `student`, `working_professional`, `freelancer`, `business_owner`, `other`, `admin`. Only `admin` affects route access; the others are informational/occupation fields.
 - **Frontend route protection:**
   - `ProtectedRoute` wraps the authenticated app shell — unauthenticated visitors are redirected to `/` (the public Landing Page), **not** `/login`.
@@ -501,22 +527,23 @@ npm run dev
 
 Backend configuration is read via `python-decouple` from a `.env` file in `backend/`. Copy `.env.example` and fill in real values — **never commit real credentials.**
 
-| Variable              | Required | Purpose                                         | Example                                     |
-| --------------------- | -------- | ----------------------------------------------- | ------------------------------------------- |
-| `SECRET_KEY`          | Yes      | Django cryptographic signing key                | `your-secret-key`                           |
-| `DEBUG`               | Yes      | Enables Django debug mode (`True`/`False`)      | `True`                                      |
-| `ALLOWED_HOSTS`       | Yes      | Comma-separated list of allowed hostnames       | `127.0.0.1,localhost`                       |
-| `DB_NAME`             | Yes      | PostgreSQL database name                        | `budgetbuddy`                               |
-| `DB_USER`             | Yes      | PostgreSQL username                             | `postgres`                                  |
-| `DB_PASSWORD`         | Yes      | PostgreSQL password                             | `your_postgres_password`                    |
-| `DB_HOST`             | Yes      | PostgreSQL host                                 | `localhost`                                 |
-| `DB_PORT`             | Yes      | PostgreSQL port                                 | `5432`                                      |
-| `EMAIL_BACKEND`       | No       | Email backend class                             | `users.email_backends.SendGridEmailBackend` |
-| `SENDGRID_API_KEY`    | No       | SendGrid API key                                | `your-sendgrid-api-key`                     |
-| `SENDGRID_FROM_EMAIL` | No       | Verified sender email address                   | `noreply@example.com`                       |
-| `FRONTEND_URL`        | No       | Base URL used to build absolute links in emails | `http://localhost:5173`                     |
-| `GEMINI_API_KEY`      | No       | Google Gemini API key for AI Financial Analysis | `your-gemini-api-key`                       |
-| `GEMINI_MODEL`        | No       | Gemini model name                               | `gemini-3.6-flash` (default)                |
+| Variable              | Required | Purpose                                                  | Example                                     |
+| --------------------- | -------- | -------------------------------------------------------- | ------------------------------------------- |
+| `SECRET_KEY`          | Yes      | Django cryptographic signing key                         | `your-secret-key`                           |
+| `DEBUG`               | Yes      | Enables Django debug mode (`True`/`False`)               | `True`                                      |
+| `ALLOWED_HOSTS`       | Yes      | Comma-separated list of allowed hostnames                | `127.0.0.1,localhost`                       |
+| `DB_NAME`             | Yes      | PostgreSQL database name                                 | `budgetbuddy`                               |
+| `DB_USER`             | Yes      | PostgreSQL username                                      | `postgres`                                  |
+| `DB_PASSWORD`         | Yes      | PostgreSQL password                                      | `your_postgres_password`                    |
+| `DB_HOST`             | Yes      | PostgreSQL host                                          | `localhost`                                 |
+| `DB_PORT`             | Yes      | PostgreSQL port                                          | `5432`                                      |
+| `EMAIL_BACKEND`       | No       | Email backend class                                      | `users.email_backends.SendGridEmailBackend` |
+| `SENDGRID_API_KEY`    | No       | SendGrid API key                                         | `your-sendgrid-api-key`                     |
+| `SENDGRID_FROM_EMAIL` | No       | Verified sender email address                            | `noreply@example.com`                       |
+| `FRONTEND_URL`        | No       | Base URL used to build absolute links in emails          | `http://localhost:5173`                     |
+| `GEMINI_API_KEY`      | No       | Google Gemini API key for AI Financial Analysis          | `your-gemini-api-key`                       |
+| `GOOGLE_CLIENT_ID`    | Yes\*    | Google sign-in client ID used by the authentication flow | `your-google-client-id`                     |
+| `GEMINI_MODEL`        | No       | Gemini model name                                        | `gemini-3.6-flash` (default)                |
 
 Email delivery uses the custom `SendGridEmailBackend`. If the SendGrid configuration is absent, the application can fall back to console email behavior for local development; real email delivery requires valid SendGrid configuration. `FRONTEND_URL` is used when building absolute links. See [Email Notifications](#-email-notifications).
 
@@ -534,7 +561,7 @@ The current backend suite was executed successfully:
 157 tests — OK
 ```
 
-The suite covers the implemented backend applications and includes API, model, notification, reporting, authentication, and AI-analysis behavior.
+The suite covers the implemented backend applications and includes API, model, notification, reporting, authentication, Google sign-in, password recovery, and AI-analysis behavior.
 
 Additional checks also pass:
 
@@ -570,6 +597,8 @@ These manual checks complement automated tests; they are not a substitute for fo
 ## ⚠️ Known Limitations
 
 - **Frontend automated test suite:** 47/50 currently pass; three Login tests need selector correction because of an ambiguous password-label query.
+- **Frontend production build:** `npm run build` completes successfully.
+- **Frontend lint:** `npm run lint` completes with **0 errors** and 17 warnings (mainly React Fast Refresh / hook-dependency warnings and a few unused imports).
 - **No formal security audit:** application-level security controls are implemented, but no formal third-party security audit or penetration test was performed.
 - **No automated E2E regression suite:** end-to-end workflows have been manually exercised, including multi-account and deployed-frontend testing.
 - **AI Financial Analysis depends on Gemini:** without a configured `GEMINI_API_KEY` or when the service is unavailable, the feature degrades gracefully instead of affecting the rest of the application.
@@ -585,6 +614,7 @@ These manual checks complement automated tests; they are not a substitute for fo
 _(Planned enhancements, not required for Milestone 4 completion.)_
 
 - Correct the three frontend Login test selectors and bring the frontend suite to 50/50.
+- Add automated regression coverage for Google sign-in and password recovery on the frontend.
 - Add automated E2E regression coverage.
 - Add a formal security audit / penetration testing process.
 - Add Celery or APScheduler for automatic monthly-report and savings-reminder scheduling.

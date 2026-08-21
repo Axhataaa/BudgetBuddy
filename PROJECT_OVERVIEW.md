@@ -51,7 +51,15 @@ Individuals who want to track and organize their personal finances — students,
 
 ### Authentication
 
-Registration, login, JWT access/refresh, server-side logout (token blacklisting), password change. See [README.md § Authentication & Security](README.md#-authentication--security).
+Registration, JWT access/refresh, server-side logout (token blacklisting), Google sign-in, password change, and password recovery/reset. See [README.md § Authentication & Security](README.md#-authentication--security).
+
+### Google Sign-In
+
+Google sign-in is supported through a backend-validated credential flow. The frontend sends the Google credential to the dedicated Google login endpoint; the backend validates it, handles login/register mode explicitly, and returns BudgetBuddy JWT access/refresh tokens. Google-created accounts are marked email-verified and do not require a local password.
+
+### Password Recovery & Reset
+
+Users can request a password-reset link from the Forgot Password page, set a new password from the Reset Password page, or change their password while authenticated from Settings. Reset-token handling is implemented in a dedicated backend service and email template.
 
 ### Email Verification
 
@@ -109,7 +117,7 @@ See **[README.md § Tech Stack](README.md#-tech-stack)** for the full, version-a
 
 **Backend:** Python, Django, Django REST Framework, Simple JWT, PostgreSQL, Pillow
 **Frontend:** React, Vite, Bootstrap, Axios, React Router, Recharts, jsPDF, SheetJS (xlsx)
-**External services:** Google Gemini (AI Financial Analysis), SendGrid (transactional email)
+**External services:** Google (sign-in credential validation), Google Gemini (AI Financial Analysis), SendGrid (transactional email)
 **Tools:** Git, GitHub, VS Code, Postman, pgAdmin 4
 
 ---
