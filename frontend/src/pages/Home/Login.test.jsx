@@ -25,7 +25,7 @@ describe("Login page", () => {
   it("renders username and password fields", () => {
     renderWithProviders(<Login />);
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /log in/i })).toBeInTheDocument();
   });
 
@@ -37,7 +37,7 @@ describe("Login page", () => {
     renderWithProviders(<Login />);
 
     await user.type(screen.getByLabelText(/username/i), "gungun");
-    await user.type(screen.getByLabelText(/password/i), "correct-password");
+    await user.type(screen.getByLabelText("Password"), "correct-password");
     await user.click(screen.getByRole("button", { name: /log in/i }));
 
     await waitFor(() => {
@@ -56,7 +56,7 @@ describe("Login page", () => {
     renderWithProviders(<Login />);
 
     await user.type(screen.getByLabelText(/username/i), "gungun");
-    await user.type(screen.getByLabelText(/password/i), "wrong-password");
+    await user.type(screen.getByLabelText("Password"), "wrong-password");
     await user.click(screen.getByRole("button", { name: /log in/i }));
 
     expect(await screen.findByText(/invalid username or password/i)).toBeInTheDocument();
