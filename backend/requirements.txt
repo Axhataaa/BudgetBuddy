@@ -14,3 +14,5 @@ python-decouple==3.8
 sqlparse==0.5.5
 tzdata==2026.2
 gunicorn==23.0.0
+google-auth==2.56.3
+requests==2.34.2

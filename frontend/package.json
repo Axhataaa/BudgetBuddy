@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@react-oauth/google": "^0.13.5",
     "axios": "^1.18.1",
     "bootstrap": "^5.3.8",
     "jspdf": "^4.2.1",

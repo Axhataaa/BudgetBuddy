@@ -6,6 +6,8 @@ from rest_framework.response import Response
 from django.contrib.auth.models import User
 
 from .logout_serializer import LogoutSerializer
+from .google_auth import GoogleAuthenticationError, authenticate_google_credential, get_or_create_google_user
+from .token_serializer import RoleAwareTokenObtainPairSerializer
 from .serializers import (
     ChangePasswordSerializer,
     DeleteAccountSerializer,
@@ -26,6 +28,31 @@ from .email_verification_service import (
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
+
+
+class GoogleLoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        credential = request.data.get("credential", "")
+        try:
+            email, first_name, last_name = authenticate_google_credential(credential)
+            user, created = get_or_create_google_user(email, first_name, last_name)
+        except GoogleAuthenticationError as exc:
+            return Response(
+                {"error": {"code": "google_authentication_failed", "message": str(exc)}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        refresh = RoleAwareTokenObtainPairSerializer.get_token(user)
+        return Response(
+            {
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "is_new_user": created,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class LogoutView(APIView):

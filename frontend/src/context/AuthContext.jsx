@@ -1,5 +1,5 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import { loginUser, logoutUser } from "../services/authService";
+import { loginUser, googleLogin, logoutUser } from "../services/authService";
 
 const AuthContext = createContext(null);
 
@@ -34,6 +34,14 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
+  const loginWithGoogle = useCallback(async (credential) => {
+    const data = await googleLogin(credential);
+    localStorage.setItem("access", data.access);
+    localStorage.setItem("refresh", data.refresh);
+    setAccess(data.access);
+    return data;
+  }, []);
+
   const logout = useCallback(async () => {
     await logoutUser();
     localStorage.removeItem("access");
@@ -51,9 +59,10 @@ export function AuthProvider({ children }) {
       user,
       loading,
       login,
+      loginWithGoogle,
       logout,
     }),
-    [access, isAdmin, user, loading, login, logout]
+    [access, isAdmin, user, loading, login, loginWithGoogle, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

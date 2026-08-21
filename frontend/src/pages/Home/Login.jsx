@@ -6,10 +6,11 @@ import Button from "../../components/ui/Button";
 import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../components/ui/Toast";
 import { decodeToken } from "../../context/AuthContext";
+import GoogleLoginButton from "../../components/auth/GoogleLoginButton";
 
 function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const { showToast } = useToast();
 
   const [formData, setFormData] = useState({ username: "", password: "" });
@@ -17,6 +18,16 @@ function Login() {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleGoogleSuccess = async (credential) => {
+    try {
+      const data = await loginWithGoogle(credential);
+      const claims = decodeToken(data.access);
+      navigate(claims?.is_staff || claims?.is_superuser ? "/admin" : "/dashboard");
+    } catch (error) {
+      showToast(error.response?.data?.error?.message || "Google sign-in failed. Please try again.", "error");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -50,6 +61,8 @@ function Login() {
             Log in
           </Button>
         </form>
+
+        <GoogleLoginButton onSuccess={handleGoogleSuccess} onError={(message) => showToast(message, "error")} />
 
         <p className="text-center small text-muted-ink mt-4 mb-0">
           Don't have an account? <Link to="/register" className="text-primary">Register</Link>

@@ -16,3 +16,7 @@ export const logoutUser = async () => {
 
   await api.post("users/logout/", { refresh }).catch(() => {});
 };
+export const googleLogin = async (credential) => {
+  const response = await api.post("users/google-login/", { credential });
+  return response.data;
+};

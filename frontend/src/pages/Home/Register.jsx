@@ -4,6 +4,9 @@ import { LuWallet, LuUser, LuMail, LuLock, LuTag, LuPhone } from "react-icons/lu
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import { registerUser } from "../../services/authService";
+import GoogleLoginButton from "../../components/auth/GoogleLoginButton";
+import { useAuth } from "../../hooks/useAuth";
+import { decodeToken } from "../../context/AuthContext";
 import { useToast } from "../../components/ui/Toast";
 
 const ROLE_OPTIONS = [
@@ -17,6 +20,7 @@ const ROLE_OPTIONS = [
 function Register() {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { loginWithGoogle } = useAuth();
 
   const [formData, setFormData] = useState({
     username: "",
@@ -30,6 +34,16 @@ function Register() {
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+
+  const handleGoogleSuccess = async (credential) => {
+    try {
+      const data = await loginWithGoogle(credential);
+      const claims = decodeToken(data.access);
+      navigate(claims?.is_staff || claims?.is_superuser ? "/admin" : "/dashboard");
+    } catch (error) {
+      showToast(error.response?.data?.error?.message || "Google sign-up failed. Please try again.", "error");
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -99,6 +113,8 @@ function Register() {
             Create account
           </Button>
         </form>
+
+        <GoogleLoginButton onSuccess={handleGoogleSuccess} onError={(message) => showToast(message, "error")} />
 
         <p className="text-center small text-muted-ink mt-4 mb-0">
           Already have an account? <Link to="/login" className="text-primary">Log in</Link>
