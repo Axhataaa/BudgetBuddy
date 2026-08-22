@@ -1,7 +1,11 @@
+import logging
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
+
+logger = logging.getLogger(__name__)
 
 class GoogleAuthenticationError(Exception):
     """Raised when a Google ID token cannot be authenticated."""
@@ -15,6 +19,10 @@ def authenticate_google_credential(credential):
     try:
         token_info = id_token.verify_oauth2_token(credential, google_requests.Request(), client_id)
     except Exception as exc:
+        # The client only ever sees the generic message below. This log is
+        # the only place the real cause (expired token, cert-fetch/network
+        # failure, audience mismatch, malformed token, etc.) is recorded.
+        logger.exception("Google credential verification failed: %s", exc)
         raise GoogleAuthenticationError("Invalid Google credential.") from exc
     if token_info.get("aud") != client_id:
         raise GoogleAuthenticationError("Invalid Google audience.")

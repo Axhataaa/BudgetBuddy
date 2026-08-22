@@ -2,10 +2,8 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { LuMenu } from "react-icons/lu";
 import Sidebar from "../components/layout/Sidebar";
-import { usePreferences } from "../hooks/usePreferences";
 
 export default function AppShell() {
-  const { currency, rates } = usePreferences();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -30,7 +28,7 @@ export default function AppShell() {
           <LuMenu size={18} />
         </button>
 
-        <Outlet key={`${currency}-${rates[currency] ?? 1}`} />
+        <Outlet />
       </main>
     </div>
   );

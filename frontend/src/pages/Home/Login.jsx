@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { LuWallet, LuUser, LuLock } from "react-icons/lu";
 import Input from "../../components/ui/Input";
@@ -20,15 +20,23 @@ function Login() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleGoogleSuccess = async (credential) => {
-    try {
-      const data = await loginWithGoogle(credential, "login");
-      const claims = decodeToken(data.access);
-      navigate(claims?.is_staff || claims?.is_superuser ? "/admin" : "/dashboard");
-    } catch (error) {
-      showToast(error.response?.data?.error?.message || "Google sign-in failed. Please try again.", "error");
-    }
-  };
+  const handleGoogleSuccess = useCallback(
+    async (credential) => {
+      try {
+        const data = await loginWithGoogle(credential, "login");
+        const claims = decodeToken(data.access);
+        navigate(claims?.is_staff || claims?.is_superuser ? "/admin" : "/dashboard");
+      } catch (error) {
+        showToast(error.response?.data?.error?.message || "Google sign-in failed. Please try again.", "error");
+      }
+    },
+    [loginWithGoogle, navigate, showToast]
+  );
+
+  const handleGoogleError = useCallback(
+    (message) => showToast(message, "error"),
+    [showToast]
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -82,7 +90,7 @@ function Login() {
           </Button>
         </form>
 
-        <GoogleLoginButton onSuccess={handleGoogleSuccess} onError={(message) => showToast(message, "error")} />
+        <GoogleLoginButton onSuccess={handleGoogleSuccess} onError={handleGoogleError} />
 
         <p className="text-center small text-muted-ink mt-4 mb-0">
           Don't have an account? <Link to="/register" className="text-primary">Register</Link>
