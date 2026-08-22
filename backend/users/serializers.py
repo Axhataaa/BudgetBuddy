@@ -17,7 +17,12 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
-    role = serializers.ChoiceField(choices=REGISTRATION_ROLE_CHOICES, source="profile.role")
+    role = serializers.ChoiceField(
+        choices=REGISTRATION_ROLE_CHOICES,
+        source="profile.role",
+        required=False,
+        default=Profile.Role.STUDENT
+    )
     phone_number = serializers.CharField(
         required=False, allow_blank=True, max_length=15, source="profile.phone_number"
     )
