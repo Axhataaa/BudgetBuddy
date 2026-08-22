@@ -16,28 +16,28 @@ Milestone 4's core requirements are complete. BudgetBuddy has been integrated, p
 
 ## Planned Work — Final Status
 
-| Requirement                        | Status                           | Evidence / Final State                                                                                                                                                                                            |
-| ---------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Analytics Dashboard                | ✅ Completed                     | Live backend-driven dashboard summaries, budget/savings progress, category spending, recent activity, and 6-month income-vs-expenses trend.                                                                       |
-| Charts & Visualizations            | ✅ Completed                     | Recharts-based trend, category/source, budget, and savings visualizations using live API data.                                                                                                                    |
-| Frontend/Backend Integration       | ✅ Completed                     | React/Vite consumes the Django REST Framework APIs under `/api/v1/`; no feature page depends on mock transaction data.                                                                                            |
-| Google Sign-In & Password Recovery | ✅ Completed                     | Google credential login/register flow, JWT issuance, Forgot Password, Reset Password, and authenticated Change Password are implemented and backend-tested.                                                       |
-| AI Financial Analysis              | ✅ Completed                     | Opt-in Gemini-backed analysis of the selected Reports-page data, with caching and graceful unavailable/insufficient-data states.                                                                                  |
-| Input Validation                   | ✅ Implemented                   | Backend serializers and frontend forms validate required fields, types, ranges, and applicable choices.                                                                                                           |
-| Error Handling                     | ✅ Implemented                   | Structured DRF errors, frontend loading/error states, toasts, and global `ErrorBoundary` are implemented.                                                                                                         |
-| Backend Automated Testing          | ✅ Completed                     | Full backend suite finally verified at **160/160 tests passing**.                                                                                                                                                 |
-| Frontend Automated Testing         | ✅ Passing — 50/50.              | Vitest + Testing Library are configured; the previously documented **47/50** result remains. Three Login tests fail because `getByLabelText(/password/i)` also matches the "Show password" button's `aria-label`. |
-| Backend Deployment                 | ✅ Completed                     | Production backend configuration is present and deployed using a production WSGI setup (`gunicorn`).                                                                                                              |
-| Frontend Deployment                | ✅ Completed                     | Vite production build verified and deployed through the configured frontend hosting setup.                                                                                                                        |
-| Production Database                | ✅ Completed                     | Production PostgreSQL is configured through environment variables.                                                                                                                                                |
-| Environment Variables              | ✅ Completed                     | Production-sensitive configuration is environment-driven; secrets are not stored in documentation.                                                                                                                |
-| CORS / CSRF                        | ✅ Completed                     | Production origins are configured through environment-backed settings, including the deployed frontend origin.                                                                                                    |
-| HTTPS / SSL                        | ✅ Completed at deployment level | The deployed application is served through the hosting platform's HTTPS configuration; no manual certificate management is claimed.                                                                               |
-| Production Verification            | ✅ Completed                     | Deployment was manually exercised using multiple accounts and the deployed frontend was successfully accessed by additional users.                                                                                |
-| End-to-End Workflow                | ✅ Manually Verified             | Registration/authentication, finance tracking, reports/exports, notifications, and deployed frontend workflows were manually exercised.                                                                           |
-| Production Build                   | ✅ Completed                     | `npm run build` successfully produces the frontend production build.                                                                                                                                              |
-| Static / Media Configuration       | ✅ Configured                    | Django `STATIC_ROOT`/`MEDIA_ROOT` and frontend production assets are configured; actual serving/storage remains deployment-platform dependent.                                                                    |
-| Documentation                      | ✅ Completed                     | Markdown documentation has been audited and updated to match the current implementation.                                                                                                                          |
+| Requirement                        | Status                           | Evidence / Final State                                                                                                                                                                 |
+| ---------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Analytics Dashboard                | ✅ Completed                     | Live backend-driven dashboard summaries, budget/savings progress, category spending, recent activity, and 6-month income-vs-expenses trend.                                            |
+| Charts & Visualizations            | ✅ Completed                     | Recharts-based trend, category/source, budget, and savings visualizations using live API data.                                                                                         |
+| Frontend/Backend Integration       | ✅ Completed                     | React/Vite consumes the Django REST Framework APIs under `/api/v1/`; no feature page depends on mock transaction data.                                                                 |
+| Google Sign-In & Password Recovery | ✅ Completed                     | Google OAuth 2.0 / OpenID Connect credential login/register flow, JWT issuance, Forgot Password, Reset Password, and authenticated Change Password are implemented and backend-tested. |
+| AI Financial Analysis              | ✅ Completed                     | Opt-in Gemini-backed analysis of the selected Reports-page data, with caching and graceful unavailable/insufficient-data states.                                                       |
+| Input Validation                   | ✅ Implemented                   | Backend serializers and frontend forms validate required fields, types, ranges, and applicable choices.                                                                                |
+| Error Handling                     | ✅ Implemented                   | Structured DRF errors, frontend loading/error states, toasts, and global `ErrorBoundary` are implemented.                                                                              |
+| Backend Automated Testing          | ✅ Completed                     | Full backend suite finally verified at **160/160 tests passing**.                                                                                                                      |
+| Frontend Automated Testing         | ✅ Completed                     | Vitest + Testing Library are configured and the final suite is verified at **50/50 tests passing** after correcting the ambiguous Login password selector.                             |
+| Backend Deployment                 | ✅ Completed                     | Production backend configuration is present and deployed using a production WSGI setup (`gunicorn`).                                                                                   |
+| Frontend Deployment                | ✅ Completed                     | Vite production build verified and deployed through the configured frontend hosting setup.                                                                                             |
+| Production Database                | ✅ Completed                     | Production PostgreSQL is configured through environment variables.                                                                                                                     |
+| Environment Variables              | ✅ Completed                     | Production-sensitive configuration is environment-driven; secrets are not stored in documentation.                                                                                     |
+| CORS / CSRF                        | ✅ Completed                     | Production origins are configured through environment-backed settings, including the deployed frontend origin.                                                                         |
+| HTTPS / SSL                        | ✅ Completed at deployment level | The deployed application is served through the hosting platform's HTTPS configuration; no manual certificate management is claimed.                                                    |
+| Production Verification            | ✅ Completed                     | Deployment was manually exercised using multiple accounts and the deployed frontend was successfully accessed by additional users.                                                     |
+| End-to-End Workflow                | ✅ Manually Verified             | Registration/authentication, finance tracking, reports/exports, notifications, and deployed frontend workflows were manually exercised.                                                |
+| Production Build                   | ✅ Completed                     | `npm run build` successfully produces the frontend production build.                                                                                                                   |
+| Static / Media Configuration       | ✅ Configured                    | Django `STATIC_ROOT`/`MEDIA_ROOT` and frontend production assets are configured; actual serving/storage remains deployment-platform dependent.                                         |
+| Documentation                      | ✅ Completed                     | Markdown documentation has been audited and updated to match the current implementation.                                                                                               |
 
 ---
 
@@ -78,7 +78,7 @@ All three report export formats use the same report API response as the on-scree
 
 ### Authentication Enhancements
 
-- Google sign-in with backend credential validation
+- Google sign-in with backend OAuth 2.0 / OpenID Connect credential validation
 - Separate Google login/register behavior with explicit account-exists/account-not-found handling
 - Google-created accounts marked as email-verified and issued normal BudgetBuddy JWT access/refresh tokens
 - Forgot Password request flow
@@ -167,10 +167,10 @@ Vitest + Testing Library are configured. The final production build was also ver
 Current result:
 
 ```text
-47 / 50 tests passing
+50 / 50 tests passing
 ```
 
-The three failing Login tests are selector-level failures caused by `/password/i` matching both the password input and the "Show password" button.
+The Login test selectors were corrected to distinguish the password input from the "Show password" button.
 
 ### Manual / Real-User Verification
 
@@ -210,7 +210,6 @@ These commands are for local development and do not represent the production dep
 
 These do **not** block Milestone 4 completion:
 
-- Correct the three Login test selectors to reach 50/50 frontend tests.
 - Add automated end-to-end regression testing.
 - Perform a formal security audit if required in a future release.
 - Add automatic scheduling for monthly reports and savings reminders.

@@ -7,7 +7,7 @@
 - Django + DRF project initialized (apps: `users`, `expenses`, `incomes`, `budgets`, `analytics`, `reports`)
 - PostgreSQL configured via `.env`
 - JWT authentication (register, login, refresh, logout) implemented
-- Google sign-in flow added with backend credential validation and JWT issuance
+- Google sign-in flow added using backend OAuth 2.0 / OpenID Connect credential validation and JWT issuance
 - Password recovery/reset and authenticated password-change flows implemented
 - `Profile` model auto-created via signal on user registration
 - React + Vite frontend initialized with routing and Axios
@@ -54,9 +54,9 @@
 - **Data Export:** wired the existing personal data export service to its API endpoint and frontend client.
 - **Bug fixes:** stabilized same-date expense ordering and corrected dark-mode transaction-table contrast.
 - **Production:** configured and deployed the frontend/backend with production environment variables, PostgreSQL, CORS/CSRF configuration, and a verified Vite production build.
-- **Authentication enhancements:** added Google sign-in with explicit login/register modes, plus Forgot Password / Reset Password and authenticated Change Password flows.
+- **Authentication enhancements:** added Google sign-in with explicit login/register modes using OAuth 2.0 / OpenID Connect identity credentials, plus Forgot Password / Reset Password and authenticated Change Password flows.
 - **Testing:** backend suite finally verified at **160/160 passing**; Google sign-in tests cover new-user creation, existing-user reuse, and invalid credentials.
-- **Frontend verification:** `npm run build` succeeds; `npm run lint` reports **0 errors** (17 warnings remain).
+- **Frontend verification:** all **50/50 Vitest + Testing Library tests pass**; `npm run build` succeeds; `npm run lint` reports **0 errors** (17 warnings remain).
 - **Manual verification:** the deployed application was exercised with multiple accounts and shared with other users who successfully accessed and used the frontend.
 - **Git finalization:** final authentication/password-recovery changes were committed and pushed to both the shared `Akshata` branch and the personal `main` branch.
 - **Documentation:** project Markdown documentation was audited and updated to match the final implementation.

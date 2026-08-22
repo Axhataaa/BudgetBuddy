@@ -95,7 +95,7 @@ The current production email implementation uses the custom `SendGridEmailBacken
 - `SENDGRID_API_KEY`
 - `SENDGRID_FROM_EMAIL`
 - `FRONTEND_URL`
-- `GOOGLE_CLIENT_ID` for Google sign-in
+- `GOOGLE_CLIENT_ID` for Google sign-in (OAuth 2.0 / OpenID Connect credential flow)
 
 For local development, email delivery can fall back to the console backend when SendGrid configuration is omitted. Never commit real API keys or credentials.
 

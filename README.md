@@ -301,7 +301,7 @@ BudgetBuddy/
 
 ## 🔑 Google Sign-In
 
-BudgetBuddy supports Google sign-in through a backend-validated Google credential flow. The frontend sends the Google credential to `POST /api/v1/users/google-login/`; the backend validates it, then either signs in the existing account or creates a Google-based account when the request is explicitly made in register mode. Successful authentication returns the normal BudgetBuddy JWT access and refresh tokens.
+BudgetBuddy supports Google sign-in through a backend-validated **OAuth 2.0 / OpenID Connect credential flow**. The frontend sends the Google credential to `POST /api/v1/users/google-login/`; the backend validates the Google identity credential, then either signs in the existing account or creates a Google-based account when the request is explicitly made in register mode. Successful authentication returns the normal BudgetBuddy JWT access and refresh tokens.
 
 The backend distinguishes these cases explicitly:
 
@@ -473,7 +473,7 @@ Every queryset is scoped to `user=request.user`, and every serializer used is th
 ## 🔐 Authentication & Security
 
 - **JWT** via `djangorestframework-simplejwt`, with `rest_framework_simplejwt.token_blacklist` installed — logout blacklists the refresh token server-side (`LogoutView` → `LogoutSerializer`), it isn't just a client-side token drop.
-- **Google sign-in:** the backend validates the Google credential before issuing BudgetBuddy JWTs; Google authentication does not expose or store the user's Google password.
+- **Google sign-in:** the backend validates the Google OAuth 2.0 / OpenID Connect identity credential before issuing BudgetBuddy JWTs; Google authentication does not expose or store the user's Google password.
 - **Password recovery:** reset tokens are hashed before persistence and are handled through the dedicated password-reset service and email template.
 - **Roles** (`Profile.Role`): `student`, `working_professional`, `freelancer`, `business_owner`, `other`, `admin`. Only `admin` affects route access; the others are informational/occupation fields.
 - **Frontend route protection:**
@@ -558,7 +558,7 @@ Email delivery uses the custom `SendGridEmailBackend`. If the SendGrid configura
 The current backend suite was executed successfully:
 
 ```text
-157 tests — OK
+160 tests — OK
 ```
 
 The suite covers the implemented backend applications and includes API, model, notification, reporting, authentication, Google sign-in, password recovery, and AI-analysis behavior.
@@ -577,10 +577,10 @@ The project uses **Vitest + Testing Library**.
 Current verified result:
 
 ```text
-47 / 50 tests passing
+50 / 50 tests passing
 ```
 
-Three Login tests currently fail because the selector `getByLabelText(/password/i)` also matches the "Show password" button's `aria-label`. This is a test-selector issue; it does not mean the password functionality itself is broken.
+The Login test selectors were corrected so the password input is queried unambiguously; the full frontend suite now passes.
 
 ### Production/manual verification
 
@@ -596,7 +596,7 @@ These manual checks complement automated tests; they are not a substitute for fo
 
 ## ⚠️ Known Limitations
 
-- **Frontend automated test suite:** 47/50 currently pass; three Login tests need selector correction because of an ambiguous password-label query.
+- **Frontend automated test suite:** 50/50 currently pass.
 - **Frontend production build:** `npm run build` completes successfully.
 - **Frontend lint:** `npm run lint` completes with **0 errors** and 17 warnings (mainly React Fast Refresh / hook-dependency warnings and a few unused imports).
 - **No formal security audit:** application-level security controls are implemented, but no formal third-party security audit or penetration test was performed.
@@ -613,7 +613,6 @@ These manual checks complement automated tests; they are not a substitute for fo
 
 _(Planned enhancements, not required for Milestone 4 completion.)_
 
-- Correct the three frontend Login test selectors and bring the frontend suite to 50/50.
 - Add automated regression coverage for Google sign-in and password recovery on the frontend.
 - Add automated E2E regression coverage.
 - Add a formal security audit / penetration testing process.

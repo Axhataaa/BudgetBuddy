@@ -55,7 +55,7 @@ Registration, JWT access/refresh, server-side logout (token blacklisting), Googl
 
 ### Google Sign-In
 
-Google sign-in is supported through a backend-validated credential flow. The frontend sends the Google credential to the dedicated Google login endpoint; the backend validates it, handles login/register mode explicitly, and returns BudgetBuddy JWT access/refresh tokens. Google-created accounts are marked email-verified and do not require a local password.
+Google sign-in is supported through a backend-validated **OAuth 2.0 / OpenID Connect credential flow**. The frontend sends the Google identity credential to the dedicated Google login endpoint; the backend validates it, handles login/register mode explicitly, and returns BudgetBuddy JWT access/refresh tokens. Google-created accounts are marked email-verified and do not require a local password.
 
 ### Password Recovery & Reset
 
@@ -117,7 +117,7 @@ See **[README.md § Tech Stack](README.md#-tech-stack)** for the full, version-a
 
 **Backend:** Python, Django, Django REST Framework, Simple JWT, PostgreSQL, Pillow
 **Frontend:** React, Vite, Bootstrap, Axios, React Router, Recharts, jsPDF, SheetJS (xlsx)
-**External services:** Google (sign-in credential validation), Google Gemini (AI Financial Analysis), SendGrid (transactional email)
+**External services:** Google (OAuth 2.0 / OpenID Connect sign-in credential validation), Google Gemini (AI Financial Analysis), SendGrid (transactional email)
 **Tools:** Git, GitHub, VS Code, Postman, pgAdmin 4
 
 ---
