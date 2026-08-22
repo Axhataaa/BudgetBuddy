@@ -9,14 +9,6 @@ import { useAuth } from "../../hooks/useAuth";
 import { decodeToken } from "../../context/AuthContext";
 import { useToast } from "../../components/ui/Toast";
 
-const ROLE_OPTIONS = [
-  { value: "student", label: "Student" },
-  { value: "working_professional", label: "Working Professional" },
-  { value: "freelancer", label: "Freelancer" },
-  { value: "business_owner", label: "Business Owner" },
-  { value: "other", label: "Other" },
-];
-
 function Register() {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -29,7 +21,6 @@ function Register() {
     confirm_password: "",
     first_name: "",
     last_name: "",
-    role: ROLE_OPTIONS[0].value,
     phone_number: "",
   });
   const [errors, setErrors] = useState({});
@@ -106,7 +97,6 @@ function Register() {
             </div>
           </div>
 
-          <Input label="Occupation" as="select" name="role" value={formData.role} onChange={handleChange} options={ROLE_OPTIONS} />
           <Input label="Phone Number (optional)" name="phone_number" icon={LuPhone} value={formData.phone_number} onChange={handleChange} />
 
           <Button type="submit" className="w-100 justify-content-center mt-3" loading={submitting}>
