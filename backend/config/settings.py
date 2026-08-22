@@ -236,5 +236,7 @@ SENDGRID_FROM_EMAIL = config(
 
 GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="")
 
+SCHEDULED_TASK_SECRET = config("SCHEDULED_TASK_SECRET", default="")
+
 GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
 GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.6-flash")

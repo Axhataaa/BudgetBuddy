@@ -1,6 +1,12 @@
-from rest_framework import mixins, viewsets
+import secrets
+
+from django.conf import settings
+from django.core.management import call_command
+from rest_framework import exceptions, mixins, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .filters import NotificationFilter
 from .models import Notification
@@ -37,3 +43,41 @@ class NotificationViewSet(
 
         self.get_queryset().delete()
         return Response({"message": "All notifications cleared."})
+
+
+SCHEDULED_JOB_COMMANDS = {
+    "savings": "send_savings_reminders",
+    "monthly": "generate_monthly_report_notifications",
+}
+
+
+class RunScheduledTaskView(APIView):
+    """
+    Server-to-server trigger for scheduled notification jobs, called by a
+    GitHub Actions cron workflow (Render Free has no built-in scheduler).
+    Authenticated exclusively via the X-Scheduled-Task-Secret header - never
+    by JWT/session, since there is no human user on this request.
+    """
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        configured_secret = settings.SCHEDULED_TASK_SECRET
+        if not configured_secret:
+            # Fail closed: an unset server-side secret must never be
+            # treated as "no auth required".
+            raise exceptions.PermissionDenied("Scheduled task endpoint is not configured.")
+
+        provided_secret = request.headers.get("X-Scheduled-Task-Secret", "")
+        if not secrets.compare_digest(provided_secret, configured_secret):
+            raise exceptions.AuthenticationFailed("Invalid scheduled task credentials.")
+
+        job = request.query_params.get("job")
+        command_name = SCHEDULED_JOB_COMMANDS.get(job)
+        if command_name is None:
+            raise exceptions.ValidationError({"job": "Must be 'savings' or 'monthly'."})
+
+        call_command(command_name)
+
+        return Response({"job": job, "command": command_name, "status": "completed"})

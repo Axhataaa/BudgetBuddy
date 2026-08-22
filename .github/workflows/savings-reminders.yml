@@ -1,0 +1,20 @@
+name: Scheduled Savings Reminders
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # 03:00 UTC daily
+  workflow_dispatch: {} # allows manual runs from the Actions tab for testing
+
+jobs:
+  trigger-savings-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call run-scheduled endpoint (job=savings)
+        env:
+          SCHEDULED_TASK_SECRET: ${{ secrets.SCHEDULED_TASK_SECRET }}
+          RENDER_BACKEND_URL: ${{ vars.RENDER_BACKEND_URL }}
+        run: |
+          curl -f --max-time 120 \
+            -X POST \
+            -H "X-Scheduled-Task-Secret: ${SCHEDULED_TASK_SECRET}" \
+            "${RENDER_BACKEND_URL}/api/v1/notifications/run-scheduled/?job=savings"
