@@ -60,7 +60,7 @@ export default function Input({
               aria-label={visible ? "Hide password" : "Show password"}
               tabIndex={-1}
             >
-              {visible ? <LuEyeOff size={16} /> : <LuEye size={16} />}
+              {visible ? <LuEye size={16} /> : <LuEyeOff size={16} />}
             </button>
           )}
         </div>
