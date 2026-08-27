@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.db import IntegrityError, transaction
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 import logging
@@ -39,6 +40,12 @@ class RegisterSerializer(serializers.ModelSerializer):
             "role",
             "phone_number",
         ]
+
+    def validate_email(self, value):
+        email = value.strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError("An account with this email already exists.")
+        return email
 
     def validate_password(self, value):
 
@@ -118,6 +125,13 @@ class ProfileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This username is already taken.")
         return value
 
+    def validate_email(self, value):
+        request = self.context["request"]
+        email = value.strip().lower()
+        if User.objects.filter(email__iexact=email).exclude(pk=request.user.pk).exists():
+            raise serializers.ValidationError("This email is already in use.")
+        return email
+
     def validate_profile_picture(self, value):
 
         if value is None:
@@ -136,18 +150,35 @@ class ProfileSerializer(serializers.ModelSerializer):
         if user_data:
             update_fields = []
             email_changed = False
-            for field in ("username", "email"):
-                if field in user_data:
-                    if field == "email" and user_data["email"] != instance.user.email:
-                        email_changed = True
-                    setattr(instance.user, field, user_data[field])
-                    update_fields.append(field)
-            if update_fields:
-                instance.user.save(update_fields=update_fields)
+
+            if "email" in user_data:
+                new_email = user_data["email"].strip().lower()
+                if new_email != (instance.user.email or "").strip().lower():
+                    email_changed = True
+                user_data["email"] = new_email
+
+            try:
+                with transaction.atomic():
+                    for field in ("username", "email"):
+                        if field in user_data:
+                            setattr(instance.user, field, user_data[field])
+                            update_fields.append(field)
+                    if update_fields:
+                        instance.user.save(update_fields=update_fields)
+
+                    if email_changed:
+                        instance.email_verified = False
+                        instance.save(update_fields=["email_verified"])
+            except IntegrityError as exc:
+                # The database-level email constraint is the final protection
+                # against two concurrent requests claiming the same email.
+                if email_changed:
+                    raise serializers.ValidationError(
+                        {"email": "This email is already in use."}
+                    ) from exc
+                raise
 
             if email_changed:
-                instance.email_verified = False
-                instance.save(update_fields=["email_verified"])
                 try:
                     raw_token = generate_verification_token(instance.user)
                     send_verification_email(instance.user, raw_token)

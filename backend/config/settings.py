@@ -27,13 +27,20 @@ CSRF_TRUSTED_ORIGINS = [
     "https://budget-buddy-ivory-mu.vercel.app",
 ]
 
-# Cloudinary (optional, for persistent profile-picture storage). Render
-# Free's filesystem is ephemeral, so uploaded images stored on local disk
-# there are lost on every restart/redeploy. When these three env vars are
-# all present, media uploads (currently just Profile.profile_picture) go to
-# Cloudinary instead of local disk. When any are missing - e.g. local dev
-# without a Cloudinary account - this stays False and behavior is unchanged
-# from before (local-disk storage under MEDIA_ROOT, as always).
+
+# Production security settings
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+
 CLOUDINARY_CLOUD_NAME = config("CLOUDINARY_CLOUD_NAME", default="")
 CLOUDINARY_API_KEY = config("CLOUDINARY_API_KEY", default="")
 CLOUDINARY_API_SECRET = config("CLOUDINARY_API_SECRET", default="")
