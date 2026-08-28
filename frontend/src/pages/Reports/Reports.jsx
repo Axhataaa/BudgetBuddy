@@ -13,7 +13,6 @@ import TrendChart from "../../components/reports/TrendChart";
 import ExpensePieChart from "../../components/dashboard/ExpensePieChart";
 import BudgetPerformance from "../../components/reports/BudgetPerformance";
 import FinancialInsights from "../../components/reports/FinancialInsights";
-import AIFinancialAnalysis from "../../components/reports/AIFinancialAnalysis";
 
 const DEFAULT_PERIOD = "this_month";
 
@@ -223,13 +222,6 @@ export default function Reports() {
             <p className="text-muted-ink small mb-3">Based on activity in this date range</p>
             <FinancialInsights insights={report?.insights} loading={loading} />
           </div>
-
-          <AIFinancialAnalysis
-            dateFrom={customFrom}
-            dateTo={customTo}
-            periodLabel={label}
-            canAnalyze={!loading && hasAnyActivity}
-          />
         </>
       )}
     </div>

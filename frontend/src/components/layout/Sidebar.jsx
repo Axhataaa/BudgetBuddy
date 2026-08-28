@@ -10,6 +10,7 @@ import {
   LuMoon,
   LuPiggyBank,
   LuSettings,
+  LuSparkles,
   LuSun,
   LuTarget,
   LuWallet,
@@ -144,6 +145,15 @@ export default function Sidebar({ open = false, onClose }) {
         >
           <LuChartColumn size={18} />
           Reports
+        </NavLink>
+
+        <NavLink
+          to="/finora"
+          className={navClass}
+          onClick={onClose}
+        >
+          <LuSparkles size={18} />
+          Finora
         </NavLink>
 
         <NavLink

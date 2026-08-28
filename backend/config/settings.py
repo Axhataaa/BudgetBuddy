@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     "analytics",
     "notifications",
     "ai_analysis",
+    "finora",
 ]
 
 if USE_CLOUDINARY:
@@ -247,3 +248,6 @@ SCHEDULED_TASK_SECRET = config("SCHEDULED_TASK_SECRET", default="")
 
 GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
 GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.6-flash")
+
+GROQ_API_KEY = config("GROQ_API_KEY", default="")
+GROQ_MODEL = config("GROQ_MODEL", default="openai/gpt-oss-120b")

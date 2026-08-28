@@ -99,9 +99,9 @@ The current production email implementation uses the custom `SendGridEmailBacken
 
 For local development, email delivery can fall back to the console backend when SendGrid configuration is omitted. Never commit real API keys or credentials.
 
-### Optional: AI Financial Analysis (Gemini)
+### Optional: AI Financial Analysis (Groq)
 
-`GEMINI_API_KEY` is also optional. If omitted, the rest of the app works normally — the AI Financial Analysis feature on the Reports page simply responds with a "temporarily unavailable" message instead of an analysis. To enable it, add `GEMINI_API_KEY` (and optionally `GEMINI_MODEL`, default `gemini-3.6-flash`) to `.env`.
+`GROQ_API_KEY` is also optional. If omitted, the rest of the app works normally — the AI Financial Analysis feature on the Reports page simply responds with a "temporarily unavailable" message instead of an analysis. To enable it, add `GEMINI_API_KEY` (and optionally `GEMINI_MODEL`, default `gemini-3.6-flash`) to `.env`.
 
 ---
 
@@ -214,7 +214,7 @@ After both servers are running:
 - Open Dashboard, including the "Income vs Expenses — Last 6 Months" chart
 - Create a Savings Goal and log a deposit
 - Open Reports, switch between Today / Week / Month / Year / Custom Range, and try each export (CSV/Excel/PDF)
-- On the Reports page, click "Analyze My Finances" to try the AI Financial Analysis feature (requires `GEMINI_API_KEY` in `.env` — without it, the feature responds with a graceful "temporarily unavailable" message instead of an error)
+- On the Reports page, click "Analyze My Finances" to try the AI Financial Analysis feature (requires `GROQ_API_KEY` in `.env` — without it, the feature responds with a graceful "temporarily unavailable" message instead of an error)
 - Check the Notification Center for the events above
 - In Settings, enable a notification email preference and confirm the corresponding event (e.g. a budget exceeded) triggers an email once the account's email is verified
 - Verify profile management and the Light/Dark theme toggle

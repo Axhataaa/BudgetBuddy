@@ -4,42 +4,20 @@ from budgets.models import SavingsGoal
 from common.formatting import convert_from_inr
 from reports.services import get_report_data
 
-# Below this many transactions in the selected period, we tell the model
-# explicitly that data is limited so it hedges instead of inventing a
-# confident "trend" out of one or two data points.
 LOW_DATA_TRANSACTION_THRESHOLD = 5
 
-# Cap on how many active/achieved savings goals we send - keeps the
-# snapshot small and avoids sending unbounded history for long-time users.
 MAX_GOALS_PER_SECTION = 12
 
 
 def _num(value, currency):
-    """
-    Convert an INR-denominated Decimal/number into the user's display
-    currency and return it as a plain float, rounded the same way the
-    rest of BudgetBuddy rounds currency (see common/formatting.py). Using
-    the existing conversion table here means the AI snapshot never
-    diverges from what the user sees elsewhere in the app.
-    """
+
     if value is None:
         return 0
     return float(convert_from_inr(value, currency))
 
 
 def build_financial_snapshot(user, date_from, date_to):
-    """
-    Build a controlled, user-specific financial snapshot for the AI
-    Financial Analyst. Only ever queries data belonging to `user` - every
-    query below is either scoped via reports.services.get_report_data
-    (which itself filters by `user=user`) or filtered by `user=user`
-    directly here.
 
-    Returns (snapshot: dict, has_activity: bool). `has_activity` is False
-    when there is literally no income or expense activity in the period,
-    which callers use to skip the Gemini call entirely (no point paying
-    for an API call that can only say "not enough data").
-    """
     currency = getattr(user.profile, "currency", None) or "INR"
 
     report = get_report_data(user=user, date_from=date_from, date_to=date_to)

@@ -10,7 +10,7 @@ from budgets.models import Budget, SavingsGoal
 from expenses.models import Expense
 from incomes.models import Income
 
-from .gemini_client import AIAnalysisUnavailable, _validate_analysis
+from .groq_client import AIAnalysisUnavailable, _validate_analysis
 from .services import build_financial_snapshot
 
 VALID_ANALYSIS = {

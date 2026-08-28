@@ -4,12 +4,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .gemini_client import AIAnalysisUnavailable, generate_financial_analysis
+from .groq_client import AIAnalysisUnavailable, generate_financial_analysis
 from .serializers import AIAnalysisRequestSerializer
 from .services import build_financial_snapshot
 
 # Short-lived, per-user, per-period cache so double-clicks or accidental
-# re-renders don't burn extra Gemini calls. Always keyed by the
+# re-renders don't burn extra AI provider calls. Always keyed by the
 # authenticated user's own id, so it can never leak across users even if
 # the underlying cache backend were ever swapped for a shared one.
 CACHE_TIMEOUT_SECONDS = 180
@@ -88,3 +88,4 @@ class AIFinancialAnalysisView(APIView):
         cache.set(cache_key, payload, timeout=CACHE_TIMEOUT_SECONDS)
 
         return Response(payload)
+    

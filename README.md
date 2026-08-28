@@ -128,7 +128,7 @@ Exact versions: [`backend/requirements.txt`](backend/requirements.txt).
 
 | Service                                       | Used for                                                                                                                                         |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Google Gemini (`gemini-3.6-flash` by default) | AI Financial Analysis — called directly via `urllib` (no SDK dependency), server-side only. See [AI Financial Analysis](#-ai-financial-analysis) |
+| Groq (`openai/gpt-oss-120b` by default) | AI Financial Analysis and Finora — server-side only via the Groq SDK. See [AI Financial Analysis](#-ai-financial-analysis) |
 | SendGrid                                      | Email verification links and opt-in notification emails. See [Email Notifications](#-email-notifications)                                        |
 
 ### Frontend
@@ -173,7 +173,7 @@ Services / Business Logic
    ├─ notifications.notification_service.create_notification() / sync_entity_notification()
    ├─ budgets.notifications (threshold checks)
    ├─ reports.services.get_report_data()
-   └─ ai_analysis.services.build_financial_snapshot() → ai_analysis.gemini_client (external call)
+   └─ ai_analysis.services.build_financial_snapshot() → ai_analysis.groq_client (external call)
  │
  ▼
 PostgreSQL Database
@@ -225,9 +225,9 @@ POST /api/v1/ai-analysis/analyze/  {date_from, date_to, refresh}
 ai_analysis.services.build_financial_snapshot()  →  reuses reports.services.get_report_data()
    for that same user + range, converts amounts to the user's display currency
  │
- ├─▶ No activity in range           →  {"status": "insufficient_data"} — Gemini is never called
+ ├─▶ No activity in range           →  {"status": "insufficient_data"} — Groq is never called
  ├─▶ 180s per-user/per-range cache hit (and refresh=false) → cached payload returned, {"cached": true}
- └─▶ Otherwise: ai_analysis.gemini_client.generate_financial_analysis(snapshot) calls Gemini
+ └─▶ Otherwise: ai_analysis.groq_client.generate_financial_analysis(snapshot) calls Groq
         │
         ├─▶ Success → structured JSON (overall/observations/patterns/risks/recommendations/
         │             savings_strategy/positive_progress), validated and cached
@@ -250,7 +250,7 @@ BudgetBuddy/
 │   ├── budgets/             # Budget, SavingsGoal, SavingsTransaction + alert logic
 │   ├── analytics/           # Dashboard summary, recent activity, admin stats
 │   ├── reports/             # Date-range report aggregation (reports/services.py)
-│   ├── ai_analysis/          # AI Financial Analyst — Gemini client, snapshot builder, single endpoint
+│   ├── ai_analysis/          # AI Financial Analyst — Groq client, snapshot builder, single endpoint
 │   ├── notifications/       # Notification model, service, management commands
 │   ├── common/               # Shared formatting helpers (e.g. INR formatting)
 │   ├── dashboard/            # Registered app scaffold; currently unused (no models/views)
@@ -427,8 +427,8 @@ An opt-in, on-demand feature on the Reports page (`AIFinancialAnalysis.jsx`) —
 - **Snapshot, not a raw dump**: `ai_analysis.services.build_financial_snapshot()` builds a compact JSON snapshot by reusing `reports.services.get_report_data()` for the same user/range and converting every amount to the user's active display currency — the AI never sees a different number than the user does. Savings goals are capped at 12 per section to bound payload size.
 - **No activity, no call**: if there's no income/expense activity in the range, the view returns `{"status": "insufficient_data"}` and never calls Gemini.
 - **Model call**: `ai_analysis.gemini_client.generate_financial_analysis()` calls the Google Gemini API (`GEMINI_MODEL`, default `gemini-3.6-flash`) directly over `urllib` — no Google SDK dependency — with a structured JSON response schema (`overall`, `key_observations`, `patterns`, `risks`, `recommendations`, `savings_strategy`, `positive_progress`) and a system prompt that restricts the model to the numbers already in the snapshot.
-- **Graceful degradation**: a missing `GEMINI_API_KEY`, a network/HTTP error, or a malformed model response all raise `AIAnalysisUnavailable`, which the view turns into `{"status": "unavailable"}` — the rest of BudgetBuddy (including the underlying report data) is unaffected either way.
-- **Caching**: successful results are cached server-side for 180 seconds per `(user, date_from, date_to, currency)`, so re-renders or accidental double-clicks don't spend an extra Gemini call; the frontend's "Refresh Analysis" button passes `refresh=true` to bypass this.
+- **Graceful degradation**: a missing `GROQ_API_KEY`, a network/HTTP error, or a malformed model response all raise `AIAnalysisUnavailable`, which the view turns into `{"status": "unavailable"}` — the rest of BudgetBuddy (including the underlying report data) is unaffected either way.
+- **Caching**: successful results are cached server-side for 180 seconds per `(user, date_from, date_to, currency)`, so re-renders or accidental double-clicks don't spend an extra Groq call; the frontend's "Refresh Analysis" button passes `refresh=true` to bypass this.
 - **Frontend behavior**: changing the report's date range doesn't silently re-run the analysis (to avoid firing Gemini on every tweak) — an existing result is instead flagged as stale until the user explicitly refreshes.
 - Backed by `ai_analysis/tests.py` (`AIFinancialAnalysisEndpointTests`).
 
@@ -541,13 +541,13 @@ Backend configuration is read via `python-decouple` from a `.env` file in `backe
 | `SENDGRID_API_KEY`    | No       | SendGrid API key                                         | `your-sendgrid-api-key`                     |
 | `SENDGRID_FROM_EMAIL` | No       | Verified sender email address                            | `noreply@example.com`                       |
 | `FRONTEND_URL`        | No       | Base URL used to build absolute links in emails          | `http://localhost:5173`                     |
-| `GEMINI_API_KEY`      | No       | Google Gemini API key for AI Financial Analysis          | `your-gemini-api-key`                       |
+| `GROQ_API_KEY`        | No       | Groq API key for Finora and AI Financial Analysis       | `your-groq-api-key`                         |
 | `GOOGLE_CLIENT_ID`    | Yes\*    | Google sign-in client ID used by the authentication flow | `your-google-client-id`                     |
-| `GEMINI_MODEL`        | No       | Gemini model name                                        | `gemini-3.6-flash` (default)                |
+| `GROQ_MODEL`          | No       | Groq model name                                          | `openai/gpt-oss-120b` (default)             |
 
 Email delivery uses the custom `SendGridEmailBackend`. If the SendGrid configuration is absent, the application can fall back to console email behavior for local development; real email delivery requires valid SendGrid configuration. `FRONTEND_URL` is used when building absolute links. See [Email Notifications](#-email-notifications).
 
-`GEMINI_API_KEY` defaults to an empty string if omitted — the project still runs, but the AI Financial Analysis feature returns `{"status": "unavailable"}` for every request instead of erroring. See [AI Financial Analysis](#-ai-financial-analysis).
+`GROQ_API_KEY` defaults to an empty string if omitted — the project still runs, but the AI Financial Analysis feature returns `{"status": "unavailable"}` for every request instead of erroring. See [AI Financial Analysis](#-ai-financial-analysis).
 
 ---
 
@@ -601,7 +601,7 @@ These manual checks complement automated tests; they are not a substitute for fo
 - **Frontend lint:** `npm run lint` completes with **0 errors** and 17 warnings (mainly React Fast Refresh / hook-dependency warnings and a few unused imports).
 - **No formal security audit:** application-level security controls are implemented, but no formal third-party security audit or penetration test was performed.
 - **No automated E2E regression suite:** end-to-end workflows have been manually exercised, including multi-account and deployed-frontend testing.
-- **AI Financial Analysis depends on Gemini:** without a configured `GEMINI_API_KEY` or when the service is unavailable, the feature degrades gracefully instead of affecting the rest of the application.
+- **AI Financial Analysis depends on Groq:** without a configured `GROQ_API_KEY` or when the service is unavailable, the feature degrades gracefully instead of affecting the rest of the application.
 - **Notifications are not automatically scheduled:** monthly-report and savings-reminder management commands are available but are manually run; no Celery/APScheduler scheduler is wired in.
 - **No data import:** "Export My Data" is implemented; corresponding import functionality is not implemented.
 - **Reports exports are aggregate-oriented:** CSV/Excel/PDF are generated client-side from the report response; PDF does not include the Trend section that CSV/Excel include.
