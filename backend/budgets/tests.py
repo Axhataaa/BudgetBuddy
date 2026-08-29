@@ -245,6 +245,49 @@ class BudgetSummaryTests(TestCase):
         row = resp.data[0]
         self.assertEqual(row["alert_level"], "warning")
 
+    def test_summary_just_below_80_percent_has_no_alert(self):
+        Budget.objects.create(
+            user=self.user, category="Food", monthly_limit="1000", month=8, year=2026
+        )
+        self._create_expense("799.00")
+
+        resp = self.client.get(self.url)
+        row = resp.data[0]
+        self.assertIsNone(row["alert_level"])
+        self.assertFalse(row["is_overspent"])
+
+    def test_summary_exactly_80_percent_is_warning(self):
+        Budget.objects.create(
+            user=self.user, category="Food", monthly_limit="1000", month=8, year=2026
+        )
+        self._create_expense("800.00")
+
+        resp = self.client.get(self.url)
+        row = resp.data[0]
+        self.assertEqual(row["usage_percentage"], "80.00")
+        self.assertEqual(row["alert_level"], "warning")
+
+    def test_summary_between_80_and_90_percent_is_warning(self):
+        Budget.objects.create(
+            user=self.user, category="Food", monthly_limit="1000", month=8, year=2026
+        )
+        self._create_expense("870.00")
+
+        resp = self.client.get(self.url)
+        row = resp.data[0]
+        self.assertEqual(row["alert_level"], "warning")
+
+    def test_summary_exactly_90_percent_is_high_warning(self):
+        Budget.objects.create(
+            user=self.user, category="Food", monthly_limit="1000", month=8, year=2026
+        )
+        self._create_expense("900.00")
+
+        resp = self.client.get(self.url)
+        row = resp.data[0]
+        self.assertEqual(row["usage_percentage"], "90.00")
+        self.assertEqual(row["alert_level"], "high_warning")
+
     def test_summary_high_warning_threshold_at_90_percent(self):
         Budget.objects.create(
             user=self.user, category="Food", monthly_limit="1000", month=8, year=2026
@@ -254,6 +297,29 @@ class BudgetSummaryTests(TestCase):
         resp = self.client.get(self.url)
         row = resp.data[0]
         self.assertEqual(row["alert_level"], "high_warning")
+
+    def test_summary_between_90_and_100_percent_is_high_warning(self):
+        Budget.objects.create(
+            user=self.user, category="Food", monthly_limit="1000", month=8, year=2026
+        )
+        self._create_expense("970.00")
+
+        resp = self.client.get(self.url)
+        row = resp.data[0]
+        self.assertEqual(row["alert_level"], "high_warning")
+        self.assertFalse(row["is_overspent"])
+
+    def test_summary_exactly_100_percent_is_exceeded(self):
+        Budget.objects.create(
+            user=self.user, category="Food", monthly_limit="1000", month=8, year=2026
+        )
+        self._create_expense("1000.00")
+
+        resp = self.client.get(self.url)
+        row = resp.data[0]
+        self.assertEqual(row["usage_percentage"], "100.00")
+        self.assertTrue(row["is_overspent"])
+        self.assertEqual(row["alert_level"], "budget_exceeded")
 
     def test_summary_exceeded_budget(self):
         Budget.objects.create(

@@ -467,3 +467,127 @@ class EntitySyncEmailBehaviorTests(TestCase):
             len(mail.outbox), outbox_after_create,
             "repeated budget edits must never send new emails",
         )
+
+
+class BudgetAlertThresholdBoundaryTests(TestCase):
+    """
+    Standardized product-wide budget alert model:
+
+        80%  -> Budget Warning     (in-app only, no email)
+        90%  -> Budget High Warning (in-app + email)
+        100% -> Budget Exceeded     (in-app + email)
+
+    Exercises every boundary of check_and_notify_budget_alerts explicitly,
+    on both the notification layer (title/type/priority/dedup_key) and the
+    email layer (an email is only sent for the 90%/100% HIGH-priority tiers,
+    never for the 80% MEDIUM-priority tier).
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="threshold_tester",
+            password="pw12345",
+            email="threshold_tester@example.com",
+        )
+        self.user.profile.email_verified = True
+        self.user.profile.save(update_fields=["email_verified"])
+
+    def _budget(self, limit="1000.00"):
+        return Budget.objects.create(
+            user=self.user,
+            category="Food",
+            monthly_limit=Decimal(limit),
+            month=8,
+            year=2026,
+        )
+
+    def _spend(self, amount):
+        Expense.objects.create(
+            user=self.user,
+            title="test expense",
+            amount=Decimal(amount),
+            category="Food",
+            date=date(2026, 8, 10),
+        )
+
+    def _check(self, budget):
+        from django.core import mail
+
+        outbox_before = len(mail.outbox)
+        check_and_notify_budget_alerts(self.user, "Food", 8, 2026)
+        emails_sent = len(mail.outbox) - outbox_before
+        notification = (
+            Notification.objects.filter(user=self.user)
+            .order_by("-created_at")
+            .first()
+        )
+        return notification, emails_sent, budget
+
+    def test_below_80_percent_no_alert(self):
+        budget = self._budget()
+        self._spend("799.00")
+        notification, emails_sent, _ = self._check(budget)
+
+        self.assertIsNone(notification)
+        self.assertEqual(emails_sent, 0)
+
+    def test_exactly_80_percent_is_warning_no_email(self):
+        budget = self._budget()
+        self._spend("800.00")
+        notification, emails_sent, budget = self._check(budget)
+
+        self.assertIsNotNone(notification)
+        self.assertEqual(notification.title, "Budget Warning")
+        self.assertEqual(notification.notification_type, Notification.NotificationType.BUDGET_WARNING)
+        self.assertEqual(notification.priority, Notification.Priority.MEDIUM)
+        self.assertEqual(notification.dedup_key, f"budget_alert:{budget.id}:80")
+        self.assertEqual(emails_sent, 0, "80% tier must not send an email")
+
+    def test_between_80_and_90_percent_is_warning_no_email(self):
+        budget = self._budget()
+        self._spend("850.00")
+        notification, emails_sent, budget = self._check(budget)
+
+        self.assertEqual(notification.title, "Budget Warning")
+        self.assertEqual(notification.dedup_key, f"budget_alert:{budget.id}:80")
+        self.assertEqual(emails_sent, 0)
+
+    def test_exactly_90_percent_is_high_warning_with_email(self):
+        budget = self._budget()
+        self._spend("900.00")
+        notification, emails_sent, budget = self._check(budget)
+
+        self.assertEqual(notification.title, "Budget High Warning")
+        self.assertEqual(notification.notification_type, Notification.NotificationType.BUDGET_WARNING)
+        self.assertEqual(notification.priority, Notification.Priority.HIGH)
+        self.assertEqual(notification.dedup_key, f"budget_alert:{budget.id}:90")
+        self.assertEqual(emails_sent, 1, "90% tier must send exactly one email")
+
+    def test_between_90_and_100_percent_is_high_warning_with_email(self):
+        budget = self._budget()
+        self._spend("950.00")
+        notification, emails_sent, budget = self._check(budget)
+
+        self.assertEqual(notification.title, "Budget High Warning")
+        self.assertEqual(notification.dedup_key, f"budget_alert:{budget.id}:90")
+        self.assertEqual(emails_sent, 1)
+
+    def test_exactly_100_percent_is_exceeded_with_email(self):
+        budget = self._budget()
+        self._spend("1000.00")
+        notification, emails_sent, budget = self._check(budget)
+
+        self.assertEqual(notification.title, "Budget Exceeded")
+        self.assertEqual(notification.notification_type, Notification.NotificationType.BUDGET_EXCEEDED)
+        self.assertEqual(notification.priority, Notification.Priority.HIGH)
+        self.assertEqual(notification.dedup_key, f"budget_alert:{budget.id}:100")
+        self.assertEqual(emails_sent, 1, "100% tier must send exactly one email")
+
+    def test_above_100_percent_is_still_exceeded_with_email(self):
+        budget = self._budget()
+        self._spend("1500.00")
+        notification, emails_sent, budget = self._check(budget)
+
+        self.assertEqual(notification.title, "Budget Exceeded")
+        self.assertEqual(notification.dedup_key, f"budget_alert:{budget.id}:100")
+        self.assertEqual(emails_sent, 1)

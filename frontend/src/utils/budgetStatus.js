@@ -1,6 +1,14 @@
+// Kept in sync with backend/budgets/notifications.py's WARNING_THRESHOLD /
+// HIGH_WARNING_THRESHOLD / EXCEEDED_THRESHOLD, and with BudgetViewSet.summary's
+// alert_level cutoffs, so the visual state, in-app notifications, and email
+// alerts all agree on the same 80/90/100 model.
+export const BUDGET_WARNING_THRESHOLD = 80;
+export const BUDGET_HIGH_WARNING_THRESHOLD = 90;
+export const BUDGET_EXCEEDED_THRESHOLD = 100;
+
 export function getBudgetStatusColor(percentUsed) {
-  if (percentUsed >= 90) return "var(--color-danger)";
-  if (percentUsed >= 70) return "var(--color-warning)";
+  if (percentUsed >= BUDGET_HIGH_WARNING_THRESHOLD) return "var(--color-danger)";
+  if (percentUsed >= BUDGET_WARNING_THRESHOLD) return "var(--color-warning)";
   return "var(--color-income)";
 }
 
