@@ -131,29 +131,7 @@ class DashboardSummaryView(APIView):
             total_income - total_expenses
         )
 
-        # =====================================================
-        # Lifetime totals (Part 2: "Overall Financial Position")
-        # =====================================================
-        # Everything above this block (total_income, total_expenses,
-        # current_balance, net_savings, savings_rate) is filtered to
-        # the selected month/year - correct for a "Monthly Summary",
-        # but current_balance was being computed with the exact same
-        # month-scoped formula as net_savings (they were duplicates of
-        # each other), which is why picking an empty month made the
-        # user's balance appear to be literally zero. A real finance
-        # app's "Current Balance" is a running lifetime total that
-        # doesn't reset each month.
-        #
-        # This block deliberately does NOT touch total_income,
-        # total_expenses, current_balance, or savings_rate above -
-        # Expenses.jsx's checkResultingBalance() genuinely needs the
-        # month-scoped current_balance (it warns "this expense makes
-        # this month go negative", not "you're broke for life"), and
-        # the Reports page's SummaryCards/PDF export are correctly
-        # scoped to whatever date range the user picked there. Adding
-        # a separate "lifetime" object keeps both meanings intact
-        # rather than overloading one field with two different
-        # meanings depending on which page reads it.
+        # Lifetime totals
         lifetime_total_income = (
             Income.objects.filter(
                 user=request.user
@@ -238,13 +216,7 @@ class DashboardSummaryView(APIView):
             )
             .first()
         )
-        
-        # Bug fix: this counted ALL budgets the user has ever created,
-        # ignoring month/year entirely - the only field in this whole
-        # view that didn't respect the selected period, even though
-        # the dashboard is already month/year filtered everywhere
-        # else. Filtering by month/year here matches how every other
-        # figure in this response (income, expenses, etc.) is scoped.
+
         budgets_created = Budget.objects.filter(
             user=request.user,
             month=month,
@@ -283,10 +255,6 @@ class DashboardSummaryView(APIView):
         overspent_categories = 0
         warning_categories = 0
 
-        # Was hardcoded to 90 - now reads the user's own Settings >
-        # Financial Preferences > "Budget warning threshold" value,
-        # falling back to the model's own default (90) if for any
-        # reason the profile lookup comes back empty.
         warning_threshold = getattr(
             request.user.profile, "budget_warning_threshold", 90
         )
@@ -354,9 +322,6 @@ class DashboardSummaryView(APIView):
 
                 "savings_rate": savings_rate,
 
-                # "Overall Financial Position" (Part 2/3) - unlike
-                # everything else in this payload, these never reset
-                # when the selected month/year changes.
                 "lifetime": {
                     "current_balance": _money(lifetime_current_balance),
                     "total_income": _money(lifetime_total_income),
@@ -604,36 +569,13 @@ class RecentActivityView(APIView):
 
 
 class AdminStatsView(APIView):
-    """
-    GET /api/v1/dashboard/admin-stats/
-
-    Read-only monitoring/analytics for the BudgetBuddy Admin Dashboard
-    (mentor spec: "This dashboard should mainly be monitoring and
-    analytics... Do not build unnecessary CRUD"). Deliberately exposes
-    no write actions and no per-user financial detail - only aggregate
-    counts across the four owning apps (expenses, incomes, budgets,
-    savings goals) plus notifications and user/occupation figures,
-    reusing each app's existing model rather than introducing a new
-    "admin" app or duplicating query logic that already lives in
-    DashboardSummaryView/RecentActivityView above.
-
-    IsAdmin (users/permissions.py) is the same permission class that
-    already guards UserListView - "Admin" here means Django
-    is_superuser/is_staff, never the Profile.role occupation field
-    (see RegisterSerializer's and RoleAwareTokenObtainPairSerializer's
-    own comments on that distinction).
-    """
+    """Read-only aggregate statistics for the admin dashboard."""
 
     permission_classes = [IsAuthenticated, IsAdmin]
 
     def get(self, request):
         total_users = User.objects.count()
 
-        # Occupation distribution (Student / Working Professional /
-        # Freelancer / Business Owner / Other) - deliberately excludes
-        # the Admin role choice, since that's an authorization label
-        # auto-assigned to superusers (users/signals.py), not an
-        # occupation a person selected at registration.
         occupation_counts = dict(
             Profile.objects.exclude(role=Profile.Role.ADMIN)
             .values_list("role")
@@ -648,9 +590,7 @@ class AdminStatsView(APIView):
             if key != Profile.Role.ADMIN
         ]
 
-        # Monthly registrations for the last 6 months (including the
-        # current one), oldest first - enough to plot a small trend
-        # without pulling every User row into Python.
+        # Registrations for the last 6 months
         today = date.today()
         monthly_registrations = []
         for i in range(5, -1, -1):
