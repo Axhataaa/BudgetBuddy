@@ -76,7 +76,7 @@ export default function NotificationsSection({
             <div className="ms-3">
               <ToggleRow
                 label="Budget alerts"
-                description="Get notified when a budget nears (90%+) or exceeds its limit."
+                description="Get notified when a budget nears (80%+) or exceeds its limit."
                 checked={budgetAlerts}
                 onChange={(checked) => handleToggle("budget_alert_notifications", checked)}
                 disabled={savingField === "budget_alert_notifications"}
@@ -84,7 +84,7 @@ export default function NotificationsSection({
               />
               <ToggleRow
                 label="Savings goal updates"
-                description="Get notified by email when a savings goal is completed."
+                description="Get notified by email when a savings goal is completed or needs a reminder."
                 checked={savingsGoalUpdates}
                 onChange={(checked) => handleToggle("email_savings_goal_notifications", checked)}
                 disabled={savingField === "email_savings_goal_notifications"}

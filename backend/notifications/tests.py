@@ -1,8 +1,10 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.core.management import call_command
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from budgets.models import Budget, SavingsGoal, SavingsTransaction
@@ -591,3 +593,284 @@ class BudgetAlertThresholdBoundaryTests(TestCase):
         self.assertEqual(notification.title, "Budget Exceeded")
         self.assertEqual(notification.dedup_key, f"budget_alert:{budget.id}:100")
         self.assertEqual(emails_sent, 1)
+
+
+class SavingsReminderEmailTests(TestCase):
+    """
+    Covers the new Savings Reminder -> email behaviour (Savings Goal
+    Updates category, reusing the existing `email_savings_goal_notifications`
+    preference and the existing savings-goal email template), plus targeted
+    regression checks confirming this change did not disturb the Budget
+    Alerts (80/90/100), Goal Completed, Purchase Completed, or routine
+    (non-emailing) savings-goal event behaviour.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="reminder_tester",
+            password="pw12345",
+            email="reminder_tester@example.com",
+        )
+        self.user.profile.email_verified = True
+        self.user.profile.save(update_fields=["email_verified"])
+
+    def _idle_goal(self, days_old=10, current_amount="0.00", target_amount="1000.00"):
+        goal = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Emergency Fund",
+            target_amount=Decimal(target_amount),
+            current_amount=Decimal(current_amount),
+            target_date=date(2027, 1, 1),
+        )
+        # created_at is auto_now_add, so backdate via a queryset update to
+        # simulate a goal that has been idle for `days_old` days.
+        SavingsGoal.objects.filter(pk=goal.pk).update(
+            created_at=timezone.now() - timedelta(days=days_old)
+        )
+        goal.refresh_from_db()
+        return goal
+
+    # ---------------------------------------------------------------
+    # 1-4: core email gating for the new Savings Reminder rule
+    # ---------------------------------------------------------------
+
+    def test_new_reminder_sends_one_email_when_savings_goal_updates_enabled(self):
+        from django.core import mail
+
+        self._idle_goal()
+        outbox_before = len(mail.outbox)
+        call_command("send_savings_reminders", "--days=7")
+
+        self.assertEqual(len(mail.outbox) - outbox_before, 1)
+        notification = Notification.objects.get(
+            user=self.user, notification_type=Notification.NotificationType.REMINDER
+        )
+        self.assertEqual(notification.title, "Savings Reminder")
+
+    def test_no_email_when_savings_goal_updates_disabled(self):
+        from django.core import mail
+
+        self.user.profile.email_savings_goal_notifications = False
+        self.user.profile.save(update_fields=["email_savings_goal_notifications"])
+
+        self._idle_goal()
+        outbox_before = len(mail.outbox)
+        call_command("send_savings_reminders", "--days=7")
+
+        self.assertEqual(len(mail.outbox) - outbox_before, 0)
+        # The in-app notification must still be created even without email.
+        self.assertTrue(
+            Notification.objects.filter(
+                user=self.user, notification_type=Notification.NotificationType.REMINDER
+            ).exists()
+        )
+
+    def test_no_email_when_master_switch_disabled(self):
+        from django.core import mail
+
+        self.user.profile.email_notifications = False
+        self.user.profile.save(update_fields=["email_notifications"])
+
+        self._idle_goal()
+        outbox_before = len(mail.outbox)
+        call_command("send_savings_reminders", "--days=7")
+
+        self.assertEqual(len(mail.outbox) - outbox_before, 0)
+
+    def test_no_email_when_email_unverified(self):
+        from django.core import mail
+
+        self.user.profile.email_verified = False
+        self.user.profile.save(update_fields=["email_verified"])
+
+        self._idle_goal()
+        outbox_before = len(mail.outbox)
+        call_command("send_savings_reminders", "--days=7")
+
+        self.assertEqual(len(mail.outbox) - outbox_before, 0)
+
+    # ---------------------------------------------------------------
+    # 5: dedup must still prevent a second email
+    # ---------------------------------------------------------------
+
+    def test_rerunning_command_same_week_sends_no_second_email(self):
+        from django.core import mail
+
+        self._idle_goal()
+        call_command("send_savings_reminders", "--days=7")
+        outbox_after_first = len(mail.outbox)
+        self.assertEqual(outbox_after_first, 1)
+
+        call_command("send_savings_reminders", "--days=7")
+        self.assertEqual(
+            len(mail.outbox),
+            outbox_after_first,
+            "re-running the reminder command with the same dedup key "
+            "must not send a second email",
+        )
+        self.assertEqual(
+            Notification.objects.filter(
+                user=self.user, notification_type=Notification.NotificationType.REMINDER
+            ).count(),
+            1,
+            "re-running must not create a duplicate notification row either",
+        )
+
+    # ---------------------------------------------------------------
+    # 6: correct preference field, template content
+    # ---------------------------------------------------------------
+
+    def test_reminder_email_is_gated_by_savings_goal_field_specifically(self):
+        from django.core import mail
+
+        profile = self.user.profile
+        profile.budget_alert_notifications = False
+        profile.email_monthly_report_notifications = False
+        profile.email_important_notifications = False
+        profile.email_achievement_notifications = False
+        profile.save(
+            update_fields=[
+                "budget_alert_notifications",
+                "email_monthly_report_notifications",
+                "email_important_notifications",
+                "email_achievement_notifications",
+            ]
+        )
+
+        self._idle_goal()
+        outbox_before = len(mail.outbox)
+        call_command("send_savings_reminders", "--days=7")
+
+        self.assertEqual(
+            len(mail.outbox) - outbox_before,
+            1,
+            "reminder email must be gated on email_savings_goal_notifications "
+            "alone, independent of the other category preferences",
+        )
+
+    def test_reminder_email_does_not_say_completed(self):
+        from django.core import mail
+
+        self._idle_goal()
+        call_command("send_savings_reminders", "--days=7")
+
+        self.assertEqual(len(mail.outbox), 1)
+        sent = mail.outbox[0]
+        html_body = next(
+            content for content, mimetype in sent.alternatives if mimetype == "text/html"
+        )
+        self.assertNotIn("Savings Goal Completed", html_body)
+        self.assertIn("Savings Goal Update", html_body)
+        self.assertIn("Savings Reminder", sent.subject)
+
+    # ---------------------------------------------------------------
+    # 7-8: regression - unrelated email-capable categories are untouched
+    # ---------------------------------------------------------------
+
+    def test_budget_alerts_80_90_100_email_behavior_unchanged(self):
+        from django.core import mail
+
+        budget = Budget.objects.create(
+            user=self.user,
+            category="Food",
+            monthly_limit=Decimal("1000.00"),
+            month=8,
+            year=2026,
+        )
+        Expense.objects.create(
+            user=self.user,
+            title="groceries",
+            amount=Decimal("850.00"),
+            category="Food",
+            date=date(2026, 8, 10),
+        )
+
+        outbox_before = len(mail.outbox)
+        check_and_notify_budget_alerts(self.user, "Food", 8, 2026)
+
+        self.assertEqual(len(mail.outbox) - outbox_before, 1)
+        notification = Notification.objects.filter(
+            user=self.user, notification_type=Notification.NotificationType.BUDGET_WARNING
+        ).latest("created_at")
+        self.assertEqual(notification.title, "Budget Warning")
+        self.assertEqual(notification.dedup_key, f"budget_alert:{budget.id}:80")
+
+    def test_goal_completed_and_purchase_completed_emails_unchanged(self):
+        from django.core import mail
+
+        goal = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Bike",
+            target_amount=Decimal("100.00"),
+            current_amount=Decimal("0.00"),
+            target_date=date(2027, 1, 1),
+        )
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+
+        outbox_before = len(mail.outbox)
+        resp = client.post(
+            "/api/v1/budgets/savings-transactions/",
+            {"goal": goal.id, "transaction_amount": "100.00", "transaction_type": "deposit"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 201, resp.data)
+        # Deposit Added -> no email; Goal Completed (auto) -> one email.
+        self.assertEqual(len(mail.outbox) - outbox_before, 1)
+
+        outbox_before = len(mail.outbox)
+        purchase_resp = client.post(
+            f"/api/v1/budgets/savings-goals/{goal.id}/complete-purchase/", {}, format="json"
+        )
+        self.assertEqual(purchase_resp.status_code, 200, purchase_resp.data)
+        self.assertEqual(
+            len(mail.outbox) - outbox_before,
+            1,
+            "Purchase Completed (Achievement) email must still fire",
+        )
+
+    def test_routine_savings_goal_events_remain_email_free(self):
+        from django.core import mail
+
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+
+        outbox_before = len(mail.outbox)
+        resp = client.post(
+            "/api/v1/budgets/savings-goals/",
+            {
+                "goal_name": "Vacation",
+                "target_amount": "5000.00",
+                "target_date": "2027-06-01",
+            },
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 201, resp.data)
+        goal_id = resp.data["id"]
+        self.assertEqual(len(mail.outbox), outbox_before, "Goal Created must not send an email")
+
+        resp = client.patch(
+            f"/api/v1/budgets/savings-goals/{goal_id}/",
+            {"goal_name": "Vacation 2027"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(len(mail.outbox), outbox_before, "Goal Updated must not send an email")
+
+        resp = client.post(
+            "/api/v1/budgets/savings-transactions/",
+            {"goal": goal_id, "transaction_amount": "100.00", "transaction_type": "deposit"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 201, resp.data)
+        self.assertEqual(
+            len(mail.outbox), outbox_before, "Deposit Added (non-completing) must not send an email"
+        )
+
+        resp = client.post(
+            "/api/v1/budgets/savings-transactions/",
+            {"goal": goal_id, "transaction_amount": "50.00", "transaction_type": "withdrawal"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 201, resp.data)
+        self.assertEqual(len(mail.outbox), outbox_before, "Withdrawal Made must not send an email")

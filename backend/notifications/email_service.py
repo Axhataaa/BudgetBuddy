@@ -40,6 +40,15 @@ _EMAIL_RULES = {
 }
 
 _EMAIL_RULES_ANY_PRIORITY = {
+    # Idle-goal "Savings Reminder" notifications (always LOW priority) reuse
+    # the Savings Goal Updates template and preference, alongside the
+    # SAVINGS_GOAL "Goal Completed" rule above.
+    Notification.NotificationType.REMINDER: {
+        "template": "notifications/emails/savings_goal_completed.html",
+        "preference_field": "email_savings_goal_notifications",
+        "cta_label": "View Goal",
+        "accent_color": "#1F9D6C",
+    },
     Notification.NotificationType.ACHIEVEMENT: {
         "template": "notifications/emails/achievement.html",
         "preference_field": "email_achievement_notifications",
