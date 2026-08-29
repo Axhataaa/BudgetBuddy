@@ -211,9 +211,8 @@ function Achievements() {
                   maxWidth: 500,
                 }}
               >
-                Complete your first savings goal and
-                mark it as purchased to unlock your
-                first achievement.
+                Complete your first savings goal to
+                unlock your first achievement.
               </p>
 
             </div>

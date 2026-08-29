@@ -40,3 +40,12 @@ export const completePurchase = async (goalId, payload) => {
 
   return response.data;
 };
+
+export const completeGoal = async (goalId, payload) => {
+  const response = await api.post(
+    `budgets/savings-goals/${goalId}/complete-goal/`,
+    payload
+  );
+
+  return response.data;
+};

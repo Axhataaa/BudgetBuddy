@@ -5,6 +5,7 @@ import {
   LuWallet,
 } from "react-icons/lu";
 import { formatCurrency } from "../../utils/formatCurrency";
+import { isPurchaseGoal } from "../../utils/goalType";
 
 function AchievementJourneyModal({
   show,
@@ -14,6 +15,8 @@ function AchievementJourneyModal({
   if (!show || !goal) {
     return null;
   }
+
+  const isPurchase = isPurchaseGoal(goal);
 
     const timeline = [
     {
@@ -36,10 +39,14 @@ function AchievementJourneyModal({
     {
         id: "purchased",
         type: "purchased",
-        title: "Purchase Completed 🎉",
+        title: isPurchase
+          ? "Purchase Completed 🎉"
+          : "Savings Goal Completed 🎉",
         description:
         goal.purchase_note ||
-        "No note was added during purchase.",
+        (isPurchase
+          ? "No note was added during purchase."
+          : "No note was added."),
         date: goal.purchase_date,
     },
     ].sort(
@@ -321,7 +328,7 @@ function AchievementJourneyModal({
                 <div className="border rounded shadow-sm p-3 h-100 bg-surface-sunken">
 
                   <small className="text-muted-ink">
-                    Purchase Value
+                    {isPurchase ? "Purchase Value" : "Amount Saved"}
                   </small>
 
                   <h4 className="fw-bold mt-2 text-primary">
@@ -385,7 +392,7 @@ function AchievementJourneyModal({
                 <div className="border rounded shadow-sm p-3 bg-surface-sunken h-100">
 
                   <small className="text-muted-ink">
-                    Purchase Date
+                    {isPurchase ? "Purchase Date" : "Completed On"}
                   </small>
 
                   <h4 className="fw-bold mt-2">
@@ -411,10 +418,21 @@ function AchievementJourneyModal({
 
                 <p className="mb-0 text-ink">
 
-                  You successfully purchased
-                    <strong> {goal.goal_name}</strong>.
-                    Keep building great financial habits and
-                    achieving your future goals.
+                  {isPurchase ? (
+                    <>
+                      You successfully purchased
+                      <strong> {goal.goal_name}</strong>.
+                      Keep building great financial habits and
+                      achieving your future goals.
+                    </>
+                  ) : (
+                    <>
+                      You successfully completed
+                      <strong> {goal.goal_name}</strong>.
+                      Keep building great financial habits and
+                      achieving your future goals.
+                    </>
+                  )}
 
                 </p>
 

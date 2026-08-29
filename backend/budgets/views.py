@@ -291,6 +291,97 @@ class SavingsGoalViewSet(viewsets.ModelViewSet):
         )
     
     @action(
+        detail=True,
+        methods=["post"],
+        url_path="complete-goal",
+    )
+    def complete_goal(self, request, pk=None):
+        """
+        Generic completion/archiving for NON-PURCHASE goals (FUND, TRAVEL,
+        EDUCATION, GENERAL, OTHER). Mirrors `complete_purchase` in shape and
+        conventions, but never sets `is_purchased` and uses generic wording.
+
+        Naming note (Option A from the Phase 4 audit): this reuses the
+        existing `purchase_date`/`purchase_note` columns to store the
+        completion date/note for non-purchase goals too, to avoid a
+        migration. Those column names are purchase-specific historically,
+        but the values stored here represent "completion date/note" for
+        non-purchase goals. The request accepts generic `completion_date`/
+        `completion_note` keys so the API contract itself doesn't expose
+        purchase-specific wording; only the underlying DB columns are reused.
+        """
+        goal = self.get_object()
+
+        if not goal.is_completed:
+            return Response(
+                {
+                    "error": "Goal has not reached its target yet."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if goal.goal_type == SavingsGoal.GoalType.PURCHASE:
+            return Response(
+                {
+                    "error": "Purchase goals must be completed through the purchase flow."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if goal.is_purchased:
+            return Response(
+                {
+                    "error": "This goal has already been marked as purchased."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if goal.is_archived:
+            return Response(
+                {
+                    "error": "Goal is already archived."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        goal.is_archived = True
+        goal.purchase_date = (
+            request.data.get("completion_date")
+            or timezone.now().date()
+        )
+        goal.purchase_note = request.data.get(
+            "completion_note",
+            "",
+        )
+
+        goal.save(
+            update_fields=[
+                "is_archived",
+                "purchase_date",
+                "purchase_note",
+                "updated_at",
+            ]
+        )
+
+        create_notification(
+            user=request.user,
+            title="Savings Goal Completed",
+            priority=Notification.Priority.MEDIUM,
+            message=(
+                f'You completed "{goal.goal_name}". '
+                f"Find it in your Achievements."
+            ),
+            notification_type=Notification.NotificationType.ACHIEVEMENT,
+            action_url="/achievements",
+            dedup_key=f"savings_goal:{goal.id}:completed_generic",
+        )
+
+        return Response(
+            SavingsGoalSerializer(goal).data,
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
         detail=False,
         methods=["get"],
         url_path="achievements",

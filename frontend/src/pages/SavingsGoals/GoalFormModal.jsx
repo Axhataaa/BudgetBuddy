@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   createSavingsGoal,
   updateSavingsGoal,
@@ -10,6 +10,28 @@ import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import { getLocalDateString } from "../../utils/localDate";
 
+const GOAL_TYPES = [
+  { value: "PURCHASE", label: "Purchase" },
+  { value: "TRAVEL", label: "Travel & Experience" },
+  { value: "FUND", label: "Fund" },
+  { value: "EDUCATION", label: "Education" },
+  { value: "GENERAL", label: "General Savings" },
+  { value: "OTHER", label: "Other" },
+];
+
+const GOAL_CATEGORIES = [
+  { value: "ELECTRONICS", label: "Electronics" },
+  { value: "SHOPPING", label: "Shopping" },
+  { value: "SPORTS_FITNESS", label: "Sports & Fitness" },
+  { value: "HEALTH_MEDICAL", label: "Health & Medical" },
+  { value: "EMERGENCY_SAFETY", label: "Emergency & Safety" },
+  { value: "CELEBRATIONS_GIFTS", label: "Celebrations & Gifts" },
+  { value: "HOME_LIFESTYLE", label: "Home & Lifestyle" },
+  { value: "OTHER", label: "Other" },
+];
+
+const DEFAULT_GOAL_TYPE = "PURCHASE";
+
 function GoalFormModal({
   show,
   onHide,
@@ -19,42 +41,44 @@ function GoalFormModal({
   const { showToast } = useToast();
   const isEdit = Boolean(goal);
 
-  const [formData, setFormData] = useState({
-    goal_name: "",
-    description: "",
-    target_amount: "",
-    current_amount: 0,
-    target_date: "",
-  });
+  // `GoalFormModal` is remounted (via a `key` prop from the parent) every
+  // time it is opened for Add or Edit, so it is safe — and simpler — to
+  // derive the initial form state directly from `goal` here instead of
+  // resetting it in an effect after the fact.
+  const [formData, setFormData] = useState(() =>
+    goal
+      ? {
+          goal_name: goal.goal_name,
+          description: goal.description,
+          goal_type: goal.goal_type || DEFAULT_GOAL_TYPE,
+          goal_category: goal.goal_category || "",
+          target_amount: goal.target_amount,
+          current_amount: goal.current_amount ?? 0,
+          target_date: goal.target_date,
+        }
+      : {
+          goal_name: "",
+          description: "",
+          goal_type: DEFAULT_GOAL_TYPE,
+          goal_category: "",
+          target_amount: "",
+          current_amount: 0,
+          target_date: "",
+        }
+  );
 
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!goal) {
-      setFormData({
-        goal_name: "",
-        description: "",
-        target_amount: "",
-        current_amount: 0,
-        target_date: "",
-      });
-      return;
-    }
-
-    setFormData({
-      goal_name: goal.goal_name,
-      description: goal.description,
-      target_amount: goal.target_amount,
-      current_amount: goal.current_amount ?? 0,
-      target_date: goal.target_date,
-    });
-  }, [goal]);
 
   async function handleSubmit(e) {
     e.preventDefault();
 
     if (!formData.goal_name.trim()) {
       showToast("Goal name is required.", "error");
+      return;
+    }
+
+    if (!formData.goal_type) {
+      showToast("Please select what you're saving for.", "error");
       return;
     }
 
@@ -150,6 +174,39 @@ function GoalFormModal({
                   description: e.target.value,
                 })
               }
+            />
+          </div>
+
+          <div className="col-md-6">
+            <Input
+              label="What are you saving for?"
+              as="select"
+              value={formData.goal_type}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  goal_type: e.target.value,
+                })
+              }
+              options={GOAL_TYPES}
+            />
+          </div>
+
+          <div className="col-md-6">
+            <Input
+              label="Category"
+              as="select"
+              value={formData.goal_category}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  goal_category: e.target.value,
+                })
+              }
+              options={[
+                { value: "", label: "Select category (optional)" },
+                ...GOAL_CATEGORIES,
+              ]}
             />
           </div>
 

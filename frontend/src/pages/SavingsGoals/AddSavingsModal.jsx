@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createSavingsTransaction } from "../../services/savingsTransactionService";
+import { formatCurrency } from "../../utils/formatCurrency";
 import { LuPiggyBank } from "react-icons/lu";
 import { useToast } from "../../components/ui/Toast";
 import Modal from "../../components/ui/Modal";
@@ -19,8 +20,26 @@ function AddSavingsModal({
 
   if (!goal) return null;
 
+  const remaining = Math.max(
+    Number(goal.target_amount) - Number(goal.current_amount),
+    0
+  );
+
   async function handleSubmit(e) {
     e.preventDefault();
+
+    if (Number(amount) <= 0) {
+      showToast("Please enter a valid amount.", "error");
+      return;
+    }
+
+    if (Number(amount) > remaining) {
+      showToast(
+        `Amount cannot exceed the remaining ${formatCurrency(remaining)} needed to reach this goal.`,
+        "error"
+      );
+      return;
+    }
 
     try {
       setSaving(true);
@@ -63,13 +82,18 @@ function AddSavingsModal({
       }
     >
       <form onSubmit={handleSubmit}>
-        <p className="fw-semibold mb-3">{goal.goal_name}</p>
+        <p className="fw-semibold mb-1">{goal.goal_name}</p>
+
+        <small className="text-muted d-block mb-3">
+          Remaining to Goal: {formatCurrency(remaining)}
+        </small>
 
         <Input
           label="Amount"
           type="number"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
+          max={remaining}
           required
         />
 

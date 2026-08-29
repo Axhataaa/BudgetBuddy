@@ -40,6 +40,25 @@ class Budget(models.Model):
 
 
 class SavingsGoal(models.Model):
+
+    class GoalType(models.TextChoices):
+        PURCHASE = "PURCHASE", "Purchase"
+        TRAVEL = "TRAVEL", "Travel & Experience"
+        FUND = "FUND", "Fund"
+        EDUCATION = "EDUCATION", "Education"
+        GENERAL = "GENERAL", "General Savings"
+        OTHER = "OTHER", "Other"
+
+    class GoalCategory(models.TextChoices):
+        ELECTRONICS = "ELECTRONICS", "Electronics"
+        SHOPPING = "SHOPPING", "Shopping"
+        SPORTS_FITNESS = "SPORTS_FITNESS", "Sports & Fitness"
+        HEALTH_MEDICAL = "HEALTH_MEDICAL", "Health & Medical"
+        EMERGENCY_SAFETY = "EMERGENCY_SAFETY", "Emergency & Safety"
+        CELEBRATIONS_GIFTS = "CELEBRATIONS_GIFTS", "Celebrations & Gifts"
+        HOME_LIFESTYLE = "HOME_LIFESTYLE", "Home & Lifestyle"
+        OTHER = "OTHER", "Other"
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -49,6 +68,19 @@ class SavingsGoal(models.Model):
     goal_name = models.CharField(max_length=100)
 
     description = models.TextField(blank=True)
+
+    goal_type = models.CharField(
+        max_length=20,
+        choices=GoalType.choices,
+        default=GoalType.PURCHASE,
+    )
+
+    goal_category = models.CharField(
+        max_length=20,
+        choices=GoalCategory.choices,
+        default=GoalCategory.OTHER,
+        blank=True,
+    )
 
     target_amount = models.DecimalField(
         max_digits=10,

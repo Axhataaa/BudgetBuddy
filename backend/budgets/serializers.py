@@ -124,6 +124,8 @@ class SavingsGoalSerializer(serializers.ModelSerializer):
             "id",
             "goal_name",
             "description",
+            "goal_type",
+            "goal_category",
             "target_amount",
             "current_amount",
             "remaining_amount",
@@ -287,6 +289,20 @@ class SavingsTransactionSerializer(
                 }
             )
 
+        if (
+            validated_data["transaction_type"]
+            == SavingsTransaction.DEPOSIT
+            and amount > goal.target_amount - goal.current_amount
+        ):
+            raise serializers.ValidationError(
+                {
+                    "transaction_amount": (
+                        "Deposit cannot exceed the remaining amount needed "
+                        "to reach this goal."
+                    )
+                }
+            )
+
         transaction_obj = super().create(
             validated_data
         )
@@ -340,8 +356,7 @@ class SavingsTransactionSerializer(
                 priority=Notification.Priority.MEDIUM,
                 message=(
                     f'Your savings goal "{goal.goal_name}" has reached its '
-                    f"target of {format_currency_for_user(goal.user, goal.target_amount)}! "
-                    f"You can now mark it as purchased."
+                    f"target of {format_currency_for_user(goal.user, goal.target_amount)}!"
                 ),
                 notification_type=Notification.NotificationType.SAVINGS_GOAL,
                 action_url="/savings-goals",

@@ -421,6 +421,220 @@ class SavingsGoalCRUDTests(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
 
+class SavingsGoalTypeAndCategoryTests(TestCase):
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="type_category_user", password="pw12345678"
+        )
+        self.client.force_authenticate(user=self.user)
+        self.url = "/api/v1/budgets/savings-goals/"
+        self.future_date = (
+            timezone.localdate() + datetime.timedelta(days=90)
+        ).isoformat()
+
+    def test_existing_goal_receives_migration_default_type_and_category(self):
+        # Simulates a pre-existing row created without goal_type/goal_category
+        # explicitly set, i.e. relying on the model/migration defaults.
+        goal = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Pre-existing Goal",
+            target_amount=Decimal("1000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+        self.assertEqual(goal.goal_type, SavingsGoal.GoalType.PURCHASE)
+        self.assertEqual(goal.goal_category, SavingsGoal.GoalCategory.OTHER)
+
+    def test_create_goal_with_valid_goal_type(self):
+        resp = self.client.post(
+            self.url,
+            {
+                "goal_name": "Trip to Goa",
+                "target_amount": "50000",
+                "target_date": self.future_date,
+                "goal_type": "TRAVEL",
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(resp.data["goal_type"], "TRAVEL")
+
+    def test_create_goal_with_valid_goal_category(self):
+        resp = self.client.post(
+            self.url,
+            {
+                "goal_name": "New Headphones",
+                "target_amount": "5000",
+                "target_date": self.future_date,
+                "goal_category": "ELECTRONICS",
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(resp.data["goal_category"], "ELECTRONICS")
+
+    def test_create_goal_without_type_or_category_uses_defaults(self):
+        resp = self.client.post(
+            self.url,
+            {
+                "goal_name": "New Laptop",
+                "target_amount": "80000",
+                "target_date": self.future_date,
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(resp.data["goal_type"], "PURCHASE")
+        self.assertEqual(resp.data["goal_category"], "OTHER")
+
+    def test_goal_type_and_category_returned_on_retrieve(self):
+        goal = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Emergency Fund",
+            target_amount=Decimal("1000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+            goal_type=SavingsGoal.GoalType.FUND,
+            goal_category=SavingsGoal.GoalCategory.EMERGENCY_SAFETY,
+        )
+        resp = self.client.get(f"{self.url}{goal.id}/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["goal_type"], "FUND")
+        self.assertEqual(resp.data["goal_category"], "EMERGENCY_SAFETY")
+
+    def test_update_goal_type_and_category(self):
+        goal = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Flexible Goal",
+            target_amount=Decimal("1000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+        resp = self.client.patch(
+            f"{self.url}{goal.id}/",
+            {"goal_type": "EDUCATION", "goal_category": "CELEBRATIONS_GIFTS"},
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        goal.refresh_from_db()
+        self.assertEqual(goal.goal_type, SavingsGoal.GoalType.EDUCATION)
+        self.assertEqual(
+            goal.goal_category, SavingsGoal.GoalCategory.CELEBRATIONS_GIFTS
+        )
+
+    def test_invalid_goal_type_rejected(self):
+        resp = self.client.post(
+            self.url,
+            {
+                "goal_name": "Bad Type Goal",
+                "target_amount": "1000",
+                "target_date": self.future_date,
+                "goal_type": "NOT_A_TYPE",
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_invalid_goal_category_rejected(self):
+        resp = self.client.post(
+            self.url,
+            {
+                "goal_name": "Bad Category Goal",
+                "target_amount": "1000",
+                "target_date": self.future_date,
+                "goal_category": "NOT_A_CATEGORY",
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_all_final_goal_category_values_accepted(self):
+        valid_categories = [
+            "ELECTRONICS",
+            "SHOPPING",
+            "SPORTS_FITNESS",
+            "HEALTH_MEDICAL",
+            "EMERGENCY_SAFETY",
+            "CELEBRATIONS_GIFTS",
+            "HOME_LIFESTYLE",
+            "OTHER",
+        ]
+        for category in valid_categories:
+            resp = self.client.post(
+                self.url,
+                {
+                    "goal_name": f"Goal for {category}",
+                    "target_amount": "1000",
+                    "target_date": self.future_date,
+                    "goal_category": category,
+                },
+            )
+            self.assertEqual(
+                resp.status_code, status.HTTP_201_CREATED, resp.data
+            )
+            self.assertEqual(resp.data["goal_category"], category)
+
+    def test_removed_travel_category_value_rejected(self):
+        # TRAVEL was removed from goal_category (it now lives on goal_type
+        # only, to avoid asking the same question twice).
+        resp = self.client.post(
+            self.url,
+            {
+                "goal_name": "Old Travel Category Goal",
+                "target_amount": "1000",
+                "target_date": self.future_date,
+                "goal_category": "TRAVEL",
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_removed_education_category_value_rejected(self):
+        # EDUCATION was removed from goal_category for the same reason.
+        resp = self.client.post(
+            self.url,
+            {
+                "goal_name": "Old Education Category Goal",
+                "target_amount": "1000",
+                "target_date": self.future_date,
+                "goal_category": "EDUCATION",
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_removed_emergency_category_value_rejected(self):
+        # EMERGENCY was replaced by EMERGENCY_SAFETY.
+        resp = self.client.post(
+            self.url,
+            {
+                "goal_name": "Old Emergency Category Goal",
+                "target_amount": "1000",
+                "target_date": self.future_date,
+                "goal_category": "EMERGENCY",
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_goal_type_travel_and_education_remain_valid(self):
+        # goal_type still has TRAVEL and EDUCATION — only goal_category
+        # dropped them. Confirms the two fields were not conflated.
+        resp = self.client.post(
+            self.url,
+            {
+                "goal_name": "Japan Trip",
+                "target_amount": "1000",
+                "target_date": self.future_date,
+                "goal_type": "TRAVEL",
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(resp.data["goal_type"], "TRAVEL")
+
+        resp = self.client.post(
+            self.url,
+            {
+                "goal_name": "Online Course",
+                "target_amount": "1000",
+                "target_date": self.future_date,
+                "goal_type": "EDUCATION",
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(resp.data["goal_type"], "EDUCATION")
+
+
 class SavingsGoalProgressTests(TestCase):
 
     def setUp(self):
@@ -562,6 +776,208 @@ class SavingsGoalCompletePurchaseTests(TestCase):
         self.assertEqual(resp.data, [])
 
 
+class SavingsGoalCompleteGoalTests(TestCase):
+    """
+    `complete-goal` is the generic (non-purchase) counterpart to
+    `complete-purchase`, for goal_type in {TRAVEL, FUND, EDUCATION,
+    GENERAL, OTHER}.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="complete_goal_user", password="pw12345678"
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def _ready_goal(self, goal_type):
+        return SavingsGoal.objects.create(
+            user=self.user,
+            goal_name=f"{goal_type} Goal",
+            goal_type=goal_type,
+            target_amount=Decimal("1000"),
+            current_amount=Decimal("1000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+
+    def test_fund_goal_complete_goal_succeeds(self):
+        goal = self._ready_goal(SavingsGoal.GoalType.FUND)
+        resp = self.client.post(
+            f"/api/v1/budgets/savings-goals/{goal.id}/complete-goal/"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        goal.refresh_from_db()
+        self.assertTrue(goal.is_completed)
+        self.assertTrue(goal.is_archived)
+        self.assertFalse(goal.is_purchased)
+
+    def test_travel_goal_complete_goal_succeeds(self):
+        goal = self._ready_goal(SavingsGoal.GoalType.TRAVEL)
+        resp = self.client.post(
+            f"/api/v1/budgets/savings-goals/{goal.id}/complete-goal/"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        goal.refresh_from_db()
+        self.assertTrue(goal.is_archived)
+        self.assertFalse(goal.is_purchased)
+
+    def test_education_goal_complete_goal_succeeds(self):
+        goal = self._ready_goal(SavingsGoal.GoalType.EDUCATION)
+        resp = self.client.post(
+            f"/api/v1/budgets/savings-goals/{goal.id}/complete-goal/"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        goal.refresh_from_db()
+        self.assertTrue(goal.is_archived)
+        self.assertFalse(goal.is_purchased)
+
+    def test_general_goal_complete_goal_succeeds(self):
+        goal = self._ready_goal(SavingsGoal.GoalType.GENERAL)
+        resp = self.client.post(
+            f"/api/v1/budgets/savings-goals/{goal.id}/complete-goal/"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        goal.refresh_from_db()
+        self.assertTrue(goal.is_archived)
+        self.assertFalse(goal.is_purchased)
+
+    def test_other_goal_complete_goal_succeeds(self):
+        goal = self._ready_goal(SavingsGoal.GoalType.OTHER)
+        resp = self.client.post(
+            f"/api/v1/budgets/savings-goals/{goal.id}/complete-goal/"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        goal.refresh_from_db()
+        self.assertTrue(goal.is_archived)
+        self.assertFalse(goal.is_purchased)
+
+    def test_complete_goal_stores_completion_date_and_note(self):
+        goal = self._ready_goal(SavingsGoal.GoalType.FUND)
+        resp = self.client.post(
+            f"/api/v1/budgets/savings-goals/{goal.id}/complete-goal/",
+            {"completion_note": "Emergency fund fully stocked."},
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        goal.refresh_from_db()
+        self.assertIsNotNone(goal.purchase_date)
+        self.assertEqual(goal.purchase_note, "Emergency fund fully stocked.")
+
+    def test_incomplete_non_purchase_goal_rejected(self):
+        goal = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Not There Yet",
+            goal_type=SavingsGoal.GoalType.FUND,
+            target_amount=Decimal("1000"),
+            current_amount=Decimal("200"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+        resp = self.client.post(
+            f"/api/v1/budgets/savings-goals/{goal.id}/complete-goal/"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        goal.refresh_from_db()
+        self.assertFalse(goal.is_archived)
+
+    def test_purchase_goal_rejected_by_complete_goal(self):
+        goal = self._ready_goal(SavingsGoal.GoalType.PURCHASE)
+        resp = self.client.post(
+            f"/api/v1/budgets/savings-goals/{goal.id}/complete-goal/"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        goal.refresh_from_db()
+        self.assertFalse(goal.is_archived)
+        self.assertFalse(goal.is_purchased)
+
+    def test_already_archived_goal_rejected_by_complete_goal(self):
+        goal = self._ready_goal(SavingsGoal.GoalType.FUND)
+        self.client.post(f"/api/v1/budgets/savings-goals/{goal.id}/complete-goal/")
+        resp = self.client.post(
+            f"/api/v1/budgets/savings-goals/{goal.id}/complete-goal/"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_already_purchased_goal_rejected_by_complete_goal(self):
+        # Simulate a Purchase-flow-completed goal that later had its
+        # goal_type changed, or any state where is_purchased is already
+        # True - complete-goal must never touch it.
+        goal = self._ready_goal(SavingsGoal.GoalType.FUND)
+        goal.is_purchased = True
+        goal.save(update_fields=["is_purchased"])
+        resp = self.client.post(
+            f"/api/v1/budgets/savings-goals/{goal.id}/complete-goal/"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        goal.refresh_from_db()
+        self.assertFalse(goal.is_archived)
+
+    def test_complete_goal_does_not_send_purchase_completed_notification(self):
+        goal = self._ready_goal(SavingsGoal.GoalType.FUND)
+        self.client.post(f"/api/v1/budgets/savings-goals/{goal.id}/complete-goal/")
+        self.assertFalse(
+            Notification.objects.filter(
+                user=self.user, title="Purchase Completed"
+            ).exists()
+        )
+        self.assertTrue(
+            Notification.objects.filter(
+                user=self.user, title="Savings Goal Completed"
+            ).exists()
+        )
+
+    def test_complete_purchase_still_sends_purchase_completed_notification(self):
+        goal = self._ready_goal(SavingsGoal.GoalType.PURCHASE)
+        self.client.post(
+            f"/api/v1/budgets/savings-goals/{goal.id}/complete-purchase/"
+        )
+        self.assertTrue(
+            Notification.objects.filter(
+                user=self.user, title="Purchase Completed"
+            ).exists()
+        )
+
+    def test_non_purchase_completed_goal_appears_in_achievements(self):
+        goal = self._ready_goal(SavingsGoal.GoalType.TRAVEL)
+        self.client.post(f"/api/v1/budgets/savings-goals/{goal.id}/complete-goal/")
+
+        resp = self.client.get("/api/v1/budgets/savings-goals/achievements/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        ids = [item["id"] for item in resp.data]
+        self.assertIn(goal.id, ids)
+
+    def test_automatic_completion_notification_uses_generic_wording(self):
+        goal = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Auto Complete Goal",
+            goal_type=SavingsGoal.GoalType.FUND,
+            target_amount=Decimal("1000"),
+            current_amount=Decimal("0"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+        self.client.post(
+            "/api/v1/budgets/savings-transactions/",
+            {
+                "goal": goal.id,
+                "transaction_amount": "1000",
+                "transaction_type": "deposit",
+            },
+        )
+        notification = Notification.objects.get(
+            user=self.user, title="Goal Completed"
+        )
+        self.assertNotIn("purchased", notification.message.lower())
+
+    def test_purchase_flow_still_functions_end_to_end(self):
+        goal = self._ready_goal(SavingsGoal.GoalType.PURCHASE)
+        resp = self.client.post(
+            f"/api/v1/budgets/savings-goals/{goal.id}/complete-purchase/",
+            {"purchase_note": "Bought the laptop."},
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        goal.refresh_from_db()
+        self.assertTrue(goal.is_purchased)
+        self.assertTrue(goal.is_archived)
+
+
 # ==========================================================
 # Savings Transaction (Deposits / Withdrawals)
 # ==========================================================
@@ -672,6 +1088,83 @@ class SavingsTransactionTests(TestCase):
             },
         )
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_deposit_below_remaining_is_accepted(self):
+        SavingsTransaction.objects.create(
+            goal=self.goal, transaction_amount=Decimal("4500"), transaction_type="deposit"
+        )
+        self.goal.current_amount = Decimal("4500")
+        self.goal.save()
+
+        resp = self.client.post(
+            self.url,
+            {
+                "goal": self.goal.id,
+                "transaction_amount": "500",
+                "transaction_type": "deposit",
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.goal.refresh_from_db()
+        self.assertEqual(str(self.goal.current_amount), "5000.00")
+
+    def test_deposit_exactly_equal_to_remaining_is_accepted(self):
+        SavingsTransaction.objects.create(
+            goal=self.goal, transaction_amount=Decimal("4500"), transaction_type="deposit"
+        )
+        self.goal.current_amount = Decimal("4500")
+        self.goal.save()
+
+        resp = self.client.post(
+            self.url,
+            {
+                "goal": self.goal.id,
+                "transaction_amount": "5500",
+                "transaction_type": "deposit",
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.goal.refresh_from_db()
+        self.assertEqual(str(self.goal.current_amount), "10000.00")
+        self.assertTrue(self.goal.is_completed)
+
+    def test_deposit_slightly_above_remaining_is_rejected(self):
+        SavingsTransaction.objects.create(
+            goal=self.goal, transaction_amount=Decimal("4500"), transaction_type="deposit"
+        )
+        self.goal.current_amount = Decimal("4500")
+        self.goal.save()
+
+        resp = self.client.post(
+            self.url,
+            {
+                "goal": self.goal.id,
+                "transaction_amount": "5500.01",
+                "transaction_type": "deposit",
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST, resp.data)
+        self.goal.refresh_from_db()
+        self.assertEqual(str(self.goal.current_amount), "4500.00")
+
+    def test_deposit_substantially_above_remaining_is_rejected(self):
+        SavingsTransaction.objects.create(
+            goal=self.goal, transaction_amount=Decimal("4500"), transaction_type="deposit"
+        )
+        self.goal.current_amount = Decimal("4500")
+        self.goal.save()
+
+        resp = self.client.post(
+            self.url,
+            {
+                "goal": self.goal.id,
+                "transaction_amount": "20000",
+                "transaction_type": "deposit",
+            },
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST, resp.data)
+        self.goal.refresh_from_db()
+        self.assertEqual(str(self.goal.current_amount), "4500.00")
 
     def test_deposit_reaching_target_marks_goal_completed_and_notifies(self):
         resp = self.client.post(

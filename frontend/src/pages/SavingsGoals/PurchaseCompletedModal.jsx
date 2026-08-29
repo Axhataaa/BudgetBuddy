@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { LuPartyPopper } from "react-icons/lu";
-import { completePurchase } from "../../services/savingsGoalService";
+import { completePurchase, completeGoal } from "../../services/savingsGoalService";
+import { isPurchaseGoal } from "../../utils/goalType";
 import { useToast } from "../../components/ui/Toast";
 import Modal from "../../components/ui/Modal";
 import Button from "../../components/ui/Button";
@@ -29,16 +30,25 @@ function PurchaseCompletedModal({
     return null;
   }
 
+  const isPurchase = isPurchaseGoal(goal);
+
   async function handleSubmit(e) {
     e.preventDefault();
 
     try {
       setSaving(true);
 
-      await completePurchase(goal.id, {
-        purchase_date: purchaseDate,
-        purchase_note: purchaseNote,
-      });
+      if (isPurchase) {
+        await completePurchase(goal.id, {
+          purchase_date: purchaseDate,
+          purchase_note: purchaseNote,
+        });
+      } else {
+        await completeGoal(goal.id, {
+          completion_date: purchaseDate,
+          completion_note: purchaseNote,
+        });
+      }
 
       onSuccess?.();
     } catch (error) {
@@ -46,7 +56,9 @@ function PurchaseCompletedModal({
 
       showToast(
         error.response?.data?.error ||
-        "Failed to complete purchase.",
+        (isPurchase
+          ? "Failed to complete purchase."
+          : "Failed to complete savings goal."),
         "error"
       );
     } finally {
@@ -61,28 +73,41 @@ function PurchaseCompletedModal({
       title={
         <span className="d-flex align-items-center">
           <LuPartyPopper className="me-2 text-success" />
-          Purchase Completed
+          {isPurchase ? "Purchase Completed" : "Savings Goal Completed"}
         </span>
       }
     >
       <form onSubmit={handleSubmit}>
         <p className="mb-3">
-          Congratulations on purchasing
-          <strong> {goal.goal_name}</strong> 🎉
+          {isPurchase ? (
+            <>
+              Congratulations on purchasing
+              <strong> {goal.goal_name}</strong> 🎉
+            </>
+          ) : (
+            <>
+              Congratulations on completing
+              <strong> {goal.goal_name}</strong> 🎉
+            </>
+          )}
         </p>
 
         <Input
-          label="Purchase Date"
+          label={isPurchase ? "Purchase Date" : "Completion Date"}
           type="date"
           value={purchaseDate}
           onChange={(e) => setPurchaseDate(e.target.value)}
         />
 
         <Input
-          label="Purchase Note"
+          label={isPurchase ? "Purchase Note" : "Completion Note"}
           as="textarea"
           rows={3}
-          placeholder="Bought during Flipkart sale..."
+          placeholder={
+            isPurchase
+              ? "Bought during Flipkart sale..."
+              : "Any notes about reaching this goal..."
+          }
           value={purchaseNote}
           onChange={(e) => setPurchaseNote(e.target.value)}
         />
@@ -92,7 +117,7 @@ function PurchaseCompletedModal({
             Cancel
           </Button>
           <Button type="submit" loading={saving}>
-            Complete Purchase
+            {isPurchase ? "Complete Purchase" : "Complete Savings Goal"}
           </Button>
         </div>
       </form>

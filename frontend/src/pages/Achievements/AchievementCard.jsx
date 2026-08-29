@@ -6,6 +6,7 @@ import {
   LuTrophy,
 } from "react-icons/lu";
 import { formatCurrency } from "../../utils/formatCurrency";
+import { isPurchaseGoal } from "../../utils/goalType";
 import Button from "../../components/ui/Button";
 
 function AchievementCard({
@@ -13,6 +14,8 @@ function AchievementCard({
   onViewJourney,
   onDelete,
 }) {
+  const isPurchase = isPurchaseGoal(goal);
+
   return (
     <div className="bg-surface rounded shadow-token-sm hover-card p-4 h-100 d-flex flex-column">
 
@@ -39,7 +42,7 @@ function AchievementCard({
 
         <div className="d-flex align-items-center gap-2 flex-shrink-0">
           <span className="badge rounded-pill bg-success-subtle text-success">
-            Purchased
+            {isPurchase ? "Purchased" : "Completed"}
           </span>
 
           <button
@@ -58,13 +61,13 @@ function AchievementCard({
 
       <hr />
 
-      {/* Purchase Value */}
+      {/* Purchase Value / Amount Saved */}
 
       <div className="d-flex justify-content-between align-items-center mb-3">
 
         <span className="text-muted-ink d-flex align-items-center gap-2">
           <LuIndianRupee size={14} />
-          Purchase Value
+          {isPurchase ? "Purchase Value" : "Amount Saved"}
         </span>
 
         <span className="fw-semibold font-currency">
@@ -73,13 +76,13 @@ function AchievementCard({
 
       </div>
 
-      {/* Purchase Date */}
+      {/* Purchase Date / Completed On */}
 
       <div className="d-flex justify-content-between align-items-center mb-3">
 
         <span className="text-muted-ink d-flex align-items-center gap-2">
           <LuCalendarDays size={14} />
-          Purchased On
+          {isPurchase ? "Purchased On" : "Completed On"}
         </span>
 
         <span className="fw-medium">
@@ -88,12 +91,12 @@ function AchievementCard({
 
       </div>
 
-      {/* Purchase Note */}
+      {/* Purchase Note / Completion Note */}
 
       <div className="mt-3">
 
         <div className="text-muted-ink small fw-semibold text-uppercase mb-2" style={{ letterSpacing: "0.04em" }}>
-          Purchase Note
+          {isPurchase ? "Purchase Note" : "Completion Note"}
         </div>
 
         <div className="bg-surface-sunken rounded p-3 small">
@@ -105,7 +108,9 @@ function AchievementCard({
           ) : (
 
             <span className="text-muted-ink fst-italic">
-              No purchase note added.
+              {isPurchase
+                ? "No purchase note added."
+                : "No completion note added."}
             </span>
 
           )}

@@ -386,6 +386,7 @@ class DashboardSummaryView(APIView):
                     {
                         "id": latest_achievement.id,
                         "goal_name": latest_achievement.goal_name,
+                        "goal_type": latest_achievement.goal_type,
                         "target_amount": _money(
                             latest_achievement.target_amount
                         ),

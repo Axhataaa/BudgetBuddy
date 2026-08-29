@@ -59,6 +59,7 @@ function SavingsGoals() {
 
   const [showModal, setShowModal] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState(null);
+  const [formKey, setFormKey] = useState(0);
 
   const [showSavingsModal, setShowSavingsModal] = useState(false);
   const [selectedSavingsGoal, setSelectedSavingsGoal] = useState(null);
@@ -106,11 +107,13 @@ function SavingsGoals() {
 
   function handleAddGoal() {
     setSelectedGoal(null);
+    setFormKey((key) => key + 1);
     setShowModal(true);
   }
 
   function handleEditGoal(goal) {
     setSelectedGoal(goal);
+    setFormKey((key) => key + 1);
     setShowModal(true);
   }
 
@@ -228,7 +231,7 @@ function SavingsGoals() {
         />
 
         <SummaryCard
-          title="Ready to Purchase"
+          title="Goals Completed"
           value={completedGoals.length}
           icon={LuTarget}
           colorClass="text-income"
@@ -317,6 +320,7 @@ function SavingsGoals() {
       )}
 
       <GoalFormModal
+        key={formKey}
         show={showModal}
         onHide={() => {
           setShowModal(false);

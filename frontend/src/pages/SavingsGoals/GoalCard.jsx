@@ -1,5 +1,6 @@
 import TransactionHistory from "./TransactionHistory";
 import { formatCurrency } from "../../utils/formatCurrency";
+import { isPurchaseGoal } from "../../utils/goalType";
 import Button from "../../components/ui/Button";
 import {
   LuCalendarDays,
@@ -20,6 +21,8 @@ function GoalCard({
   onEdit,
   onDelete,
 }) {
+  const isPurchase = isPurchaseGoal(goal);
+
   const progress = Math.min(
     Number(goal.progress_percentage),
     100
@@ -42,7 +45,7 @@ function GoalCard({
   let badge = "bg-success-subtle text-success";
 
   if (goal.is_completed) {
-    status = "Ready to Purchase";
+    status = isPurchase ? "Ready to Purchase" : "Goal Reached";
     badge = "bg-success-subtle text-success";
   } else if (daysLeft < 0) {
     status = "Overdue";
@@ -208,7 +211,9 @@ function GoalCard({
               className="w-100 mt-3"
               onClick={() => onPurchase(goal)}
             >
-              🎉 Purchase Completed
+              {isPurchase
+                ? "🎉 Purchase Completed"
+                : "🎉 Complete Savings Goal"}
             </Button>
           )}
 
