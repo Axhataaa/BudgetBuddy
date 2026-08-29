@@ -10,6 +10,15 @@ from .models import Notification
 logger = logging.getLogger(__name__)
 
 _EMAIL_RULES = {
+    # 80% tier (MEDIUM priority "Budget Warning") and the 90% tier (HIGH
+    # priority "Budget High Warning") are both BUDGET_WARNING notifications;
+    # both now email, matching the standardized 80/90/100 alert model.
+    (Notification.NotificationType.BUDGET_WARNING, Notification.Priority.MEDIUM): {
+        "template": "notifications/emails/budget_warning.html",
+        "preference_field": "budget_alert_notifications",
+        "cta_label": "View Budget",
+        "accent_color": "#E8A33D",
+    },
     (Notification.NotificationType.BUDGET_WARNING, Notification.Priority.HIGH): {
         "template": "notifications/emails/budget_warning.html",
         "preference_field": "budget_alert_notifications",

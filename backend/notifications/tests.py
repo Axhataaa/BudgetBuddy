@@ -473,14 +473,14 @@ class BudgetAlertThresholdBoundaryTests(TestCase):
     """
     Standardized product-wide budget alert model:
 
-        80%  -> Budget Warning     (in-app only, no email)
+        80%  -> Budget Warning      (in-app + email)
         90%  -> Budget High Warning (in-app + email)
         100% -> Budget Exceeded     (in-app + email)
 
     Exercises every boundary of check_and_notify_budget_alerts explicitly,
     on both the notification layer (title/type/priority/dedup_key) and the
-    email layer (an email is only sent for the 90%/100% HIGH-priority tiers,
-    never for the 80% MEDIUM-priority tier).
+    email layer (an email is sent for every tier at/above 80%, and never
+    below 80%).
     """
 
     def setUp(self):
@@ -531,7 +531,7 @@ class BudgetAlertThresholdBoundaryTests(TestCase):
         self.assertIsNone(notification)
         self.assertEqual(emails_sent, 0)
 
-    def test_exactly_80_percent_is_warning_no_email(self):
+    def test_exactly_80_percent_is_warning_with_email(self):
         budget = self._budget()
         self._spend("800.00")
         notification, emails_sent, budget = self._check(budget)
@@ -541,16 +541,16 @@ class BudgetAlertThresholdBoundaryTests(TestCase):
         self.assertEqual(notification.notification_type, Notification.NotificationType.BUDGET_WARNING)
         self.assertEqual(notification.priority, Notification.Priority.MEDIUM)
         self.assertEqual(notification.dedup_key, f"budget_alert:{budget.id}:80")
-        self.assertEqual(emails_sent, 0, "80% tier must not send an email")
+        self.assertEqual(emails_sent, 1, "80% tier must send exactly one email")
 
-    def test_between_80_and_90_percent_is_warning_no_email(self):
+    def test_between_80_and_90_percent_is_warning_with_email(self):
         budget = self._budget()
         self._spend("850.00")
         notification, emails_sent, budget = self._check(budget)
 
         self.assertEqual(notification.title, "Budget Warning")
         self.assertEqual(notification.dedup_key, f"budget_alert:{budget.id}:80")
-        self.assertEqual(emails_sent, 0)
+        self.assertEqual(emails_sent, 1)
 
     def test_exactly_90_percent_is_high_warning_with_email(self):
         budget = self._budget()
