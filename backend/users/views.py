@@ -5,6 +5,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 
+from notifications.models import Notification
+from notifications.notification_service import create_notification
+
 from .logout_serializer import LogoutSerializer
 from .google_auth import GoogleAuthenticationError, authenticate_google_credential, get_or_create_google_user
 from .token_serializer import RoleAwareTokenObtainPairSerializer
@@ -151,6 +154,29 @@ class ChangePasswordView(APIView):
         serializer.is_valid(raise_exception=True)
         request.user.set_password(serializer.validated_data["new_password"])
         request.user.save(update_fields=["password"])
+
+        # Post-success confirmation for an already-authenticated password
+        # change. Distinct from the password RESET flow (mandatory,
+        # preference-independent transactional email in
+        # password_reset_service.py) - this is a preference-controlled
+        # Important Notification. No dedup_key is used: there is no
+        # genuine operation-specific identifier for a password change (no
+        # entity row is created, unlike expense/income/budget/goal events
+        # elsewhere in the codebase), and a synthetic timestamp-based key
+        # would risk colliding two distinct legitimate changes together.
+        # create_notification's no-dedup path already gives exactly the
+        # required behavior: this single successful request creates exactly
+        # one notification and triggers at most one email, and any later
+        # request - legitimate or not - simply creates its own new one.
+        create_notification(
+            user=request.user,
+            title="Password Changed",
+            message="Your BudgetBuddy password was changed successfully.",
+            notification_type=Notification.NotificationType.ADMIN,
+            priority=Notification.Priority.HIGH,
+            action_url="/settings",
+        )
+
         return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
 
 
