@@ -36,6 +36,22 @@ api.interceptors.response.use(
     const refresh = localStorage.getItem("refresh");
 
     if (!refresh) {
+      // No refresh token to fall back on: the session isn't actually valid,
+      // so this is treated the same as the failed-refresh branch below —
+      // clear the stale access token and force a logout, rather than
+      // leaving localStorage/AuthContext in an inconsistent "still looks
+      // authenticated" state.
+      localStorage.removeItem("access");
+      localStorage.removeItem("refresh");
+
+      window.dispatchEvent(new Event("auth:logout"));
+
+      // Mark this rejection as a session-expiry so UI code (e.g. Dashboard's
+      // fetch error handling) can distinguish "the user was just logged out"
+      // from a genuine data-fetch failure and skip showing a stray error
+      // toast that would otherwise survive the redirect back to "/".
+      error.isSessionExpired = true;
+
       return Promise.reject(error);
     }
 
@@ -66,6 +82,12 @@ api.interceptors.response.use(
       localStorage.removeItem("refresh");
 
       window.dispatchEvent(new Event("auth:logout"));
+
+      // Mark this rejection as a session-expiry so UI code (e.g. Dashboard's
+      // fetch error handling) can distinguish "the user was just logged out"
+      // from a genuine data-fetch failure and skip showing a stray error
+      // toast that would otherwise survive the redirect back to "/".
+      refreshError.isSessionExpired = true;
 
       return Promise.reject(refreshError);
     }

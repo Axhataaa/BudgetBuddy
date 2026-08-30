@@ -56,8 +56,16 @@ export default function Dashboard() {
         setSummary(summaryData);
         setRecent(recentActivity);
         setGoals(goalsData.results || []);
-      } catch {
-        showToast("Couldn't load dashboard data. Please try again.", "error");
+      } catch (error) {
+        // A stale/expired session is handled by the axios interceptor
+        // (tokens cleared, "auth:logout" dispatched, user redirected to the
+        // public landing page). Showing a "couldn't load dashboard" toast on
+        // top of that redirect is misleading, since it survives the
+        // redirect and appears to unauthenticated visitors. Only surface the
+        // toast for genuine data-fetch failures while actually logged in.
+        if (!error?.isSessionExpired) {
+          showToast("Couldn't load dashboard data. Please try again.", "error");
+        }
       } finally {
         setLoading(false);
       }

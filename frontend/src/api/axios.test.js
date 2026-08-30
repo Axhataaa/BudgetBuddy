@@ -80,6 +80,21 @@ describe("api axios instance error handling", () => {
     window.removeEventListener("auth:logout", logoutHandler);
   });
 
+  // Regression test for the stale-session Dashboard toast bug: when the
+  // refresh token is invalid, the rejected error must be tagged so callers
+  // can tell this apart from a genuine data-fetch failure (see Dashboard.jsx).
+  it("tags the rejected error as isSessionExpired when the refresh token is invalid", async () => {
+    localStorage.setItem("access", "expired-token");
+    localStorage.setItem("refresh", "invalid-refresh-token");
+
+    mock.onGet("expenses/").reply(401, { detail: "Token expired" });
+    realMock.onPost(/users\/refresh\//).reply(401, { detail: "Refresh token invalid" });
+
+    await expect(api.get("expenses/")).rejects.toMatchObject({
+      isSessionExpired: true,
+    });
+  });
+
   it("does not attempt a refresh loop when there is no refresh token at all", async () => {
     localStorage.setItem("access", "expired-token");
     // No refresh token stored.
@@ -89,6 +104,42 @@ describe("api axios instance error handling", () => {
     await expect(api.get("expenses/")).rejects.toBeTruthy();
     // No refresh call should have been attempted.
     expect(realMock.history.post.length).toBe(0);
+  });
+
+  // Regression test: an absent refresh token is just as much an invalid
+  // session as a failed refresh call, so it must be cleaned up the same
+  // way — clearing the stale access token and dispatching "auth:logout" —
+  // rather than leaving a stale access token in localStorage while
+  // AuthContext still believes the user is authenticated.
+  it("clears the stale access token and dispatches a forced-logout event when there is no refresh token at all", async () => {
+    localStorage.setItem("access", "expired-token");
+    // No refresh token stored.
+
+    const logoutHandler = vi.fn();
+    window.addEventListener("auth:logout", logoutHandler);
+
+    mock.onGet("expenses/").reply(401, { detail: "Token expired" });
+
+    await expect(api.get("expenses/")).rejects.toBeTruthy();
+
+    expect(localStorage.getItem("access")).toBeNull();
+    expect(localStorage.getItem("refresh")).toBeNull();
+    expect(logoutHandler).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener("auth:logout", logoutHandler);
+  });
+
+  // Regression test: a 401 with no refresh token available at all is just as
+  // much an invalid session as a failed refresh, so it should be tagged the
+  // same way.
+  it("tags the rejected error as isSessionExpired when there is no refresh token at all", async () => {
+    localStorage.setItem("access", "expired-token");
+
+    mock.onGet("expenses/").reply(401, { detail: "Token expired" });
+
+    await expect(api.get("expenses/")).rejects.toMatchObject({
+      isSessionExpired: true,
+    });
   });
 
   it("passes through non-401 errors (e.g. 500) without attempting a refresh", async () => {

@@ -109,6 +109,32 @@ describe("Dashboard page", () => {
     expect(screen.getByRole("heading", { name: /dashboard/i })).toBeInTheDocument();
   });
 
+  // Regression test for the stale-session bug: when the axios interceptor
+  // has already forced a logout (expired access token + invalid/missing
+  // refresh token), the rejected error is tagged `isSessionExpired`.
+  // Dashboard must NOT show its own error toast in that case — the
+  // interceptor already redirects the user back to the public landing page,
+  // and since ToastProvider lives above the router, a toast raised here
+  // would otherwise survive that redirect and appear on the landing page.
+  it("does not show an error toast when the failure is a session-expiry (forced logout)", async () => {
+    const sessionExpiredError = new Error("Request failed with status code 401");
+    sessionExpiredError.isSessionExpired = true;
+
+    getDashboardSummary.mockRejectedValue(sessionExpiredError);
+    getRecentActivity.mockRejectedValue(sessionExpiredError);
+    listSavingsGoals.mockResolvedValue({ results: [] });
+    getReportSummary.mockResolvedValue({ trend: [] });
+
+    renderDashboard();
+
+    await waitFor(() => expect(getDashboardSummary).toHaveBeenCalled());
+    // Give any (incorrect) toast a chance to appear before asserting absence.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByText(/couldn't load dashboard data/i)).not.toBeInTheDocument();
+    // The page itself should still render cleanly rather than crash.
+    expect(screen.getByRole("heading", { name: /dashboard/i })).toBeInTheDocument();
+  });
+
   it("handles an empty-data period without crashing", async () => {
     mockServicesResolve({ summary: emptySummary });
     renderDashboard();
