@@ -79,7 +79,7 @@ export default function Dashboard() {
     const fetchTrend = async () => {
       setTrendLoading(true);
       try {
-        const { date_from, date_to, months } = getLastNMonthsRange(6);
+        const { date_from, date_to, months } = getLastNMonthsRange(6, month, year);
         const report = await getReportSummary({ date_from, date_to });
         setMonthlyTrend(fillMissingMonths(report.trend, months));
       } catch {
@@ -90,7 +90,7 @@ export default function Dashboard() {
     };
 
     fetchTrend();
-  }, []);
+  }, [month, year]);
 
   const periodLabel = `${MONTH_NAMES[month - 1]} ${year}`;
   const hasBudgetData = summary?.budget_utilization?.length > 0;

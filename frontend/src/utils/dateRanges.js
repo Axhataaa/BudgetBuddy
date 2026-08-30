@@ -66,16 +66,28 @@ export function getReportDateRangeForPeriod(period) {
   }
 }
 
-export function getLastNMonthsRange(n) {
+export function getLastNMonthsRange(n, endMonth, endYear) {
   const today = new Date();
+  // `endMonth`/`endYear` let the window be anchored to an arbitrary
+  // calendar month (e.g. the Dashboard's selected period) instead of always
+  // ending at today's real date. Both default to the current month/year so
+  // existing callers that don't pass them keep their original behavior.
+  const anchorMonth = endMonth ?? today.getMonth() + 1; // 1-indexed
+  const anchorYear = endYear ?? today.getFullYear();
+
   const months = [];
   for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const d = new Date(anchorYear, anchorMonth - 1 - i, 1);
     months.push(`${d.getFullYear()}-${pad(d.getMonth() + 1)}`);
   }
+
+  // End of the anchor month (not "today"), so a historical period covers
+  // its full last month rather than being cut off mid-month.
+  const rangeEnd = new Date(anchorYear, anchorMonth, 0);
+
   return {
     date_from: `${months[0]}-01`,
-    date_to: toISODate(today),
+    date_to: toISODate(rangeEnd),
     months,
   };
 }

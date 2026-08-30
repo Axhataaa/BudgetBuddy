@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { render } from "@testing-library/react";
 import { AuthProvider } from "../../context/AuthContext";
@@ -10,6 +10,7 @@ import Dashboard from "./Dashboard";
 import { getDashboardSummary, getRecentActivity } from "../../services/dashboardService";
 import { listSavingsGoals } from "../../services/savingsGoalService";
 import { getReportSummary } from "../../services/reportService";
+import { getLastNMonthsRange } from "../../utils/dateRanges";
 
 vi.mock("../../services/dashboardService", () => ({
   getDashboardSummary: vi.fn(),
@@ -109,6 +110,14 @@ describe("Dashboard page", () => {
     expect(screen.getByRole("heading", { name: /dashboard/i })).toBeInTheDocument();
   });
 
+  it("handles an empty-data period without crashing", async () => {
+    mockServicesResolve({ summary: emptySummary });
+    renderDashboard();
+
+    await waitFor(() => expect(getDashboardSummary).toHaveBeenCalled());
+    expect(screen.getByRole("heading", { name: /dashboard/i })).toBeInTheDocument();
+  });
+
   // Regression test for the stale-session bug: when the axios interceptor
   // has already forced a logout (expired access token + invalid/missing
   // refresh token), the rejected error is tagged `isSessionExpired`.
@@ -135,11 +144,44 @@ describe("Dashboard page", () => {
     expect(screen.getByRole("heading", { name: /dashboard/i })).toBeInTheDocument();
   });
 
-  it("handles an empty-data period without crashing", async () => {
-    mockServicesResolve({ summary: emptySummary });
-    renderDashboard();
+  // Regression tests for the "Last 6 Months chart doesn't follow the
+  // selected Dashboard period" bug: the chart's date range must be anchored
+  // to the currently selected month/year, and must refetch whenever that
+  // selection changes.
+  describe("Last 6 Months chart period wiring", () => {
+    it("fetches the trend anchored to the currently selected Dashboard period on initial load", async () => {
+      mockServicesResolve();
+      renderDashboard();
 
-    await waitFor(() => expect(getDashboardSummary).toHaveBeenCalled());
-    expect(screen.getByRole("heading", { name: /dashboard/i })).toBeInTheDocument();
+      await waitFor(() => expect(getReportSummary).toHaveBeenCalled());
+
+      const now = new Date();
+      const { date_from, date_to } = getLastNMonthsRange(6, now.getMonth() + 1, now.getFullYear());
+      expect(getReportSummary).toHaveBeenCalledWith({ date_from, date_to });
+    });
+
+    it("refetches the trend with a shifted 6-month window when the Dashboard period changes", async () => {
+      mockServicesResolve();
+      renderDashboard();
+
+      await waitFor(() => expect(getReportSummary).toHaveBeenCalledTimes(1));
+
+      fireEvent.click(screen.getByRole("button", { name: /previous month/i }));
+
+      await waitFor(() => expect(getReportSummary).toHaveBeenCalledTimes(2));
+
+      const now = new Date();
+      const prevPeriod = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevMonth = prevPeriod.getMonth() + 1;
+      const prevYear = prevPeriod.getFullYear();
+
+      const { date_from, date_to } = getLastNMonthsRange(6, prevMonth, prevYear);
+      expect(getReportSummary).toHaveBeenLastCalledWith({ date_from, date_to });
+
+      // The main monthly statistics fetch must keep tracking the selected
+      // period too — this fix only changes how the trend window is
+      // computed, not the existing per-month summary behavior.
+      expect(getDashboardSummary).toHaveBeenLastCalledWith({ month: prevMonth, year: prevYear });
+    });
   });
 });
