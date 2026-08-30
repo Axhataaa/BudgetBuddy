@@ -80,7 +80,6 @@ export default function Settings() {
 
             <FinancialPreferencesSection
               savingTarget={profile?.monthly_saving_target}
-              warningThreshold={profile?.budget_warning_threshold}
               onSave={savePreferences}
               loading={profileLoading}
             />

@@ -8,6 +8,12 @@ export const listSavingsGoals = async (params = {}) => {
   return response.data;
 };
 
+export const getSavingsGoalsSummary = async () => {
+  const response = await api.get("budgets/savings-goals/summary/");
+
+  return response.data;
+};
+
 export const createSavingsGoal = async (payload) => {
   const response = await api.post(
     "budgets/savings-goals/",

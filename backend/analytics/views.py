@@ -28,6 +28,12 @@ from .serializers import (
 
 TWO_PLACES = Decimal("0.01")
 
+# Fixed product-wide "nearing limit" boundary for the Dashboard's budget
+# chip/utilization warning bucket. This mirrors the standardized alert
+# model used by budgets/notifications.py (80/90/100) and is no longer
+# sourced from the user's (removed) configurable budget_warning_threshold.
+DASHBOARD_NEARING_LIMIT_THRESHOLD = 80
+
 
 def _money(value):
     """
@@ -129,6 +135,15 @@ class DashboardSummaryView(APIView):
 
         current_balance = (
             total_income - total_expenses
+        )
+
+        # Monthly saving target: reused as-is from the user's profile.
+        # Comparison against this month's net_savings happens on the
+        # frontend so the semantics stay anchored to the Dashboard's own
+        # net_savings figure above (no duplicate calculation here).
+        monthly_saving_target = (
+            request.user.profile.monthly_saving_target
+            or Decimal("0.00")
         )
 
         # Lifetime totals
@@ -255,10 +270,6 @@ class DashboardSummaryView(APIView):
         overspent_categories = 0
         warning_categories = 0
 
-        warning_threshold = getattr(
-            request.user.profile, "budget_warning_threshold", 90
-        )
-
         budget_utilization = []
 
         for budget in budget_qs:
@@ -278,7 +289,7 @@ class DashboardSummaryView(APIView):
 
             if percent_used >= 100:
                 overspent_categories += 1
-            elif percent_used >= warning_threshold:
+            elif percent_used >= DASHBOARD_NEARING_LIMIT_THRESHOLD:
                 warning_categories += 1
 
             budget_utilization.append(
@@ -314,6 +325,10 @@ class DashboardSummaryView(APIView):
 
                 "net_savings": _money(
                     net_savings
+                ),
+
+                "monthly_saving_target": _money(
+                    monthly_saving_target
                 ),
 
                 "current_balance": _money(current_balance),

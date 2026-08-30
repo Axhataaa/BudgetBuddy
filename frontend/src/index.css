@@ -569,6 +569,46 @@ img {
   margin-top: 0.1rem;
 }
 
+.finance-hero-target {
+  margin-top: 0.65rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.14);
+}
+
+.finance-hero-target-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 600;
+}
+
+.finance-hero-target-percent {
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.finance-hero-target-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.1rem;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.finance-hero-target-track {
+  height: 5px;
+  margin-top: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.finance-hero-target-caption {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 0.35rem;
+}
+
 .health-ring-label {
   font-family: var(--font-display);
   font-weight: 600;

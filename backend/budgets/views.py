@@ -8,7 +8,7 @@ from common.formatting import format_currency_for_user
 from notifications.notification_service import create_notification, sync_entity_notification
 from notifications.models import Notification
 
-from .filters import BudgetFilter
+from .filters import BudgetFilter, SavingsGoalFilter
 from .models import (
     Budget,
     SavingsGoal,
@@ -19,6 +19,7 @@ from .serializers import (
     BudgetSerializer,
     BudgetSummarySerializer,
     SavingsGoalSerializer,
+    SavingsGoalSummarySerializer,
     SavingsTransactionSerializer,
 )
 
@@ -168,6 +169,8 @@ class SavingsGoalViewSet(viewsets.ModelViewSet):
 
     serializer_class = SavingsGoalSerializer
 
+    filterset_class = SavingsGoalFilter
+
     search_fields = [
         "goal_name",
         "description",
@@ -190,7 +193,20 @@ class SavingsGoalViewSet(viewsets.ModelViewSet):
         queryset = SavingsGoal.objects.filter(user=self.request.user)
 
         if self.action == "list":
-            queryset = queryset.filter(is_archived=False)
+            # Archived goals (is_archived=True) are set by complete_goal()
+            # and complete_purchase(). They must stay excluded from the
+            # default list and from status=in_progress, but the
+            # "completed"/"purchased" status filters need to be able to
+            # retrieve them - otherwise a goal that was actually completed
+            # or purchased through those real actions could never be found
+            # via ?status=completed or ?status=purchased. The archived
+            # exclusion is skipped only for those two status values; the
+            # filterset's own is_completed/is_purchased filtering is what
+            # actually narrows the result set.
+            status_param = self.request.query_params.get("status")
+
+            if status_param not in ("completed", "purchased"):
+                queryset = queryset.filter(is_archived=False)
 
         return queryset
 
@@ -226,6 +242,41 @@ class SavingsGoalViewSet(viewsets.ModelViewSet):
             dedup_key=f"savings_goal:{goal.id}:updated",
             savings_goal=goal,
         )
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="summary",
+    )
+    def summary(self, request):
+        """
+        Aggregate totals for the Savings Goals summary cards, computed over
+        the user's complete non-archived goal set - independent of any
+        search/status/type/category/ordering/page currently applied to the
+        list endpoint.
+        """
+        goals = SavingsGoal.objects.filter(
+            user=request.user,
+            is_archived=False,
+        )
+
+        totals = goals.aggregate(
+            saved_amount=Sum("current_amount"),
+            target_amount=Sum("target_amount"),
+        )
+
+        completed_goals = goals.filter(is_completed=True).count()
+
+        data = {
+            "active_goals": goals.count() - completed_goals,
+            "completed_goals": completed_goals,
+            "saved_amount": totals["saved_amount"] or Decimal("0.00"),
+            "target_amount": totals["target_amount"] or Decimal("0.00"),
+        }
+
+        serializer = SavingsGoalSummarySerializer(data)
+
+        return Response(serializer.data)
 
     @action(
         detail=True,

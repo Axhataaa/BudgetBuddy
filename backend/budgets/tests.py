@@ -487,6 +487,130 @@ class SavingsGoalCRUDTests(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
 
+class SavingsGoalFilterSearchSortTests(TestCase):
+    """
+    Task 2: search, status/type/category filtering, and ordering on the
+    Savings Goals list endpoint, reusing the existing SearchFilter /
+    DjangoFilterBackend / OrderingFilter already configured globally.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="filter_goal_user", password="pw12345678"
+        )
+        self.client.force_authenticate(user=self.user)
+        self.url = "/api/v1/budgets/savings-goals/"
+
+        self.laptop = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="New Laptop",
+            description="For work and gaming",
+            goal_type=SavingsGoal.GoalType.PURCHASE,
+            goal_category=SavingsGoal.GoalCategory.ELECTRONICS,
+            target_amount=Decimal("80000"),
+            current_amount=Decimal("20000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=60),
+        )
+        self.trip = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Japan Trip",
+            description="Cherry blossom season",
+            goal_type=SavingsGoal.GoalType.TRAVEL,
+            goal_category=SavingsGoal.GoalCategory.OTHER,
+            target_amount=Decimal("150000"),
+            current_amount=Decimal("150000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=10),
+        )
+        self.emergency = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Emergency Fund",
+            description="Six months of expenses",
+            goal_type=SavingsGoal.GoalType.FUND,
+            goal_category=SavingsGoal.GoalCategory.EMERGENCY_SAFETY,
+            target_amount=Decimal("300000"),
+            current_amount=Decimal("50000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=200),
+        )
+
+        # Mark the trip as purchased (completed + purchased) to exercise
+        # the "Purchased" status filter option.
+        self.trip.is_purchased = True
+        self.trip.save()
+
+    def _names(self, resp):
+        return [row["goal_name"] for row in resp.data["results"]]
+
+    def test_search_by_goal_name(self):
+        resp = self.client.get(self.url, {"search": "Laptop"})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._names(resp), ["New Laptop"])
+
+    def test_search_by_description(self):
+        resp = self.client.get(self.url, {"search": "blossom"})
+        self.assertEqual(self._names(resp), ["Japan Trip"])
+
+    def test_status_filter_in_progress(self):
+        resp = self.client.get(self.url, {"status": "in_progress"})
+        self.assertEqual(set(self._names(resp)), {"New Laptop", "Emergency Fund"})
+
+    def test_status_filter_completed_excludes_purchased(self):
+        # trip is both completed and purchased; "completed" should mean
+        # completed-but-not-yet-purchased.
+        another_completed = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Phone Upgrade",
+            goal_type=SavingsGoal.GoalType.PURCHASE,
+            target_amount=Decimal("40000"),
+            current_amount=Decimal("40000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=15),
+        )
+        resp = self.client.get(self.url, {"status": "completed"})
+        self.assertEqual(self._names(resp), ["Phone Upgrade"])
+
+    def test_status_filter_purchased(self):
+        resp = self.client.get(self.url, {"status": "purchased"})
+        self.assertEqual(self._names(resp), ["Japan Trip"])
+
+    def test_goal_type_filter(self):
+        resp = self.client.get(self.url, {"goal_type": "FUND"})
+        self.assertEqual(self._names(resp), ["Emergency Fund"])
+
+    def test_goal_category_filter(self):
+        resp = self.client.get(
+            self.url, {"goal_category": "EMERGENCY_SAFETY"}
+        )
+        self.assertEqual(self._names(resp), ["Emergency Fund"])
+
+    def test_ordering_by_target_date_soonest(self):
+        resp = self.client.get(self.url, {"ordering": "target_date"})
+        self.assertEqual(
+            self._names(resp),
+            ["Japan Trip", "New Laptop", "Emergency Fund"],
+        )
+
+    def test_ordering_by_target_amount_highest(self):
+        resp = self.client.get(self.url, {"ordering": "-target_amount"})
+        self.assertEqual(
+            self._names(resp),
+            ["Emergency Fund", "Japan Trip", "New Laptop"],
+        )
+
+    def test_ordering_by_current_amount_lowest(self):
+        resp = self.client.get(self.url, {"ordering": "current_amount"})
+        self.assertEqual(
+            self._names(resp),
+            ["New Laptop", "Emergency Fund", "Japan Trip"],
+        )
+
+    def test_clearing_filters_restores_full_list(self):
+        filtered = self.client.get(self.url, {"search": "Laptop"})
+        self.assertEqual(len(filtered.data["results"]), 1)
+
+        cleared = self.client.get(self.url)
+        self.assertEqual(cleared.data["count"], 3)
+
+
 class SavingsGoalTypeAndCategoryTests(TestCase):
 
     def setUp(self):
@@ -1299,3 +1423,282 @@ class SavingsTransactionModelLevelTests(TestCase):
         )
         with self.assertRaises(ValueError):
             txn.save()
+
+
+# ==========================================================
+# Savings Goals - archived Completed/Purchased filter fix
+# ==========================================================
+
+class SavingsGoalArchivedStatusFilterTests(TestCase):
+    """
+    Regression tests for the bug where `?status=completed` and
+    `?status=purchased` could never return goals archived by the real
+    `complete-goal` / `complete-purchase` actions, because
+    `get_queryset()` excluded all archived goals for the `list` action
+    before the status filterset ever ran.
+
+    These tests always go through the real completion endpoints rather
+    than setting `is_archived=True` directly on a fixture, since the bug
+    only manifests when archiving happens the way the product actually
+    archives goals.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="archived_filter_user", password="pw12345678"
+        )
+        self.client.force_authenticate(user=self.user)
+        self.url = "/api/v1/budgets/savings-goals/"
+
+    def _names(self, resp):
+        return [row["goal_name"] for row in resp.data["results"]]
+
+    def test_status_completed_retrieves_goal_archived_by_complete_goal(self):
+        goal = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Emergency Fund",
+            goal_type=SavingsGoal.GoalType.FUND,
+            target_amount=Decimal("1000"),
+            current_amount=Decimal("1000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+        resp = self.client.post(
+            f"{self.url}{goal.id}/complete-goal/"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        goal.refresh_from_db()
+        self.assertTrue(goal.is_archived)
+
+        resp = self.client.get(self.url, {"status": "completed"})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._names(resp), ["Emergency Fund"])
+
+    def test_status_purchased_retrieves_goal_archived_by_complete_purchase(self):
+        goal = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="New Laptop",
+            goal_type=SavingsGoal.GoalType.PURCHASE,
+            target_amount=Decimal("1000"),
+            current_amount=Decimal("1000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+        resp = self.client.post(
+            f"{self.url}{goal.id}/complete-purchase/"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        goal.refresh_from_db()
+        self.assertTrue(goal.is_archived)
+        self.assertTrue(goal.is_purchased)
+
+        resp = self.client.get(self.url, {"status": "purchased"})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._names(resp), ["New Laptop"])
+
+    def test_default_list_still_excludes_archived_goals(self):
+        goal = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Emergency Fund",
+            goal_type=SavingsGoal.GoalType.FUND,
+            target_amount=Decimal("1000"),
+            current_amount=Decimal("1000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+        self.client.post(f"{self.url}{goal.id}/complete-goal/")
+
+        still_active = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Still Active",
+            target_amount=Decimal("1000"),
+            current_amount=Decimal("100"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._names(resp), ["Still Active"])
+
+    def test_in_progress_filter_still_excludes_archived_goals(self):
+        goal = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="New Laptop",
+            goal_type=SavingsGoal.GoalType.PURCHASE,
+            target_amount=Decimal("1000"),
+            current_amount=Decimal("1000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+        self.client.post(f"{self.url}{goal.id}/complete-purchase/")
+
+        still_active = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Still Active",
+            target_amount=Decimal("1000"),
+            current_amount=Decimal("100"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+
+        resp = self.client.get(self.url, {"status": "in_progress"})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._names(resp), ["Still Active"])
+
+    def test_archived_status_filters_compose_with_search_and_type(self):
+        laptop = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="New Laptop",
+            description="Work machine",
+            goal_type=SavingsGoal.GoalType.PURCHASE,
+            target_amount=Decimal("1000"),
+            current_amount=Decimal("1000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+        self.client.post(f"{self.url}{laptop.id}/complete-purchase/")
+
+        phone = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="New Phone",
+            description="Backup phone",
+            goal_type=SavingsGoal.GoalType.PURCHASE,
+            target_amount=Decimal("500"),
+            current_amount=Decimal("500"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+        self.client.post(f"{self.url}{phone.id}/complete-purchase/")
+
+        resp = self.client.get(
+            self.url,
+            {"status": "purchased", "search": "Laptop"},
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._names(resp), ["New Laptop"])
+
+        resp = self.client.get(
+            self.url,
+            {"status": "purchased", "goal_type": "FUND"},
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["count"], 0)
+
+
+# ==========================================================
+# Savings Goals - summary endpoint (independent of list filters)
+# ==========================================================
+
+class SavingsGoalSummaryTests(TestCase):
+    """
+    The summary endpoint backs the Savings Goals summary cards, and must
+    always reflect the user's complete non-archived goal set regardless
+    of whatever search/status/type/category/ordering/page is currently
+    applied on the list endpoint.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="summary_user", password="pw12345678"
+        )
+        self.client.force_authenticate(user=self.user)
+        self.list_url = "/api/v1/budgets/savings-goals/"
+        self.summary_url = "/api/v1/budgets/savings-goals/summary/"
+
+        self.laptop = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="New Laptop",
+            goal_type=SavingsGoal.GoalType.PURCHASE,
+            target_amount=Decimal("80000"),
+            current_amount=Decimal("20000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=60),
+        )
+        self.trip = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Japan Trip",
+            goal_type=SavingsGoal.GoalType.TRAVEL,
+            target_amount=Decimal("150000"),
+            current_amount=Decimal("150000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=10),
+        )
+        self.emergency = SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="Emergency Fund",
+            goal_type=SavingsGoal.GoalType.FUND,
+            target_amount=Decimal("300000"),
+            current_amount=Decimal("50000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=200),
+        )
+
+    def test_summary_requires_authentication(self):
+        anon_client = APIClient()
+        resp = anon_client.get(self.summary_url)
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_summary_reflects_complete_dataset(self):
+        resp = self.client.get(self.summary_url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["active_goals"], 2)
+        self.assertEqual(resp.data["completed_goals"], 1)
+        self.assertEqual(Decimal(resp.data["saved_amount"]), Decimal("220000"))
+        self.assertEqual(Decimal(resp.data["target_amount"]), Decimal("530000"))
+
+    def test_status_filter_does_not_change_summary_totals(self):
+        baseline = self.client.get(self.summary_url).data
+        self.client.get(self.list_url, {"status": "completed"})
+        after = self.client.get(self.summary_url).data
+        self.assertEqual(baseline, after)
+
+    def test_search_does_not_change_summary_totals(self):
+        baseline = self.client.get(self.summary_url).data
+        self.client.get(self.list_url, {"search": "Laptop"})
+        after = self.client.get(self.summary_url).data
+        self.assertEqual(baseline, after)
+
+    def test_sorting_and_pagination_do_not_change_summary_totals(self):
+        baseline = self.client.get(self.summary_url).data
+        self.client.get(
+            self.list_url,
+            {"ordering": "-target_amount", "page": 1, "page_size": 1},
+        )
+        after = self.client.get(self.summary_url).data
+        self.assertEqual(baseline, after)
+
+    def test_summary_excludes_archived_goals(self):
+        self.client.post(f"{self.list_url}{self.trip.id}/complete-purchase/")
+
+        resp = self.client.get(self.summary_url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["active_goals"], 2)
+        self.assertEqual(resp.data["completed_goals"], 0)
+        self.assertEqual(Decimal(resp.data["saved_amount"]), Decimal("70000"))
+        self.assertEqual(Decimal(resp.data["target_amount"]), Decimal("380000"))
+
+    def test_summary_refreshes_after_mutation(self):
+        before = self.client.get(self.summary_url).data
+        self.assertEqual(before["active_goals"], 2)
+
+        self.client.post(
+            self.list_url,
+            {
+                "goal_name": "New Camera",
+                "target_amount": "60000",
+                "target_date": (
+                    timezone.localdate() + datetime.timedelta(days=90)
+                ).isoformat(),
+            },
+        )
+
+        after = self.client.get(self.summary_url).data
+        self.assertEqual(after["active_goals"], 3)
+
+    def test_summary_only_includes_own_goals(self):
+        other_user = User.objects.create_user(
+            username="summary_user2", password="pw12345678"
+        )
+        SavingsGoal.objects.create(
+            user=other_user,
+            goal_name="Not Yours",
+            target_amount=Decimal("1000"),
+            current_amount=Decimal("1000"),
+            target_date=timezone.localdate() + datetime.timedelta(days=30),
+        )
+
+        resp = self.client.get(self.summary_url)
+        self.assertEqual(resp.data["active_goals"], 2)
+        self.assertEqual(resp.data["completed_goals"], 1)

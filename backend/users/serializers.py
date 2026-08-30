@@ -98,7 +98,6 @@ class ProfileSerializer(serializers.ModelSerializer):
             "theme",
             "currency",
             "monthly_saving_target",
-            "budget_warning_threshold",
             "email_notifications",
             "budget_alert_notifications",
             "email_savings_goal_notifications",
@@ -108,11 +107,6 @@ class ProfileSerializer(serializers.ModelSerializer):
             "email_verified",
         ]
         read_only_fields = ["role", "email_verified"]
-
-    def validate_budget_warning_threshold(self, value):
-        if not (1 <= value <= 100):
-            raise serializers.ValidationError("Must be between 1 and 100.")
-        return value
 
     def validate_monthly_saving_target(self, value):
         if value < 0:

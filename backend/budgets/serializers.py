@@ -407,3 +407,26 @@ class BudgetSummarySerializer(serializers.Serializer):
     alert_level = serializers.CharField(
         allow_null=True,
     )
+
+
+class SavingsGoalSummarySerializer(serializers.Serializer):
+    """
+    Aggregate totals for the Savings Goals summary cards. Always
+    computed over the user's complete non-archived goal set, so it's
+    independent of whatever search/status/type/category/ordering/page
+    is currently applied to the list endpoint.
+    """
+
+    active_goals = serializers.IntegerField()
+
+    completed_goals = serializers.IntegerField()
+
+    saved_amount = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    target_amount = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )

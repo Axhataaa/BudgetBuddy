@@ -17,6 +17,26 @@ export default function HeroSection({ summary, periodLabel, loading }) {
   const netSavings = Number(summary.net_savings) || 0;
   const isPositive = netSavings >= 0;
 
+  const savingTarget = Number(summary.monthly_saving_target) || 0;
+  const hasSavingTarget = savingTarget > 0;
+
+  const targetAchievedPercent = hasSavingTarget && netSavings > 0
+    ? Math.round((netSavings / savingTarget) * 100)
+    : 0;
+  const targetProgressPercent = Math.min(Math.max(targetAchievedPercent, 0), 100);
+
+  let targetCaption = "";
+  if (hasSavingTarget) {
+    if (netSavings <= 0) {
+      targetCaption = `${formatCurrency(savingTarget - netSavings)} below target`;
+    } else if (targetAchievedPercent >= 100) {
+      const above = netSavings - savingTarget;
+      targetCaption = above > 0 ? `${formatCurrency(above)} above target` : "Target reached";
+    } else {
+      targetCaption = `${formatCurrency(savingTarget - netSavings)} to go`;
+    }
+  }
+
   const lifetimeBalance = Number(summary.lifetime?.current_balance) || 0;
 
   const hasBudgets = Number(summary.total_budget) > 0;
@@ -88,6 +108,41 @@ export default function HeroSection({ summary, periodLabel, loading }) {
               style={{ color: isPositive ? "#7FE0AE" : "#F0897E" }}
             >
               {formatCurrency(netSavings)}
+            </div>
+
+            <div className="finance-hero-target">
+              <div className="d-flex justify-content-between align-items-baseline">
+                <span className="finance-hero-target-label">Monthly saving target</span>
+                {hasSavingTarget && (
+                  <span
+                    className="finance-hero-target-percent"
+                    style={{ color: targetAchievedPercent >= 100 ? "#7FE0AE" : "rgba(255,255,255,0.85)" }}
+                  >
+                    {targetAchievedPercent}% achieved
+                  </span>
+                )}
+              </div>
+
+              {hasSavingTarget ? (
+                <>
+                  <div className="finance-hero-target-value font-currency">
+                    {formatCurrency(savingTarget)}
+                  </div>
+                  <div className="progress finance-hero-target-track">
+                    <div
+                      className="progress-bar"
+                      role="progressbar"
+                      aria-valuenow={targetProgressPercent}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      style={{ width: `${targetProgressPercent}%`, backgroundColor: "var(--color-accent)" }}
+                    />
+                  </div>
+                  <div className="finance-hero-target-caption">{targetCaption}</div>
+                </>
+              ) : (
+                <div className="finance-hero-target-caption">No monthly target set</div>
+              )}
             </div>
           </div>
 
