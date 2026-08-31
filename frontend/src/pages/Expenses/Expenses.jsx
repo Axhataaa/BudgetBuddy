@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { LuPlus, LuPencil, LuTrash2, LuSearch, LuWallet, LuFilterX, LuArrowDownRight } from "react-icons/lu";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
@@ -10,7 +11,7 @@ import FilterChips from "../../components/ui/FilterChips";
 import { useToast } from "../../components/ui/Toast";
 import ExpenseForm from "./ExpenseForm";
 import { formatCurrency } from "../../utils/formatCurrency";
-import { TIME_PERIOD_OPTIONS, getDateRangeForPeriod } from "../../utils/dateRanges";
+import { TIME_PERIOD_OPTIONS, getDateRangeForPeriod, getMonthDateRange } from "../../utils/dateRanges";
 import { AMOUNT_DATE_SORT_OPTIONS } from "../../utils/sortOptions";
 import { EXPENSE_CATEGORIES, PAYMENT_METHODS, getExpenseCategoryMeta } from "./expenseConstants";
 import {
@@ -32,15 +33,28 @@ const emptyFilters = {
   customTo: "",
 };
 
+// When arriving from a Dashboard stat card (see StatCards.jsx), the
+// Dashboard's selected month/year is handed off via router state so this
+// page can open already scoped to that period, using the existing "Custom
+// Date Range" filter rather than a new filtering mechanism. Direct
+// navigation (e.g. from the sidebar) has no router state, so it falls back
+// to the normal unfiltered default.
+function getInitialFilters(dashboardPeriod) {
+  if (!dashboardPeriod?.month || !dashboardPeriod?.year) return emptyFilters;
+  const { date_from, date_to } = getMonthDateRange(dashboardPeriod.month, dashboardPeriod.year);
+  return { ...emptyFilters, timePeriod: "custom", customFrom: date_from, customTo: date_to };
+}
+
 export default function Expenses() {
   const { showToast } = useToast();
+  const location = useLocation();
 
   const [expenses, setExpenses] = useState([]);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  const [filters, setFilters] = useState(emptyFilters);
+  const [filters, setFilters] = useState(() => getInitialFilters(location.state?.dashboardPeriod));
   const { search, category, paymentMethod, timePeriod, customFrom, customTo } = filters;
   const [ordering, setOrdering] = useState("-date");
 

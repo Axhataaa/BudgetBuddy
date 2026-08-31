@@ -69,7 +69,25 @@ export function StatCardSkeleton() {
   );
 }
 
-export default function StatCards({ summary, loading, hasBudgetData, budgetRemaining, overallBudgetPercent, navigate }) {
+export default function StatCards({
+  summary,
+  loading,
+  hasBudgetData,
+  budgetRemaining,
+  overallBudgetPercent,
+  navigate,
+  month,
+  year,
+}) {
+  // Carries the Dashboard's currently selected period along to the
+  // destination page's router state, so pages that support period
+  // filtering (Expenses, Income, Budgets) can open pre-scoped to the same
+  // month the user was looking at on the Dashboard, rather than resetting
+  // to their own default (e.g. "today"/current month). Only used to seed
+  // the destination page's initial filters — it's read once on that page's
+  // first mount, not synced afterward.
+  const dashboardPeriodState = { state: { dashboardPeriod: { month, year } } };
+
   if (loading || !summary) {
     return (
       <div className="row g-3 mb-3">
@@ -91,7 +109,7 @@ export default function StatCards({ summary, loading, hasBudgetData, budgetRemai
           colorClass="text-income"
           icon={LuTrendingUp}
           clickable
-          onClick={() => navigate("/income")}
+          onClick={() => navigate("/income", dashboardPeriodState)}
         />
         <StatCard
           label="Total Expenses"
@@ -100,7 +118,7 @@ export default function StatCards({ summary, loading, hasBudgetData, budgetRemai
           colorClass="text-expense"
           icon={LuTrendingDown}
           clickable
-          onClick={() => navigate("/expenses")}
+          onClick={() => navigate("/expenses", dashboardPeriodState)}
         />
         <StatCard
           label="Savings Rate"
@@ -130,7 +148,7 @@ export default function StatCards({ summary, loading, hasBudgetData, budgetRemai
           colorClass={hasBudgetData && budgetRemaining < 0 ? "text-expense" : "text-ink"}
           icon={LuFolderOpen}
           clickable
-          onClick={() => navigate("/budgets")}
+          onClick={() => navigate("/budgets", dashboardPeriodState)}
         />
       </div>
 

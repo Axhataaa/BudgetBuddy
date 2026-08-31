@@ -146,6 +146,8 @@ export default function Dashboard() {
         budgetRemaining={budgetRemaining}
         overallBudgetPercent={overallBudgetPercent}
         navigate={navigate}
+        month={month}
+        year={year}
       />
 
       {}

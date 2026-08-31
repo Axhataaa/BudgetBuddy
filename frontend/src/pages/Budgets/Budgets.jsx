@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { LuPlus, LuPencil, LuTrash2, LuTarget } from "react-icons/lu";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
@@ -97,9 +98,17 @@ function BudgetCard({ budget, onEdit, onDelete }) {
 
 export default function Budgets() {
   const { showToast } = useToast();
+  const location = useLocation();
+  // When arriving from the Dashboard's "Budget Remaining" card (see
+  // StatCards.jsx), the Dashboard's selected month/year is handed off via
+  // router state so this page opens on that same period, using the same
+  // month/year selection state it already has. Direct navigation (e.g.
+  // from the sidebar) has no router state, so it falls back to the normal
+  // current-month default.
+  const dashboardPeriod = location.state?.dashboardPeriod;
 
-  const [month, setMonth] = useState(today.getMonth() + 1);
-  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(dashboardPeriod?.month ?? today.getMonth() + 1);
+  const [year, setYear] = useState(dashboardPeriod?.year ?? today.getFullYear());
 
   const [budgets, setBudgets] = useState([]);
   const [loading, setLoading] = useState(true);

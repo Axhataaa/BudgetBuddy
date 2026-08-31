@@ -12,6 +12,15 @@ import { listSavingsGoals } from "../../services/savingsGoalService";
 import { getReportSummary } from "../../services/reportService";
 import { getLastNMonthsRange } from "../../utils/dateRanges";
 
+// Captures navigate() calls made by StatCards.jsx so the Dashboard →
+// Expenses/Income/Budgets period hand-off can be asserted directly, without
+// pulling in the destination pages' own services/rendering.
+const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 vi.mock("../../services/dashboardService", () => ({
   getDashboardSummary: vi.fn(),
   getRecentActivity: vi.fn(),
@@ -182,6 +191,78 @@ describe("Dashboard page", () => {
       // period too — this fix only changes how the trend window is
       // computed, not the existing per-month summary behavior.
       expect(getDashboardSummary).toHaveBeenLastCalledWith({ month: prevMonth, year: prevYear });
+    });
+  });
+
+  // Regression tests for the Dashboard → Expenses/Income/Budgets period
+  // hand-off: clicking a stat card must carry the Dashboard's currently
+  // selected month/year to the destination page via router state.
+  describe("Dashboard stat card navigation carries the selected period", () => {
+    beforeEach(() => {
+      mockNavigate.mockClear();
+    });
+
+    it("passes the selected period to Expenses when clicking Total Expenses", async () => {
+      mockServicesResolve({ summary: populatedSummary });
+      renderDashboard();
+
+      await waitFor(() => expect(getDashboardSummary).toHaveBeenCalled());
+      const now = new Date();
+
+      fireEvent.click(await screen.findByText("Total Expenses"));
+
+      expect(mockNavigate).toHaveBeenCalledWith("/expenses", {
+        state: { dashboardPeriod: { month: now.getMonth() + 1, year: now.getFullYear() } },
+      });
+    });
+
+    it("passes the selected period to Income when clicking Total Income", async () => {
+      mockServicesResolve({ summary: populatedSummary });
+      renderDashboard();
+
+      await waitFor(() => expect(getDashboardSummary).toHaveBeenCalled());
+      const now = new Date();
+
+      fireEvent.click(await screen.findByText("Total Income"));
+
+      expect(mockNavigate).toHaveBeenCalledWith("/income", {
+        state: { dashboardPeriod: { month: now.getMonth() + 1, year: now.getFullYear() } },
+      });
+    });
+
+    it("passes the selected period to Budgets when clicking Budget Remaining", async () => {
+      mockServicesResolve({ summary: populatedSummary });
+      renderDashboard();
+
+      await waitFor(() => expect(getDashboardSummary).toHaveBeenCalled());
+      const now = new Date();
+
+      fireEvent.click(await screen.findByText("Budget Remaining"));
+
+      expect(mockNavigate).toHaveBeenCalledWith("/budgets", {
+        state: { dashboardPeriod: { month: now.getMonth() + 1, year: now.getFullYear() } },
+      });
+    });
+
+    it("carries a non-current Dashboard selection (e.g. previous month) rather than always the real current month", async () => {
+      mockServicesResolve({ summary: populatedSummary });
+      renderDashboard();
+
+      await waitFor(() => expect(getDashboardSummary).toHaveBeenCalledTimes(1));
+
+      fireEvent.click(screen.getByRole("button", { name: /previous month/i }));
+      await waitFor(() => expect(getDashboardSummary).toHaveBeenCalledTimes(2));
+
+      const now = new Date();
+      const prevPeriod = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevMonth = prevPeriod.getMonth() + 1;
+      const prevYear = prevPeriod.getFullYear();
+
+      fireEvent.click(await screen.findByText("Total Expenses"));
+
+      expect(mockNavigate).toHaveBeenCalledWith("/expenses", {
+        state: { dashboardPeriod: { month: prevMonth, year: prevYear } },
+      });
     });
   });
 });
