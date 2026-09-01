@@ -82,8 +82,18 @@ class BudgetViewSet(viewsets.ModelViewSet):
         url_path="summary",
     )
     def summary(self, request):
-
-        budgets = self.get_queryset()
+        # Applies the viewset's normal filter backends (DjangoFilterBackend
+        # + BudgetFilter, already declared as filterset_class above) instead
+        # of the raw get_queryset(). This is what lets a caller pass
+        # ?category=&month=&year= to scope the summary to one exact budget.
+        # Since (user, category, month, year) is enforced unique
+        # (Budget.Meta.constraints: unique_budget_per_category_per_month),
+        # filtering by all three can only ever match zero or one budget, so
+        # this is always unambiguous — unlike category alone, which a user
+        # can legitimately have several of across different months. With no
+        # filters supplied, this behaves exactly as before (all of the
+        # user's budgets), so existing unfiltered callers are unaffected.
+        budgets = self.filter_queryset(self.get_queryset())
 
         summary = []
 

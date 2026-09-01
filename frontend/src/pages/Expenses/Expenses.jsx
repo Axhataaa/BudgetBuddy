@@ -21,8 +21,81 @@ import {
   deleteExpense,
 } from "../../services/expenseService";
 import { getDashboardSummary } from "../../services/dashboardService";
+import { listBudgets, getBudgetsSummary } from "../../services/budgetService";
 
 const PAGE_SIZE = 20;
+
+// Mirrors the 80/90/100 tiers already used by BudgetViewSet.summary's
+// alert_level (backend/budgets/views.py) — not a new threshold model, just
+// reading the same one on the frontend.
+const ALERT_LEVEL_TIER = {
+  budget_exceeded: 100,
+  high_warning: 90,
+  warning: 80,
+};
+
+function tierFromAlertLevel(alertLevel) {
+  return ALERT_LEVEL_TIER[alertLevel] || 0;
+}
+
+// Finds the threshold tier (0/80/90/100) for one specific
+// (category, month, year) budget, safely.
+//
+// Both requests are filtered by the exact same (category, month, year)
+// triple, via BudgetFilter (backend/budgets/filters.py) — which
+// BudgetViewSet.summary now also applies (backend/budgets/views.py),
+// instead of building its response from the unfiltered queryset. That's
+// the minimal backend change this fix required: /budgets/summary/
+// previously ignored query params entirely, so a category with budgets in
+// more than one month (e.g. "Food" in both July and August) returned
+// several rows all sharing category: "Food" with nothing to tell them
+// apart, and no filter existed to narrow it. That limitation lived in the
+// backend, not the frontend, so it couldn't be fixed safely from here
+// alone.
+//
+// Because (user, category, month, year) is enforced unique on Budget
+// (backend/budgets/models.py, unique_budget_per_category_per_month),
+// filtering by all three can only ever match zero or one budget — so a
+// single-item result from each filtered call *is* the exact budget, not a
+// guess. This never pairs two independently-fetched, unrelated arrays
+// positionally: both calls carry the same filter criteria, so a
+// single-row result from each is guaranteed (by the DB constraint) to
+// refer to the same budget. `count` (from /budgets/, not
+// `results.length`) is still used to confirm there's truly one match
+// regardless of pagination, exactly as before.
+async function findBudgetTier(category, month, year) {
+  if (!category || !month || !year) return null;
+
+  try {
+    const [budgetsResponse, summary] = await Promise.all([
+      listBudgets({ category, month, year }),
+      getBudgetsSummary({ category, month, year }),
+    ]);
+
+    const results = budgetsResponse.results || [];
+    const totalForFilter = budgetsResponse.count ?? results.length;
+    if (totalForFilter !== 1 || results.length !== 1) return null;
+
+    const [budget] = results;
+    if (budget.category !== category || budget.month !== month || budget.year !== year) {
+      return null;
+    }
+
+    if (!Array.isArray(summary) || summary.length !== 1) return null;
+    const [summaryRow] = summary;
+    if (summaryRow.category !== category) return null;
+
+    return tierFromAlertLevel(summaryRow.alert_level);
+  } catch {
+    return null;
+  }
+}
+
+function monthYearFromDateString(dateString) {
+  if (!dateString) return { month: null, year: null };
+  const [year, month] = dateString.split("-").map(Number);
+  return { month, year };
+}
 
 const emptyFilters = {
   search: "",
@@ -119,6 +192,13 @@ export default function Expenses() {
   const handleSubmit = async (formValues) => {
     setSubmitting(true);
     try {
+      // Snapshot this budget's tier *before* the save mutates anything, so
+      // the toast afterward reflects a crossing caused by this action —
+      // not merely the budget's standing state (also what keeps a fresh
+      // page load from toasting about a budget that's already at 80%+).
+      const { month, year } = monthYearFromDateString(formValues.date);
+      const tierBefore = await findBudgetTier(formValues.category, month, year);
+
       if (editingExpense) {
         await updateExpense(editingExpense.id, formValues);
         showToast("Expense updated.", "success");
@@ -129,11 +209,36 @@ export default function Expenses() {
       setModalOpen(false);
       fetchExpenses();
       checkResultingBalance(formValues.date);
+      checkBudgetThreshold(formValues.category, month, year, tierBefore);
     } catch (err) {
       const message = err.response?.data?.error?.message || "Couldn't save expense.";
       showToast(message, "error");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Immediate, current-screen-only feedback when this expense causes its
+  // category's budget to reach/cross the 80/90/100 thresholds already
+  // computed by BudgetViewSet.summary. Only toasts when the tier actually
+  // increased versus the pre-save snapshot (`tierBefore`), so it never
+  // fires on page load, on an edit that doesn't change utilization, or
+  // after a delete (nothing calls this from handleDelete). `findBudgetTier`
+  // itself refuses to answer when the category/period can't be safely
+  // identified, so an unresolved `tierBefore` (null) skips the check
+  // rather than guessing.
+  const checkBudgetThreshold = async (categoryValue, month, year, tierBefore) => {
+    if (tierBefore === null) return;
+
+    const tierAfter = await findBudgetTier(categoryValue, month, year);
+    if (tierAfter === null || tierAfter <= tierBefore) return;
+
+    if (tierAfter >= 100) {
+      showToast(`Your ${categoryValue} budget has been exceeded.`, "error");
+    } else if (tierAfter >= 90) {
+      showToast(`You've used 90% of your ${categoryValue} budget. You're close to the limit.`, "warning");
+    } else if (tierAfter >= 80) {
+      showToast(`You've used 80% of your ${categoryValue} budget.`, "warning");
     }
   };
 

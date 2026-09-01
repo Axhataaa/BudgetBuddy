@@ -48,8 +48,9 @@ export function ToastProvider({ children }) {
   }, []);
 
   const showToast = useCallback(
-    (message, variant = "info") => {
+    (message, variant = "info", options = {}) => {
       const id = `${Date.now()}-${Math.random()}`;
+      const { persistent = false } = options;
 
       setToasts((prev) => [
         ...prev,
@@ -60,10 +61,13 @@ export function ToastProvider({ children }) {
         },
       ]);
 
-      if (variant !== "error") {
+      // Normal toasts (success/info/warning/error/budget warnings) auto-dismiss
+      // after 5s but remain closable via the X at any time. Only toasts
+      // explicitly marked `persistent` stay until the user closes them.
+      if (!persistent) {
         const timer = setTimeout(() => {
           dismiss(id);
-        }, 4000);
+        }, 5000);
 
         timersRef.current.set(id, timer);
       }

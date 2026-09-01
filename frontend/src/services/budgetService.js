@@ -23,6 +23,19 @@ export const deleteBudget = async (id) => {
   await api.delete(`budgets/${id}/`);
 };
 
+// Per-budget usage_percentage / alert_level, computed server-side by the
+// existing BudgetViewSet.summary action. Used on the Expenses page to
+// detect 80/90/100 threshold crossings for the toast warnings.
+//
+// Optional `params` (category/month/year) scope the summary to one exact
+// budget — the backend now applies its normal BudgetFilter to this action,
+// so passing all three returns just that budget's row, never a different
+// period's. Called with no params, this returns every budget as before.
+export const getBudgetsSummary = async (params = {}) => {
+  const response = await api.get("budgets/summary/", { params });
+  return response.data;
+};
+
 /* ==========================
    Savings Goals
 ========================== */

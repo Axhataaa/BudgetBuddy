@@ -354,6 +354,48 @@ class BudgetSummaryTests(TestCase):
         resp = self.client.get(self.url)
         self.assertEqual(resp.data, [])
 
+    def test_summary_filters_to_the_exact_budget_when_category_month_year_given(self):
+        # Same category, two different months — a legitimate setup the
+        # unfiltered /budgets/summary/ can't disambiguate on its own
+        # (both rows share category "Food"). Passing category+month+year
+        # must scope the response to exactly the requested period's budget,
+        # since (user, category, month, year) is unique.
+        Budget.objects.create(
+            user=self.user, category="Food", monthly_limit="1000", month=7, year=2026
+        )
+        Budget.objects.create(
+            user=self.user, category="Food", monthly_limit="1000", month=8, year=2026
+        )
+        self._create_expense("850.00", date=datetime.date(2026, 8, 10))  # 85% of August
+        self._create_expense("300.00", date=datetime.date(2026, 7, 10))  # 30% of July
+
+        resp = self.client.get(
+            self.url, {"category": "Food", "month": 8, "year": 2026}
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data), 1)
+        self.assertEqual(resp.data[0]["usage_percentage"], "85.00")
+        self.assertEqual(resp.data[0]["alert_level"], "warning")
+
+        resp = self.client.get(
+            self.url, {"category": "Food", "month": 7, "year": 2026}
+        )
+        self.assertEqual(len(resp.data), 1)
+        self.assertEqual(resp.data[0]["usage_percentage"], "30.00")
+        self.assertIsNone(resp.data[0]["alert_level"])
+
+    def test_summary_unfiltered_still_returns_all_budgets(self):
+        # No query params supplied — behaves exactly as before the fix,
+        # returning every one of the user's budgets.
+        Budget.objects.create(
+            user=self.user, category="Food", monthly_limit="1000", month=7, year=2026
+        )
+        Budget.objects.create(
+            user=self.user, category="Food", monthly_limit="1000", month=8, year=2026
+        )
+        resp = self.client.get(self.url)
+        self.assertEqual(len(resp.data), 2)
+
 
 # ==========================================================
 # Savings Goal
