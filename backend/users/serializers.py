@@ -4,6 +4,9 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 import logging
 
+from notifications.models import Notification
+from notifications.notification_service import create_notification
+
 from .models import Profile
 from .email_verification_service import generate_verification_token, send_verification_email
 
@@ -161,6 +164,28 @@ class ProfileSerializer(serializers.ModelSerializer):
                         instance.user.save(update_fields=update_fields)
 
                     if email_changed:
+                        # Post-success confirmation for a successful email
+                        # address change, following the exact same
+                        # Important Notification pattern used for
+                        # "Password Changed" in ChangePasswordView: a
+                        # preference-controlled, non-deduplicated
+                        # notification/email pair (each legitimate email
+                        # change is its own security event). This is
+                        # created here - before the email_verified reset
+                        # just below - so the dispatch's existing
+                        # verified-email gate reflects this account's
+                        # verification standing at the moment the change
+                        # succeeded, exactly like every other Important
+                        # Notification email.
+                        create_notification(
+                            user=instance.user,
+                            title="Email Address Changed",
+                            message="Your BudgetBuddy email address was changed successfully.",
+                            notification_type=Notification.NotificationType.ADMIN,
+                            priority=Notification.Priority.HIGH,
+                            action_url="/settings",
+                        )
+
                         instance.email_verified = False
                         instance.save(update_fields=["email_verified"])
             except IntegrityError as exc:

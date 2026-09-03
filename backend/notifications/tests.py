@@ -7,10 +7,15 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from types import SimpleNamespace
+
 from budgets.models import Budget, SavingsGoal, SavingsTransaction
 from budgets.notifications import check_and_notify_budget_alerts
 from expenses.models import Expense
 from incomes.models import Income
+from notifications.management.commands.send_savings_reminders import (
+    is_target_date_reminder_eligible,
+)
 
 from .models import Notification
 
@@ -874,3 +879,275 @@ class SavingsReminderEmailTests(TestCase):
         )
         self.assertEqual(resp.status_code, 201, resp.data)
         self.assertEqual(len(mail.outbox), outbox_before, "Withdrawal Made must not send an email")
+
+
+class TargetDateReminderEligibilityTests(TestCase):
+    """
+    Direct unit tests of the pure `is_target_date_reminder_eligible` helper.
+    Using a plain object (rather than a DB-backed SavingsGoal) lets us cover
+    the "no target_date" case even though the current SavingsGoal.target_date
+    field is non-nullable at the DB level.
+    """
+
+    def _goal(self, target_date, is_completed=False, is_archived=False):
+        return SimpleNamespace(
+            target_date=target_date,
+            is_completed=is_completed,
+            is_archived=is_archived,
+        )
+
+    def test_exactly_7_days_out_is_eligible(self):
+        today = date(2026, 8, 1)
+        goal = self._goal(target_date=today + timedelta(days=7))
+        self.assertTrue(is_target_date_reminder_eligible(goal, today))
+
+    def test_within_window_is_eligible(self):
+        today = date(2026, 8, 1)
+        for offset in range(0, 8):
+            goal = self._goal(target_date=today + timedelta(days=offset))
+            self.assertTrue(
+                is_target_date_reminder_eligible(goal, today),
+                f"offset={offset} should be eligible",
+            )
+
+    def test_more_than_7_days_out_is_not_eligible(self):
+        today = date(2026, 8, 1)
+        goal = self._goal(target_date=today + timedelta(days=8))
+        self.assertFalse(is_target_date_reminder_eligible(goal, today))
+
+    def test_past_target_date_is_not_eligible(self):
+        today = date(2026, 8, 1)
+        goal = self._goal(target_date=today - timedelta(days=1))
+        self.assertFalse(is_target_date_reminder_eligible(goal, today))
+
+    def test_completed_goal_is_not_eligible(self):
+        today = date(2026, 8, 1)
+        goal = self._goal(target_date=today + timedelta(days=3), is_completed=True)
+        self.assertFalse(is_target_date_reminder_eligible(goal, today))
+
+    def test_archived_goal_is_not_eligible(self):
+        today = date(2026, 8, 1)
+        goal = self._goal(target_date=today + timedelta(days=3), is_archived=True)
+        self.assertFalse(is_target_date_reminder_eligible(goal, today))
+
+    def test_no_target_date_is_not_eligible(self):
+        today = date(2026, 8, 1)
+        goal = self._goal(target_date=None)
+        self.assertFalse(is_target_date_reminder_eligible(goal, today))
+
+
+class SavingsGoalTargetDateReminderTests(TestCase):
+    """
+    Covers the new target-date ("deadline approaching") Savings Goal
+    reminder end-to-end via the send_savings_reminders management command:
+    in-app notification creation, dedup by (goal, target_date), email
+    gating via the existing Savings Goal Updates preference, and exclusion
+    of completed/archived/overdue goals. Does not touch or duplicate the
+    existing inactivity-reminder tests above.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="target_date_tester",
+            password="pw12345",
+            email="target_date_tester@example.com",
+        )
+        self.user.profile.email_verified = True
+        self.user.profile.save(update_fields=["email_verified"])
+
+    def _goal(self, target_date, current_amount="0.00", target_amount="1000.00", **kwargs):
+        return SavingsGoal.objects.create(
+            user=self.user,
+            goal_name="New Phone",
+            target_amount=Decimal(target_amount),
+            current_amount=Decimal(current_amount),
+            target_date=target_date,
+            **kwargs,
+        )
+
+    # A. Target date exactly 7 days away -> reminder created.
+    def test_target_date_exactly_7_days_away_creates_reminder(self):
+        goal = self._goal(target_date=timezone.localdate() + timedelta(days=7))
+        call_command("send_savings_reminders")
+
+        notification = Notification.objects.get(
+            user=self.user,
+            dedup_key=f"savings_goal:{goal.id}:target_date_reminder:{goal.target_date.isoformat()}",
+        )
+        self.assertEqual(notification.title, "Savings Goal Deadline Approaching")
+        self.assertIn("due in 7 days", notification.message)
+        self.assertNotIn("Don't forget to continue saving", notification.message)
+
+    # B. Reminder only created once for the same goal + same target date.
+    def test_reminder_not_duplicated_on_repeated_runs(self):
+        goal = self._goal(target_date=timezone.localdate() + timedelta(days=5))
+        call_command("send_savings_reminders")
+        call_command("send_savings_reminders")
+        call_command("send_savings_reminders")
+
+        count = Notification.objects.filter(
+            user=self.user,
+            dedup_key=f"savings_goal:{goal.id}:target_date_reminder:{goal.target_date.isoformat()}",
+        ).count()
+        self.assertEqual(count, 1)
+
+    # C. Target date change generates its own new reminder.
+    def test_changed_target_date_generates_new_reminder(self):
+        goal = self._goal(target_date=timezone.localdate() + timedelta(days=6))
+        call_command("send_savings_reminders")
+        first_key = f"savings_goal:{goal.id}:target_date_reminder:{goal.target_date.isoformat()}"
+        self.assertTrue(Notification.objects.filter(user=self.user, dedup_key=first_key).exists())
+
+        new_target_date = timezone.localdate() + timedelta(days=4)
+        goal.target_date = new_target_date
+        goal.save(update_fields=["target_date"])
+
+        call_command("send_savings_reminders")
+        second_key = f"savings_goal:{goal.id}:target_date_reminder:{new_target_date.isoformat()}"
+        self.assertTrue(Notification.objects.filter(user=self.user, dedup_key=second_key).exists())
+        # Both notifications now exist - the old one is not overwritten,
+        # and a genuinely new reminder was generated for the new date.
+        self.assertEqual(
+            Notification.objects.filter(
+                user=self.user, notification_type=Notification.NotificationType.REMINDER
+            ).count(),
+            2,
+        )
+
+    # D. Completed goal -> no target-date reminder.
+    def test_completed_goal_gets_no_target_date_reminder(self):
+        goal = self._goal(
+            target_date=timezone.localdate() + timedelta(days=3),
+            current_amount="1000.00",
+            target_amount="1000.00",
+        )
+        self.assertTrue(goal.is_completed)
+        call_command("send_savings_reminders")
+
+        self.assertFalse(
+            Notification.objects.filter(
+                user=self.user, dedup_key__startswith=f"savings_goal:{goal.id}:target_date_reminder:"
+            ).exists()
+        )
+
+    # E. Archived goal -> no target-date reminder.
+    def test_archived_goal_gets_no_target_date_reminder(self):
+        goal = self._goal(target_date=timezone.localdate() + timedelta(days=3))
+        SavingsGoal.objects.filter(pk=goal.pk).update(is_archived=True)
+
+        call_command("send_savings_reminders")
+
+        self.assertFalse(
+            Notification.objects.filter(
+                user=self.user, dedup_key__startswith=f"savings_goal:{goal.id}:target_date_reminder:"
+            ).exists()
+        )
+
+    # G. Past target date -> no target-date reminder (and no repeated firing).
+    def test_overdue_goal_gets_no_target_date_reminder(self):
+        goal = self._goal(target_date=timezone.localdate() - timedelta(days=2))
+        call_command("send_savings_reminders")
+        call_command("send_savings_reminders")
+
+        self.assertFalse(
+            Notification.objects.filter(
+                user=self.user, dedup_key__startswith=f"savings_goal:{goal.id}:target_date_reminder:"
+            ).exists()
+        )
+
+    # H. In-app notification is created (also covered by test A; asserted
+    # explicitly here against the Notification model fields used by the UI).
+    def test_in_app_notification_fields(self):
+        goal = self._goal(target_date=timezone.localdate() + timedelta(days=2))
+        call_command("send_savings_reminders")
+
+        notification = Notification.objects.get(
+            user=self.user,
+            dedup_key=f"savings_goal:{goal.id}:target_date_reminder:{goal.target_date.isoformat()}",
+        )
+        self.assertEqual(notification.notification_type, Notification.NotificationType.REMINDER)
+        self.assertEqual(notification.action_url, "/savings-goals")
+        self.assertFalse(notification.is_read)
+
+    # I. Email is sent when Savings Goal Updates preference allows it.
+    def test_email_sent_when_savings_goal_updates_enabled(self):
+        from django.core import mail
+
+        self._goal(target_date=timezone.localdate() + timedelta(days=7))
+        outbox_before = len(mail.outbox)
+        call_command("send_savings_reminders")
+
+        self.assertEqual(len(mail.outbox) - outbox_before, 1)
+        self.assertIn("Deadline Approaching", mail.outbox[-1].subject)
+
+    # J. Email NOT sent when Savings Goal Updates preference disabled.
+    # K. In-app notification still exists when email preference is disabled.
+    def test_no_email_but_notification_still_created_when_preference_disabled(self):
+        from django.core import mail
+
+        self.user.profile.email_savings_goal_notifications = False
+        self.user.profile.save(update_fields=["email_savings_goal_notifications"])
+
+        goal = self._goal(target_date=timezone.localdate() + timedelta(days=7))
+        outbox_before = len(mail.outbox)
+        call_command("send_savings_reminders")
+
+        self.assertEqual(len(mail.outbox) - outbox_before, 0)
+        self.assertTrue(
+            Notification.objects.filter(
+                user=self.user,
+                dedup_key=f"savings_goal:{goal.id}:target_date_reminder:{goal.target_date.isoformat()}",
+            ).exists()
+        )
+
+    # N. A scheduler run that misses the exact 7-day mark still produces
+    # exactly one reminder, generated on the first run that falls inside
+    # the eligibility window (rather than only on day-7 itself).
+    def test_missed_exact_day_still_fires_once_within_window(self):
+        # Simulate the scheduler having "missed" days 7 and 6; the first
+        # run happens on what is now day 5 of the window.
+        goal = self._goal(target_date=timezone.localdate() + timedelta(days=5))
+        call_command("send_savings_reminders")
+
+        notification = Notification.objects.get(
+            user=self.user,
+            dedup_key=f"savings_goal:{goal.id}:target_date_reminder:{goal.target_date.isoformat()}",
+        )
+        self.assertIn("due in 5 days", notification.message)
+
+        # A later run the same day (or any subsequent day within the
+        # window) must not create a second reminder for this target date.
+        call_command("send_savings_reminders")
+        self.assertEqual(
+            Notification.objects.filter(
+                user=self.user,
+                dedup_key=f"savings_goal:{goal.id}:target_date_reminder:{goal.target_date.isoformat()}",
+            ).count(),
+            1,
+        )
+
+    # L/M regression: confirm the existing inactivity reminder and its
+    # dedup_key format are completely unaffected by adding the
+    # target-date reminder to the same command run.
+    def test_inactivity_reminder_dedup_key_format_unchanged(self):
+        goal = self._goal(target_date=timezone.localdate() + timedelta(days=30))
+        SavingsGoal.objects.filter(pk=goal.pk).update(
+            created_at=timezone.now() - timedelta(days=10)
+        )
+        goal.refresh_from_db()
+
+        call_command("send_savings_reminders", "--days=7")
+
+        now = timezone.now()
+        iso_year, iso_week, _ = now.isocalendar()
+        inactivity_key = f"savings_goal:{goal.id}:reminder:{iso_year}-W{iso_week:02d}"
+        self.assertTrue(
+            Notification.objects.filter(user=self.user, dedup_key=inactivity_key).exists()
+        )
+        # The target-date reminder (30 days out) must not have fired
+        # alongside it.
+        self.assertFalse(
+            Notification.objects.filter(
+                user=self.user, dedup_key__startswith=f"savings_goal:{goal.id}:target_date_reminder:"
+            ).exists()
+        )

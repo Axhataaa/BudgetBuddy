@@ -136,11 +136,7 @@ class DashboardSummaryView(APIView):
         current_balance = (
             total_income - total_expenses
         )
-
-        # Monthly saving target: reused as-is from the user's profile.
-        # Comparison against this month's net_savings happens on the
-        # frontend so the semantics stay anchored to the Dashboard's own
-        # net_savings figure above (no duplicate calculation here).
+        
         monthly_saving_target = (
             request.user.profile.monthly_saving_target
             or Decimal("0.00")
