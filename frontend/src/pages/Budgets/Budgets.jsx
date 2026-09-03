@@ -161,12 +161,33 @@ export default function Budgets() {
     setModalOpen(true);
   };
 
+  // Mirrors the threshold toast wording already used on the Expenses page
+  // (see checkBudgetThreshold in pages/Expenses/Expenses.jsx) for the
+  // 80/90/100 tiers, reusing the exact same current-screen-toast rules.
+  // The BEFORE/AFTER tier here comes straight back on the budget update
+  // response itself (BudgetViewSet.update, backend/budgets/views.py) -
+  // no extra API round trip needed to know whether this edit actually
+  // caused a genuine upward threshold crossing.
+  const showBudgetThresholdToast = (categoryValue, updatedBudget) => {
+    if (!updatedBudget?.threshold_crossed_up) return;
+
+    const tierAfter = updatedBudget.tier_after;
+    if (tierAfter >= 100) {
+      showToast(`Your ${categoryValue} budget has been exceeded.`, "error");
+    } else if (tierAfter >= 90) {
+      showToast(`You've used 90% of your ${categoryValue} budget. You're close to the limit.`, "warning");
+    } else if (tierAfter >= 80) {
+      showToast(`You've used 80% of your ${categoryValue} budget.`, "warning");
+    }
+  };
+
   const handleSubmit = async (formValues) => {
     setSubmitting(true);
     try {
       if (editingBudget) {
-        await updateBudget(editingBudget.id, formValues);
+        const updatedBudget = await updateBudget(editingBudget.id, formValues);
         showToast("Budget updated.", "success");
+        showBudgetThresholdToast(formValues.category, updatedBudget);
       } else {
         await createBudget(formValues);
         showToast("Budget added.", "success");

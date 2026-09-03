@@ -6,7 +6,7 @@ from notifications.models import Notification
 from .filters import ExpenseFilter
 from .models import Expense
 from .serializers import ExpenseSerializer
-from budgets.notifications import check_and_notify_budget_alerts
+from budgets.notifications import check_and_notify_budget_alerts, reconcile_budget_alerts
 
 
 class ExpenseViewSet(viewsets.ModelViewSet):
@@ -70,4 +70,19 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         check_and_notify_budget_alerts(
             self.request.user, expense.category, expense.date.month, expense.date.year
         )
+
+    def perform_destroy(self, instance):
+        user = instance.user
+        category = instance.category
+        month = instance.date.month
+        year = instance.date.year
+
+        instance.delete()
+
+        # Deleting an expense can only ever lower that category's usage,
+        # so it can only make already-sent 80/90/100 in-app alerts stale -
+        # it can never cause a genuine new threshold crossing. No email or
+        # notification is ever created here; reconcile_budget_alerts only
+        # removes in-app Notification rows that no longer apply.
+        reconcile_budget_alerts(user, category, month, year)
 

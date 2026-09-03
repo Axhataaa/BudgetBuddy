@@ -14,6 +14,7 @@ from .models import (
     SavingsGoal,
     SavingsTransaction,
 )
+from .notifications import reconcile_budget_alerts_for_amount_change
 
 from .serializers import (
     BudgetSerializer,
@@ -59,6 +60,16 @@ class BudgetViewSet(viewsets.ModelViewSet):
         )
 
     def perform_update(self, serializer):
+        # Snapshot the pre-save monthly_limit/identity from the instance
+        # serializer.save() is about to mutate, so the 80/90/100 threshold
+        # tier can be computed both BEFORE and AFTER the edit using the
+        # exact same existing expenses (see budgets/notifications.py:
+        # reconcile_budget_alerts_for_amount_change).
+        old_monthly_limit = serializer.instance.monthly_limit
+        old_category = serializer.instance.category
+        old_month = serializer.instance.month
+        old_year = serializer.instance.year
+
         budget = serializer.save()
 
         sync_entity_notification(
@@ -75,6 +86,38 @@ class BudgetViewSet(viewsets.ModelViewSet):
             budget=budget,
         )
 
+        # Only the budget AMOUNT participates in 80/90/100 threshold
+        # reconciliation. If the category/month/year identity changed too
+        # (moving the budget to a different period/category), the "same
+        # existing expenses" comparison the required rule depends on no
+        # longer means anything, so it's skipped - and if only unrelated
+        # identity fields changed with the amount untouched, there's
+        # nothing to reconcile either.
+        self._threshold_transition = None
+        if (
+            old_monthly_limit != budget.monthly_limit
+            and old_category == budget.category
+            and old_month == budget.month
+            and old_year == budget.year
+        ):
+            self._threshold_transition = reconcile_budget_alerts_for_amount_change(
+                self.request.user, budget, old_monthly_limit
+            )
+
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+
+        # Surface the before/after threshold tier on the update response
+        # itself, so the budget-edit UI can show the same current-screen
+        # toast an expense threshold crossing gets - without a fragile
+        # extra round trip to re-derive it.
+        transition = getattr(self, "_threshold_transition", None)
+        if transition is not None:
+            response.data["tier_before"] = transition["tier_before"]
+            response.data["tier_after"] = transition["tier_after"]
+            response.data["threshold_crossed_up"] = transition["threshold_crossed_up"]
+
+        return response
 
     @action(
         detail=False,
